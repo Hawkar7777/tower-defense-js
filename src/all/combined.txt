@@ -472,12 +472,17 @@ canvas.addEventListener("mousedown", (e) => {
         return;
       }
     }
+    // Clicked in shop area but not on a button - deselect everything
+    ui.selectedShopKey = null;
+    ui.selectedTower = null;
+    return;
   }
 
   // Check if clicking on existing tower to select
   const t = towers.find((t) => t.gx === mouse.gx && t.gy === mouse.gy);
   if (t) {
     ui.selectedTower = t;
+    ui.selectedShopKey = null;
     mouse.draggingTower = false;
     return;
   }
@@ -485,6 +490,9 @@ canvas.addEventListener("mousedown", (e) => {
   // Start dragging if we have a tower selected from shop
   if (ui.selectedShopKey) {
     mouse.draggingTower = true;
+  } else {
+    // Clicked on empty space - deselect everything
+    ui.selectedTower = null;
   }
 });
 canvas.addEventListener("mouseup", (e) => {
@@ -494,6 +502,8 @@ canvas.addEventListener("mouseup", (e) => {
   mouse.gx = Math.floor(mouse.x / TILE);
   mouse.gy = Math.floor(mouse.y / TILE);
   mouse.down = false;
+
+  let towerPlaced = false; // Track if we placed a tower
 
   if (mouse.draggingTower) {
     // Place tower if tile is valid
@@ -509,6 +519,11 @@ canvas.addEventListener("mouseup", (e) => {
         towers.push(new Tower(mouse.gx, mouse.gy, ui.selectedShopKey));
         state.money -= spec.cost;
         pulse(`-${spec.cost}`);
+
+        // Clear selection after placing tower
+        ui.selectedShopKey = null;
+        ui.selectedTower = null;
+        towerPlaced = true; // Mark that we placed a tower
       } else {
         pulse("Not enough $", "#f66");
       }
@@ -516,6 +531,22 @@ canvas.addEventListener("mouseup", (e) => {
   }
 
   mouse.draggingTower = false;
+
+  // Only select tower if not dragging, not clicking on shop area, and didn't just place a tower
+  if (
+    !towerPlaced &&
+    !mouse.draggingTower &&
+    mouse.y <= ctx.canvas.clientHeight - 100
+  ) {
+    const t = towers.find((t) => t.gx === mouse.gx && t.gy === mouse.gy);
+    if (t) {
+      ui.selectedTower = t;
+    } else {
+      // Clicked on empty space - deselect everything
+      ui.selectedTower = null;
+      ui.selectedShopKey = null;
+    }
+  }
 });
 
 canvas.addEventListener("mouseleave", () => {

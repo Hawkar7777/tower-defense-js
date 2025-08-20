@@ -231,7 +231,11 @@ function loop(ts) {
   drawShop(ctx.canvas.clientWidth, ctx.canvas.clientHeight);
 
   // Show ghost when dragging or when hovering with a tower selected
-  if (mouse.draggingTower || (ui.hoveredTile && ui.selectedShopKey)) {
+  // BUT NOT when mouse is over the shop button area
+  if (
+    (mouse.draggingTower || (ui.hoveredTile && ui.selectedShopKey)) &&
+    mouse.y <= ctx.canvas.clientHeight - 100
+  ) {
     drawGhost(ui.hoveredTile, TILE, ui.selectedShopKey, mouse.draggingTower);
   }
 

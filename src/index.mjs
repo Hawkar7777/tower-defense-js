@@ -80,9 +80,14 @@ canvas.addEventListener("mousedown", (e) => {
           return;
         }
 
-        ui.selectedShopKey = b.key;
-        ui.selectedTower = null;
-        mouse.draggingTower = true;
+        // If clicking the same tower type that's already selected, deselect it
+        if (ui.selectedShopKey === b.key) {
+          ui.selectedShopKey = null;
+        } else {
+          ui.selectedShopKey = b.key;
+          ui.selectedTower = null;
+        }
+        mouse.draggingTower = false;
         return;
       }
     }
@@ -92,11 +97,16 @@ canvas.addEventListener("mousedown", (e) => {
     return;
   }
 
-  // Check if clicking on existing tower to select
+  // Check if clicking on existing tower
   const t = towers.find((t) => t.gx === mouse.gx && t.gy === mouse.gy);
   if (t) {
-    ui.selectedTower = t;
-    ui.selectedShopKey = null;
+    // If clicking the same tower that's already selected, deselect it
+    if (ui.selectedTower === t) {
+      ui.selectedTower = null;
+    } else {
+      ui.selectedTower = t;
+      ui.selectedShopKey = null;
+    }
     mouse.draggingTower = false;
     return;
   }
@@ -109,6 +119,7 @@ canvas.addEventListener("mousedown", (e) => {
     ui.selectedTower = null;
   }
 });
+
 canvas.addEventListener("mouseup", (e) => {
   const rect = canvas.getBoundingClientRect();
   mouse.x = e.clientX - rect.left;

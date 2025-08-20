@@ -1,6 +1,6 @@
 // Central mutable state (exported as objects so imported modules can mutate properties)
 export const state = {
-  money: 200,
+  money: 1000000,
   lives: 20,
   wave: 0,
   time: 0,

@@ -85,6 +85,11 @@ export class Enemy {
     this.dead = false;
     this.animationOffset = rand(Math.PI * 2);
     this.tier = tier;
+
+    this.slowEffect = null;
+    this.frozen = false;
+    this.iceEffect = false;
+    this.iceEffectTime = 0;
   }
 
   get pos() {
@@ -100,6 +105,21 @@ export class Enemy {
       this.dead = true;
       state.lives = Math.max(0, state.lives - 1);
       spawnExplosion(this.pos.x, this.pos.y, 20, "#f44");
+    }
+
+    if (this.slowEffect) {
+      this.slowEffect.duration -= dt;
+      if (this.slowEffect.duration <= 0) {
+        this.speed = this.slowEffect.originalSpeed;
+        this.slowEffect = null;
+      }
+    }
+
+    if (this.iceEffect) {
+      this.iceEffectTime -= dt;
+      if (this.iceEffectTime <= 0) {
+        this.iceEffect = false;
+      }
     }
   }
 
@@ -138,6 +158,26 @@ export class Enemy {
     ctx.strokeStyle = this.detailColor;
     ctx.lineWidth = 2;
     ctx.beginPath();
+
+    if (this.iceEffect || this.frozen) {
+      const alpha = this.frozen ? 0.6 : 0.3;
+      ctx.fillStyle = `rgba(180, 230, 255, ${alpha})`;
+      ctx.beginPath();
+      ctx.arc(x, y, this.r + 2, 0, TAU);
+      ctx.fill();
+
+      if (this.frozen) {
+        // Draw ice cracks
+        ctx.strokeStyle = "rgba(255, 255, 255, 0.7)";
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(x - this.r * 0.7, y - this.r * 0.3);
+        ctx.lineTo(x + this.r * 0.5, y + this.r * 0.4);
+        ctx.moveTo(x + this.r * 0.2, y - this.r * 0.6);
+        ctx.lineTo(x - this.r * 0.3, y + this.r * 0.7);
+        ctx.stroke();
+      }
+    }
 
     const spikeCount = 6 + this.tier * 2;
     for (let i = 0; i < spikeCount; i++) {

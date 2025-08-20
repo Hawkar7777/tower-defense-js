@@ -4,6 +4,7 @@ import { GunTower } from "./towers/GunTower.js";
 import { CannonTower } from "./towers/CannonTower.js";
 import { DoubleCannonTower } from "./towers/DoubleCannonTower.js";
 import { LaserTower } from "./towers/LaserTower.js";
+import { IceTower } from "./towers/IceTower.js";
 
 export const TOWER_TYPES = {
   gun: {
@@ -47,5 +48,19 @@ export const TOWER_TYPES = {
     beam: true,
     color: "#ff69e0",
     class: LaserTower,
+  },
+  ice: {
+    // Add Ice Tower
+    name: "Ice Tower",
+    cost: 180,
+    range: 130,
+    fireRate: 2.5,
+    dmg: 8,
+    slowAmount: 0.6,
+    slowDuration: 3,
+    freezeChance: 0.2,
+    bulletSpeed: 300,
+    color: "#6cfaff",
+    class: IceTower,
   },
 };

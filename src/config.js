@@ -1,3 +1,10 @@
+// ===== FILE: C:\Users\kurd7\Downloads\Tower\src\config.js =====
+
+import { GunTower } from "./towers/GunTower.js";
+import { CannonTower } from "./towers/CannonTower.js";
+import { DoubleCannonTower } from "./towers/DoubleCannonTower.js";
+import { LaserTower } from "./towers/LaserTower.js";
+
 export const TOWER_TYPES = {
   gun: {
     name: "Gunner",
@@ -7,6 +14,7 @@ export const TOWER_TYPES = {
     dmg: 12,
     bulletSpeed: 340,
     color: "#6cf",
+    class: GunTower,
   },
   cannon: {
     name: "Cannon",
@@ -17,6 +25,7 @@ export const TOWER_TYPES = {
     splash: 60,
     bulletSpeed: 260,
     color: "#f6c66a",
+    class: CannonTower,
   },
   doubleCanon: {
     name: "Double Canon",
@@ -27,6 +36,7 @@ export const TOWER_TYPES = {
     splash: 55,
     bulletSpeed: 240,
     color: "#f00",
+    class: DoubleCannonTower,
   },
   laser: {
     name: "Laser",
@@ -36,5 +46,6 @@ export const TOWER_TYPES = {
     dmg: 5,
     beam: true,
     color: "#ff69e0",
+    class: LaserTower,
   },
 };

@@ -141,7 +141,8 @@ canvas.addEventListener("mouseup", (e) => {
     ) {
       const spec = TOWER_TYPES[ui.selectedShopKey];
       if (state.money >= spec.cost) {
-        towers.push(new Tower(mouse.gx, mouse.gy, ui.selectedShopKey));
+        const spec = TOWER_TYPES[ui.selectedShopKey];
+        towers.push(new spec.class(mouse.gx, mouse.gy, ui.selectedShopKey));
         state.money -= spec.cost;
         pulse(`-${spec.cost}`);
 

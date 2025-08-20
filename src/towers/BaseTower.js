@@ -1,12 +1,13 @@
-import { ctx } from "./core.js";
-import { dist } from "./utils.js";
-import { spawnMuzzle, spawnBeam } from "./effects.js";
-import { projectiles } from "./state.js";
-import { TOWER_TYPES } from "./config.js";
-import { Bullet } from "./bullet.js";
-import { roundRect } from "./helpers.js";
+// ===== FILE: C:\Users\kurd7\Downloads\Tower\src\towers\BaseTower.js =====
 
-export class Tower {
+import { ctx } from "../core.js";
+import { dist } from "../utils.js";
+import { spawnMuzzle } from "../effects.js";
+import { projectiles } from "../state.js";
+import { Bullet } from "../bullet.js";
+import { roundRect } from "../helpers.js";
+
+export class BaseTower {
   constructor(gx, gy, key) {
     this.gx = gx;
     this.gy = gy;
@@ -17,7 +18,7 @@ export class Tower {
   }
 
   spec() {
-    const base = TOWER_TYPES[this.key];
+    const base = this.constructor.SPEC;
     const mult = 1 + (this.level - 1) * 0.35;
     return {
       name: base.name,
@@ -69,34 +70,24 @@ export class Tower {
       const dps = s.dmg * 60;
       if (this.cool <= 0) {
         best.damage(dps * dt);
-        spawnBeam(c, bp, s.color);
+        this.fireBeam(c, bp, s.color);
       }
       return;
     }
 
     if (this.cool <= 0) {
       this.cool = 1 / s.fireRate;
-
-      // Check for double cannon
-      if (this.key === "doubleCanon") {
-        const offset = 6; // pixels from center
-        const sin = Math.sin(this.rot);
-        const cos = Math.cos(this.rot);
-        // left barrel
-        projectiles.push(
-          new Bullet(c.x - sin * offset, c.y + cos * offset, best, s)
-        );
-        // right barrel
-        projectiles.push(
-          new Bullet(c.x + sin * offset, c.y - cos * offset, best, s)
-        );
-        spawnMuzzle(c.x - sin * offset, c.y + cos * offset, this.rot, s.color);
-        spawnMuzzle(c.x + sin * offset, c.y - cos * offset, this.rot, s.color);
-      } else {
-        projectiles.push(new Bullet(c.x, c.y, best, s));
-        spawnMuzzle(c.x, c.y, this.rot, s.color);
-      }
+      this.fireProjectile(c, best, s);
     }
+  }
+
+  fireProjectile(center, target, spec) {
+    projectiles.push(new Bullet(center.x, center.y, target, spec));
+    spawnMuzzle(center.x, center.y, this.rot, spec.color);
+  }
+
+  fireBeam(start, end, color) {
+    // This will be implemented in the LaserTower class
   }
 
   draw() {
@@ -110,14 +101,8 @@ export class Tower {
     ctx.rotate(this.rot);
     ctx.fillStyle = s.color;
 
-    if (this.key === "doubleCanon") {
-      // draw two barrels
-      const offset = 6;
-      roundRect(-8 - offset, -8, 16, 16, 4, s.color, true);
-      roundRect(-8 + offset, -8, 16, 16, 4, s.color, true);
-    } else {
-      roundRect(-8, -8, 16, 16, 4, s.color, true);
-    }
+    // Default single barrel
+    roundRect(-8, -8, 16, 16, 4, s.color, true);
 
     ctx.fillStyle = "#fff";
     ctx.fillRect(0, -3, 14, 6); // muzzle indicator

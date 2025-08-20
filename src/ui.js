@@ -7,7 +7,12 @@ import { pointAt, blocked } from "./path.js";
 
 export function drawBackground(t, pathArr) {
   ctx.fillStyle = "#0b0f1a";
-  ctx.fillRect(0, 0, Math.max(0, ctx.canvas.width), Math.max(0, ctx.canvas.height));
+  ctx.fillRect(
+    0,
+    0,
+    Math.max(0, ctx.canvas.width),
+    Math.max(0, ctx.canvas.height)
+  );
   ctx.save();
   const W = ctx.canvas.clientWidth;
   const H = ctx.canvas.clientHeight;
@@ -42,14 +47,16 @@ export function drawBackground(t, pathArr) {
     ctx.lineCap = "round";
     ctx.beginPath();
     ctx.moveTo(pathArr[0].x, pathArr[0].y);
-    for (let i = 1; i < pathArr.length; i++) ctx.lineTo(pathArr[i].x, pathArr[i].y);
+    for (let i = 1; i < pathArr.length; i++)
+      ctx.lineTo(pathArr[i].x, pathArr[i].y);
     ctx.stroke();
     ctx.globalAlpha = 1;
     ctx.lineWidth = 3;
     ctx.strokeStyle = "#0cf";
     ctx.beginPath();
     ctx.moveTo(pathArr[0].x, pathArr[0].y);
-    for (let i = 1; i < pathArr.length; i++) ctx.lineTo(pathArr[i].x, pathArr[i].y);
+    for (let i = 1; i < pathArr.length; i++)
+      ctx.lineTo(pathArr[i].x, pathArr[i].y);
     ctx.stroke();
   }
 }
@@ -81,7 +88,8 @@ export function drawTopbar(W) {
     ctx.fillText(p.text, p.x || W - 120, p.y || 58);
     ctx.globalAlpha = 1;
   }
-  for (let i = pulses.length - 1; i >= 0; i--) if (pulses[i].life <= 0) pulses.splice(i, 1);
+  for (let i = pulses.length - 1; i >= 0; i--)
+    if (pulses[i].life <= 0) pulses.splice(i, 1);
 }
 
 export function getShopButtons(W, H) {
@@ -93,52 +101,87 @@ export function getShopButtons(W, H) {
   return keys.map((k, i) => ({ key: k, x: pad + i * (w + 12), y, w, h }));
 }
 
+// ===== FILE: C:\Users\kurd7\Downloads\Tower\src\ui.js =====
+
 export function drawShop(W, H) {
   const buttons = getShopButtons(W, H);
   for (const b of buttons) {
     const spec = TOWER_TYPES[b.key];
     const active = ui.selectedShopKey === b.key;
-    roundRect(
-      b.x,
-      b.y,
-      b.w,
-      b.h,
-      12,
-      active ? "rgba(26,46,76,0.95)" : "rgba(12,22,36,0.9)",
-      true,
-      active ? "#3d6fb6" : "#24496f"
-    );
-    ctx.fillStyle = spec.color;
+    const canAfford = state.money >= spec.cost; // Check if player can afford
+
+    // Apply disabled styling if can't afford
+    const bgColor = canAfford
+      ? active
+        ? "rgba(26,46,76,0.95)"
+        : "rgba(12,22,36,0.9)"
+      : "rgba(36,36,48,0.8)"; // Darker, desaturated background
+
+    const borderColor = canAfford
+      ? active
+        ? "#3d6fb6"
+        : "#24496f"
+      : "#444455"; // Gray border for disabled
+
+    const textColor = canAfford ? spec.color : "#666677"; // Gray text for disabled
+    const costColor = canAfford ? "#bfe7ff" : "#888899"; // Gray cost text
+
+    roundRect(b.x, b.y, b.w, b.h, 12, bgColor, true, borderColor);
+
+    ctx.fillStyle = textColor;
     ctx.font = "700 18px Inter, system-ui";
     ctx.fillText(spec.name, b.x + 16, b.y + 28);
-    ctx.fillStyle = "#bfe7ff";
+    ctx.fillStyle = costColor;
     ctx.font = "500 14px Inter, system-ui";
     ctx.fillText(`$${spec.cost}  •  Rng ${spec.range}`, b.x + 16, b.y + 50);
   }
 }
-
-export function drawGhost(hoveredTile, TILE, selectedShopKey) {
+export function drawGhost(
+  hoveredTile,
+  TILE,
+  selectedShopKey,
+  isDragging = false
+) {
   if (!hoveredTile) return;
-  const gx = hoveredTile.gx,
-    gy = hoveredTile.gy;
-  const x = gx * TILE,
-    y = gy * TILE;
-  const valid = !blocked.has(`${gx},${gy}`);
+
+  const gx = hoveredTile.gx;
+  const gy = hoveredTile.gy;
+  const x = gx * TILE;
+  const y = gy * TILE;
+
+  // Check if placement is valid
+  const valid =
+    gx >= 0 &&
+    gy >= 0 &&
+    gy < Math.floor(ctx.canvas.clientHeight / TILE) - 2 &&
+    !blocked.has(`${gx},${gy}`) &&
+    !towers.some((t) => t.gx === gx && t.gy === gy);
+
   const spec = TOWER_TYPES[selectedShopKey];
   const c = { x: x + TILE / 2, y: y + TILE / 2 };
-  ctx.globalAlpha = 0.12;
+
+  // Draw range circle with higher opacity when dragging
+  ctx.globalAlpha = isDragging ? 0.2 : 0.12;
   ctx.fillStyle = valid ? "#9f9" : "#f99";
   ctx.beginPath();
   ctx.arc(c.x, c.y, spec.range, 0, Math.PI * 2);
   ctx.fill();
   ctx.globalAlpha = 1;
+
+  // Draw ghost tower with higher opacity when dragging
   roundRect(
     x + 4,
     y + 4,
     TILE - 8,
     TILE - 8,
     10,
-    valid ? "rgba(120,220,140,0.35)" : "rgba(255,120,120,0.35)"
+    valid
+      ? isDragging
+        ? "rgba(120,220,140,0.6)"
+        : "rgba(120,220,140,0.35)"
+      : isDragging
+      ? "rgba(255,120,120,0.6)"
+      : "rgba(255,120,120,0.35)"
   );
 }
 
@@ -146,7 +189,7 @@ export function drawInspector(selectedTower) {
   if (!selectedTower) return;
   const t = selectedTower;
   const s = t.spec();
-  const c = t.center();
+  const c = t.center;
   const panel = {
     x: clamp(c.x - 90, 12, ctx.canvas.clientWidth - 192),
     y: clamp(c.y - 110, 12, ctx.canvas.clientHeight - 210),
@@ -167,9 +210,16 @@ export function drawInspector(selectedTower) {
   ctx.font = "700 16px Inter";
   ctx.fillText(`${s.name} Lv.${t.level}`, panel.x + 14, panel.y + 28);
   ctx.font = "500 14px Inter";
-  ctx.fillText(`Dmg ${Math.round(s.dmg)}  Rng ${Math.round(s.range)}`, panel.x + 14, panel.y + 50);
+  ctx.fillText(
+    `Dmg ${Math.round(s.dmg)}  Rng ${Math.round(s.range)}`,
+    panel.x + 14,
+    panel.y + 50
+  );
   ctx.fillText(`Rate ${s.fireRate.toFixed(1)}/s`, panel.x + 14, panel.y + 70);
   ctx.fillText(`U: Upgrade $${t.upgradeCost()}`, panel.x + 14, panel.y + 92);
-  ctx.fillText(`S: Sell $${Math.round(t.sellValue())}`, panel.x + 14, panel.y + 110);
+  ctx.fillText(
+    `S: Sell $${Math.round(t.sellValue())}`,
+    panel.x + 14,
+    panel.y + 110
+  );
 }
-

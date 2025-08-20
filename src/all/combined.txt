@@ -1,0 +1,1169 @@
+
+
+// ===== FILE: C:\Users\kurd7\Downloads\Tower\src\bullet.js =====
+
+import { ctx } from "./core.js";
+import { dist } from "./utils.js";
+import { enemies } from "./state.js";
+import { spawnExplosion, spawnHit } from "./effects.js";
+
+export class Bullet {
+  constructor(x, y, target, spec) {
+    this.x = x;
+    this.y = y;
+    this.target = target;
+    this.speed = spec.bulletSpeed;
+    this.dmg = spec.dmg;
+    this.splash = spec.splash || 0;
+    this.color = spec.color;
+    this.dead = false;
+  }
+
+  update(dt) {
+    if (!this.target || this.target.dead) {
+      this.dead = true;
+      return;
+    }
+
+    const tp = this.target.pos;
+    const a = Math.atan2(tp.y - this.y, tp.x - this.x);
+    const vx = Math.cos(a) * this.speed,
+      vy = Math.sin(a) * this.speed;
+    this.x += vx * dt;
+    this.y += vy * dt;
+
+    if (Math.hypot(tp.x - this.x, tp.y - this.y) < 10) {
+      if (this.splash > 0) {
+        for (const e of enemies) {
+          const d = dist({ x: this.x, y: this.y }, e.pos);
+          if (d <= this.splash) e.damage(this.dmg * (1 - d / this.splash));
+        }
+        spawnExplosion(this.x, this.y, this.splash, this.color);
+      } else {
+        this.target.damage(this.dmg);
+        spawnHit(this.x, this.y, this.color);
+      }
+      this.dead = true;
+    }
+  }
+
+  draw() {
+    ctx.fillStyle = this.color;
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, 3, 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
+
+
+// ===== FILE: C:\Users\kurd7\Downloads\Tower\src\config.js =====
+
+export const TOWER_TYPES = {
+  gun: {
+    name: "Gunner",
+    cost: 80,
+    range: 120,
+    fireRate: 6,
+    dmg: 12,
+    bulletSpeed: 340,
+    color: "#6cf",
+  },
+  cannon: {
+    name: "Cannon",
+    cost: 120,
+    range: 140,
+    fireRate: 1.2,
+    dmg: 55,
+    splash: 60,
+    bulletSpeed: 260,
+    color: "#f6c66a",
+  },
+  doubleCanon: {
+    name: "Double Canon",
+    cost: 160,
+    range: 120,
+    fireRate: 0.9,
+    dmg: 75,
+    splash: 55,
+    bulletSpeed: 240,
+    color: "#f00",
+  },
+  laser: {
+    name: "Laser",
+    cost: 250,
+    range: 150,
+    fireRate: 12,
+    dmg: 5,
+    beam: true,
+    color: "#ff69e0",
+  },
+};
+
+
+// ===== FILE: C:\Users\kurd7\Downloads\Tower\src\core.js =====
+
+// Canvas, sizing and basic exports
+export const DPR = Math.min(2, window.devicePixelRatio || 1);
+export const TILE = 40;
+export let GRID_W = 0;
+export let GRID_H = 0;
+export let W = 0;
+export let H = 0;
+
+export const canvas = document.createElement("canvas");
+canvas.id = "game";
+canvas.style.width = "100%";
+canvas.style.maxWidth = "1100px";
+canvas.style.height = "650px";
+canvas.style.display = "block";
+canvas.style.margin = "24px auto";
+canvas.style.background = "#0b0f1a";
+canvas.style.borderRadius = "16px";
+canvas.style.boxShadow =
+  "0 30px 60px rgba(0,0,0,0.35), inset 0 0 120px rgba(0,180,255,0.04)";
+document.body.appendChild(canvas);
+export const ctx = canvas.getContext("2d");
+
+function computeGrid() {
+  GRID_W = Math.floor(canvas.clientWidth / TILE);
+  GRID_H = Math.floor(canvas.clientHeight / TILE);
+  W = GRID_W * TILE;
+  H = GRID_H * TILE;
+}
+
+export function resize() {
+  const w = Math.min(window.innerWidth - 32, 1100);
+  const h = 650;
+  canvas.width = Math.floor(w * DPR);
+  canvas.height = Math.floor(h * DPR);
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  computeGrid();
+}
+window.addEventListener("resize", resize);
+
+export function syncLogicalSize() {
+  computeGrid();
+  canvas.width = Math.floor(W * DPR);
+  canvas.height = Math.floor(H * DPR);
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+}
+
+
+
+// ===== FILE: C:\Users\kurd7\Downloads\Tower\src\effects.js =====
+
+import { particles, beams, circles, pulses } from "./state.js";
+import { rand, TAU, clamp } from "./utils.js";
+import { ctx } from "./core.js";
+
+export function spawnMuzzle(x, y, rot, color) {
+  for (let i = 0; i < 6; i++)
+    particles.push({
+      x,
+      y,
+      vx: Math.cos(rot + rand(0.5, -0.25)) * rand(220, 60),
+      vy: Math.sin(rot + rand(0.5, -0.25)) * rand(220, 60),
+      life: rand(0.15, 0.06),
+      r: rand(2.5, 1),
+      c: color,
+    });
+}
+export function spawnHit(x, y, color) {
+  for (let i = 0; i < 8; i++)
+    particles.push({
+      x,
+      y,
+      vx: rand(180, -180),
+      vy: rand(180, -180),
+      life: rand(0.25, 0.12),
+      r: rand(2.5, 1),
+      c: color,
+    });
+}
+export function spawnExplosion(x, y, R, color) {
+  for (let i = 0; i < 18; i++) {
+    const a = rand(TAU);
+    particles.push({
+      x,
+      y,
+      vx: Math.cos(a) * rand(220, 60),
+      vy: Math.sin(a) * rand(220, 60),
+      life: rand(0.45, 0.25),
+      r: rand(4, 2),
+      c: color,
+    });
+  }
+  circles.push({ x, y, R, life: 0.3, c: color });
+}
+export function spawnDeath(p) {
+  for (let i = 0; i < 16; i++) {
+    const a = rand(TAU);
+    particles.push({
+      x: p.x,
+      y: p.y,
+      vx: Math.cos(a) * rand(240, 80),
+      vy: Math.sin(a) * rand(240, 80),
+      life: rand(0.55, 0.25),
+      r: rand(4, 2),
+      c: "#9ff",
+    });
+  }
+  pulses.push({ text: "+$", x: 0, y: 0, life: 1.2, c: "#9f9" });
+}
+export function spawnBeam(a, b, color) {
+  beams.push({ a: { ...a }, b: { ...b }, life: 0.06, c: color });
+}
+
+export function updateEffects(dt) {
+  for (const p of particles) {
+    p.x += p.vx * dt;
+    p.y += p.vy * dt;
+    p.life -= dt;
+    p.vx *= 0.98;
+    p.vy *= 0.98;
+  }
+  for (let i = particles.length - 1; i >= 0; i--)
+    if (particles[i].life <= 0) particles.splice(i, 1);
+  for (const b of beams) {
+    b.life -= dt;
+  }
+  for (let i = beams.length - 1; i >= 0; i--) if (beams[i].life <= 0) beams.splice(i, 1);
+  for (const c of circles) {
+    c.life -= dt;
+  }
+  for (let i = circles.length - 1; i >= 0; i--) if (circles[i].life <= 0) circles.splice(i, 1);
+}
+
+export function drawEffects() {
+  // Beams
+  for (const b of beams) {
+    ctx.strokeStyle = b.c;
+    ctx.globalAlpha = clamp(b.life / 0.06, 0, 1);
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(b.a.x, b.a.y);
+    ctx.lineTo(b.b.x, b.b.y);
+    ctx.stroke();
+    ctx.globalAlpha = 1;
+  }
+  // Expanding shock circles
+  for (const c of circles) {
+    const a = clamp(c.life / 0.3, 0, 1);
+    ctx.strokeStyle = c.c;
+    ctx.globalAlpha = a;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(c.x, c.y, (1 - a) * c.R, 0, TAU);
+    ctx.stroke();
+    ctx.globalAlpha = 1;
+  }
+  // Particles
+  for (const p of particles) {
+    ctx.globalAlpha = clamp(p.life * 4, 0, 1);
+    ctx.fillStyle = p.c;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.r, 0, TAU);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+  }
+}
+
+
+
+// ===== FILE: C:\Users\kurd7\Downloads\Tower\src\enemy.js =====
+
+import { ctx } from "./core.js";
+import { clamp } from "./utils.js";
+import { pointAt, totalLen } from "./path.js";
+import { spawnDeath, spawnExplosion } from "./effects.js";
+import { state } from "./state.js";
+
+let difficultyMult = () => 1 + state.wave * 0.15;
+
+export class Enemy {
+  constructor(tier = 0) {
+    this.t = 0;
+    this.speed = 50 * difficultyMult();
+    this.maxHp = (100 + tier * 40) * difficultyMult();
+    this.hp = this.maxHp;
+    this.reward = Math.round((8 + tier * 2) * difficultyMult());
+    this.r = 12;
+    this.dead = false;
+  }
+
+  get pos() {
+    return pointAt(this.t);
+  }
+
+  update(dt) {
+    if (this.dead) return;
+    this.t += (this.speed * dt) / totalLen;
+    if (this.t >= 1) {
+      this.dead = true;
+      state.lives = Math.max(0, state.lives - 1);
+      spawnExplosion(this.pos.x, this.pos.y, 20, "#f44");
+    }
+  }
+
+  damage(d) {
+    if (this.dead) return;
+    this.hp -= d;
+    if (this.hp <= 0) {
+      this.dead = true;
+      state.money += this.reward;
+      spawnDeath(this.pos);
+    }
+  }
+
+  draw() {
+    if (this.dead) return;
+    const { x, y } = this.pos;
+    const TAU = Math.PI * 2;
+    const { r } = this;
+
+    const grd = ctx.createRadialGradient(x, y, 4, x, y, r + 10);
+    grd.addColorStop(0, "#48f");
+    grd.addColorStop(1, "rgba(0,255,255,0.0)");
+    ctx.fillStyle = grd;
+    ctx.beginPath();
+    ctx.arc(x, y, r + 8, 0, TAU);
+    ctx.fill();
+
+    ctx.fillStyle = "#7df";
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, TAU);
+    ctx.fill();
+
+    const w = 28,
+      h = 5;
+    const p = clamp(this.hp / this.maxHp, 0, 1);
+    ctx.fillStyle = "#132";
+    ctx.fillRect(x - w / 2, y - r - 14, w, h);
+    ctx.fillStyle = p > 0.5 ? "#6f6" : p > 0.25 ? "#fd6" : "#f66";
+    ctx.fillRect(x - w / 2, y - r - 14, w * p, h);
+  }
+}
+
+
+// ===== FILE: C:\Users\kurd7\Downloads\Tower\src\entities.js =====
+
+export { Enemy } from "./enemy.js";
+export { Tower } from "./tower.js";
+export { Bullet } from "./bullet.js";
+
+
+// ===== FILE: C:\Users\kurd7\Downloads\Tower\src\helpers.js =====
+
+import { ctx } from "./core.js";
+
+export function roundRect(
+  x,
+  y,
+  w,
+  h,
+  r = 4,
+  fillColor = "#000",
+  fill = true,
+  strokeColor = null
+) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.lineTo(x + w - r, y);
+  ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+  ctx.lineTo(x + w, y + h - r);
+  ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+  ctx.lineTo(x + r, y + h);
+  ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+  ctx.lineTo(x, y + r);
+  ctx.quadraticCurveTo(x, y, x + r, y);
+  ctx.closePath();
+  if (fill) (ctx.fillStyle = fillColor), ctx.fill();
+  if (strokeColor) (ctx.strokeStyle = strokeColor), ctx.stroke();
+}
+
+
+// ===== FILE: C:\Users\kurd7\Downloads\Tower\src\index.mjs =====
+
+import { canvas, ctx, TILE, resize, syncLogicalSize } from "./core.js";
+import { state, enemies, towers, projectiles, particles } from "./state.js";
+import { rand, clamp, dist, TAU, removeFromArray, pulse } from "./utils.js";
+import { TOWER_TYPES } from "./config.js";
+import { initPath, path, blocked, totalLen } from "./path.js";
+import { Enemy, Tower, Bullet } from "./entities.js";
+import {
+  spawnMuzzle,
+  spawnHit,
+  spawnExplosion,
+  spawnDeath,
+  spawnBeam,
+  updateEffects,
+  drawEffects,
+} from "./effects.js";
+import { spawner, startNextWave } from "./spawner.js";
+import {
+  drawBackground,
+  drawTopbar,
+  drawShop,
+  drawGhost,
+  drawInspector,
+  getShopButtons,
+} from "./ui.js";
+import { ui } from "./state.js";
+
+// Ensure sizes
+resize();
+syncLogicalSize();
+initPath();
+
+// Mouse state with drag support
+let mouse = {
+  x: 0,
+  y: 0,
+  gx: 0,
+  gy: 0,
+  down: false,
+  draggingTower: false,
+  dragStartX: 0,
+  dragStartY: 0,
+};
+
+canvas.addEventListener("mousemove", (e) => {
+  const rect = canvas.getBoundingClientRect();
+  mouse.x = e.clientX - rect.left;
+  mouse.y = e.clientY - rect.top;
+  mouse.gx = Math.floor(mouse.x / TILE);
+  mouse.gy = Math.floor(mouse.y / TILE);
+  ui.hoveredTile = { gx: mouse.gx, gy: mouse.gy };
+});
+
+canvas.addEventListener("mousedown", (e) => {
+  const rect = canvas.getBoundingClientRect();
+  mouse.x = e.clientX - rect.left;
+  mouse.y = e.clientY - rect.top;
+  mouse.gx = Math.floor(mouse.x / TILE);
+  mouse.gy = Math.floor(mouse.y / TILE);
+  mouse.down = true;
+  mouse.dragStartX = mouse.x;
+  mouse.dragStartY = mouse.y;
+
+  // Check if clicking on shop button
+  if (mouse.y > ctx.canvas.clientHeight - 100) {
+    const buttons = getShopButtons(
+      ctx.canvas.clientWidth,
+      ctx.canvas.clientHeight
+    );
+    for (const b of buttons) {
+      if (
+        mouse.x >= b.x &&
+        mouse.x <= b.x + b.w &&
+        mouse.y >= b.y &&
+        mouse.y <= b.y + b.h
+      ) {
+        const spec = TOWER_TYPES[b.key];
+        // Don't allow selection if can't afford
+        if (state.money < spec.cost) {
+          pulse("Not enough money!", "#f66");
+          return;
+        }
+
+        ui.selectedShopKey = b.key;
+        ui.selectedTower = null;
+        mouse.draggingTower = true;
+        return;
+      }
+    }
+  }
+
+  // Check if clicking on existing tower to select
+  const t = towers.find((t) => t.gx === mouse.gx && t.gy === mouse.gy);
+  if (t) {
+    ui.selectedTower = t;
+    mouse.draggingTower = false;
+    return;
+  }
+
+  // Start dragging if we have a tower selected from shop
+  if (ui.selectedShopKey) {
+    mouse.draggingTower = true;
+  }
+});
+canvas.addEventListener("mouseup", (e) => {
+  const rect = canvas.getBoundingClientRect();
+  mouse.x = e.clientX - rect.left;
+  mouse.y = e.clientY - rect.top;
+  mouse.gx = Math.floor(mouse.x / TILE);
+  mouse.gy = Math.floor(mouse.y / TILE);
+  mouse.down = false;
+
+  if (mouse.draggingTower) {
+    // Place tower if tile is valid
+    if (
+      mouse.gx >= 0 &&
+      mouse.gy >= 0 &&
+      mouse.gy < Math.floor(ctx.canvas.clientHeight / TILE) - 2 &&
+      !blocked.has(`${mouse.gx},${mouse.gy}`) &&
+      !towers.some((t) => t.gx === mouse.gx && t.gy === mouse.gy)
+    ) {
+      const spec = TOWER_TYPES[ui.selectedShopKey];
+      if (state.money >= spec.cost) {
+        towers.push(new Tower(mouse.gx, mouse.gy, ui.selectedShopKey));
+        state.money -= spec.cost;
+        pulse(`-${spec.cost}`);
+      } else {
+        pulse("Not enough $", "#f66");
+      }
+    }
+  }
+
+  mouse.draggingTower = false;
+});
+
+canvas.addEventListener("mouseleave", () => {
+  ui.hoveredTile = null;
+  mouse.down = false;
+  mouse.draggingTower = false;
+});
+
+window.addEventListener("keydown", (e) => {
+  if (!ui.selectedTower) return;
+  if (e.key.toLowerCase() === "u") {
+    const cost = ui.selectedTower.upgradeCost();
+    if (state.money >= cost) {
+      state.money -= cost;
+      ui.selectedTower.level++;
+      pulse(`Upgrade -${cost}`);
+    } else pulse("Need more $", "#f66");
+  }
+  if (e.key.toLowerCase() === "s") {
+    state.money += Math.round(ui.selectedTower.sellValue());
+    removeFromArray(towers, ui.selectedTower);
+    ui.selectedTower = null;
+    pulse("Sold +$", "#9f9");
+  }
+});
+
+// Main loop
+let last = performance.now();
+startNextWave();
+
+function loop(ts) {
+  const dt = Math.min(0.033, (ts - last) / 1000);
+  last = ts;
+  state.time += dt;
+  if (!state.running) return;
+
+  // Logic
+  spawner(dt);
+  for (const t of towers) t.update(dt, enemies);
+  for (const b of projectiles) b.update(dt);
+  for (const e of enemies) e.update(dt);
+  updateEffects(dt);
+
+  // Cull
+  for (let i = projectiles.length - 1; i >= 0; i--)
+    if (projectiles[i].dead) projectiles.splice(i, 1);
+  for (let i = enemies.length - 1; i >= 0; i--)
+    if (enemies[i].dead) enemies.splice(i, 1);
+  if (state.lives <= 0) {
+    gameOver();
+    return;
+  }
+
+  // Draw
+  drawBackground(state.time, path);
+  drawTopbar(ctx.canvas.clientWidth);
+  drawShop(ctx.canvas.clientWidth, ctx.canvas.clientHeight);
+
+  // Show ghost when dragging or when hovering with a tower selected
+  if (mouse.draggingTower || (ui.hoveredTile && ui.selectedShopKey)) {
+    drawGhost(ui.hoveredTile, TILE, ui.selectedShopKey, mouse.draggingTower);
+  }
+
+  for (const t of towers) t.draw();
+  for (const e of enemies) e.draw();
+  for (const b of projectiles) b.draw();
+  drawEffects();
+  drawInspector(ui.selectedTower);
+
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+
+function gameOver() {
+  drawBackground(state.time, path);
+  drawTopbar(ctx.canvas.clientWidth);
+  ctx.fillStyle = "rgba(10,20,36,0.86)";
+  ctx.fillRect(0, 0, ctx.canvas.clientWidth, ctx.canvas.clientHeight);
+  ctx.fillStyle = "#fff";
+  ctx.font = "800 48px Inter";
+  ctx.textAlign = "center";
+  ctx.fillText(
+    "Game Over",
+    ctx.canvas.clientWidth / 2,
+    ctx.canvas.clientHeight / 2 - 10
+  );
+  ctx.font = "500 18px Inter";
+  ctx.fillStyle = "#bfe7ff";
+  ctx.fillText(
+    `You reached wave ${state.wave}. Refresh to try again!`,
+    ctx.canvas.clientWidth / 2,
+    ctx.canvas.clientHeight / 2 + 28
+  );
+  ctx.textAlign = "start";
+}
+
+// Optional font loader (same as original)
+(async () => {
+  try {
+    const inter = new FontFace(
+      "Inter",
+      "url(https://fonts.gstatic.com/s/inter/v13/UcCO3FwrK3iLTeHuS_fvQtMwCp50KnMaBZV.woff2)"
+    );
+    await inter.load();
+    document.fonts.add(inter);
+  } catch (e) {
+    /* ignore */
+  }
+})();
+
+
+// ===== FILE: C:\Users\kurd7\Downloads\Tower\src\path.js =====
+
+import { TILE } from "./core.js";
+import { lerp } from "./utils.js";
+import { GRID_W, GRID_H, W as _W, H as _H } from "./core.js";
+import { syncLogicalSize } from "./core.js";
+
+// We'll compute path after canvas size sync. Export initPath to call from main.
+export let path = [];
+export let segLens = [];
+export let totalLen = 0;
+export const blocked = new Set();
+
+export function initPath() {
+  // Ensure canvas sizes are current
+  // (main will call syncLogicalSize before this)
+  const W = Math.max(
+    1,
+    Math.floor((document.querySelector("#game").clientWidth || 1100) / TILE) *
+      TILE
+  );
+  const H = Math.max(
+    1,
+    Math.floor((document.querySelector("#game").clientHeight || 650) / TILE) *
+      TILE
+  );
+
+  path = [
+    { x: 0, y: H * 0.65 },
+    { x: W * 0.18, y: H * 0.65 },
+    { x: W * 0.18, y: H * 0.2 },
+    { x: W * 0.45, y: H * 0.2 },
+    { x: W * 0.45, y: H * 0.8 },
+    { x: W * 0.72, y: H * 0.8 },
+    { x: W * 0.72, y: H * 0.35 },
+    { x: W * 0.98, y: H * 0.35 },
+  ];
+
+  segLens.length = 0;
+  totalLen = 0;
+  for (let i = 0; i < path.length - 1; i++) {
+    const a = path[i],
+      b = path[i + 1];
+    const L = Math.hypot(b.x - a.x, b.y - a.y);
+    segLens.push(L);
+    totalLen += L;
+  }
+
+  blocked.clear();
+  for (let i = 0; i < totalLen; i += TILE * 0.6) {
+    const p = pointAt(i / totalLen);
+    const gx = Math.floor(p.x / TILE),
+      gy = Math.floor(p.y / TILE);
+    blocked.add(`${gx},${gy}`);
+  }
+}
+
+export function pointAt(t) {
+  if (totalLen === 0) return { x: 0, y: 0 };
+  let d = t * totalLen;
+  for (let i = 0; i < segLens.length; i++) {
+    if (d <= segLens[i]) {
+      const a = path[i],
+        b = path[i + 1];
+      const r = d / segLens[i];
+      return { x: lerp(a.x, b.x, r), y: lerp(a.y, b.y, r) };
+    }
+    d -= segLens[i];
+  }
+  return { ...path[path.length - 1] };
+}
+
+
+// ===== FILE: C:\Users\kurd7\Downloads\Tower\src\spawner.js =====
+
+import { enemies, state } from "./state.js";
+import { Enemy } from "./entities.js";
+import { pointAt, totalLen } from "./path.js";
+import { pulse } from "./utils.js";
+
+let spawnTimer = 0;
+let toSpawn = 0;
+let tier = 0;
+
+export function startNextWave() {
+  state.wave++;
+  toSpawn = 8 + state.wave * 2;
+  spawnTimer = 0;
+  tier = Math.floor((state.wave - 1) / 1.5);
+  pulse(`Wave ${state.wave}!`, "#adf");
+}
+
+export function spawner(dt) {
+  if (toSpawn <= 0) {
+    if (enemies.length === 0) startNextWave();
+    return;
+  }
+  spawnTimer -= dt;
+  if (spawnTimer <= 0) {
+    enemies.push(new Enemy(tier));
+    spawnTimer = Math.max(0.25, 0.9 - state.wave * 0.03);
+    toSpawn--;
+  }
+}
+
+
+
+// ===== FILE: C:\Users\kurd7\Downloads\Tower\src\state.js =====
+
+// Central mutable state (exported as objects so imported modules can mutate properties)
+export const state = {
+  money: 200,
+  lives: 20,
+  wave: 0,
+  time: 0,
+  running: true,
+};
+
+export const enemies = [];
+export const towers = [];
+export const projectiles = [];
+export const particles = [];
+export const beams = [];
+export const circles = [];
+export const pulses = [];
+
+// UI selections
+export const ui = {
+  selectedShopKey: "gun",
+  hoveredTile: null,
+  selectedTower: null,
+};
+
+
+// ===== FILE: C:\Users\kurd7\Downloads\Tower\src\tower.js =====
+
+import { ctx } from "./core.js";
+import { dist } from "./utils.js";
+import { spawnMuzzle, spawnBeam } from "./effects.js";
+import { projectiles } from "./state.js";
+import { TOWER_TYPES } from "./config.js";
+import { Bullet } from "./bullet.js";
+import { roundRect } from "./helpers.js";
+
+export class Tower {
+  constructor(gx, gy, key) {
+    this.gx = gx;
+    this.gy = gy;
+    this.key = key;
+    this.level = 1;
+    this.cool = 0;
+    this.rot = 0;
+  }
+
+  spec() {
+    const base = TOWER_TYPES[this.key];
+    const mult = 1 + (this.level - 1) * 0.35;
+    return {
+      name: base.name,
+      range: base.range * (1 + (this.level - 1) * 0.08),
+      fireRate: base.fireRate * (1 + (this.level - 1) * 0.05),
+      dmg: base.dmg * mult,
+      bulletSpeed: base.bulletSpeed,
+      splash: base.splash || 0,
+      beam: base.beam || false,
+      color: base.color,
+      cost: base.cost,
+    };
+  }
+
+  get center() {
+    return { x: this.gx * 40 + 20, y: this.gy * 40 + 20 };
+  }
+
+  upgradeCost() {
+    return Math.round(this.spec().cost * (0.75 + this.level * 0.75));
+  }
+
+  sellValue() {
+    return this.spec().cost * 0.7 + (this.level - 1) * this.spec().cost * 0.35;
+  }
+
+  update(dt, enemiesList) {
+    const s = this.spec();
+    this.cool -= dt;
+    let best = null,
+      bestScore = -1;
+
+    for (const e of enemiesList) {
+      if (e.dead) continue;
+      const p = e.pos;
+      const d = dist(this.center, p);
+      if (d <= s.range && e.t > bestScore) {
+        best = e;
+        bestScore = e.t;
+      }
+    }
+
+    if (!best) return;
+    const c = this.center,
+      bp = best.pos;
+    this.rot = Math.atan2(bp.y - c.y, bp.x - c.x);
+
+    if (s.beam) {
+      const dps = s.dmg * 60;
+      if (this.cool <= 0) {
+        best.damage(dps * dt);
+        spawnBeam(c, bp, s.color);
+      }
+      return;
+    }
+
+    if (this.cool <= 0) {
+      this.cool = 1 / s.fireRate;
+
+      // Check for double cannon
+      if (this.key === "doubleCanon") {
+        const offset = 6; // pixels from center
+        const sin = Math.sin(this.rot);
+        const cos = Math.cos(this.rot);
+        // left barrel
+        projectiles.push(
+          new Bullet(c.x - sin * offset, c.y + cos * offset, best, s)
+        );
+        // right barrel
+        projectiles.push(
+          new Bullet(c.x + sin * offset, c.y - cos * offset, best, s)
+        );
+        spawnMuzzle(c.x - sin * offset, c.y + cos * offset, this.rot, s.color);
+        spawnMuzzle(c.x + sin * offset, c.y - cos * offset, this.rot, s.color);
+      } else {
+        projectiles.push(new Bullet(c.x, c.y, best, s));
+        spawnMuzzle(c.x, c.y, this.rot, s.color);
+      }
+    }
+  }
+
+  draw() {
+    const s = this.spec();
+    const { x, y } = this.center;
+
+    roundRect(x - 16, y - 16, 32, 32, 8, "#0e1626", true, "#223c62");
+
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(this.rot);
+    ctx.fillStyle = s.color;
+
+    if (this.key === "doubleCanon") {
+      // draw two barrels
+      const offset = 6;
+      roundRect(-8 - offset, -8, 16, 16, 4, s.color, true);
+      roundRect(-8 + offset, -8, 16, 16, 4, s.color, true);
+    } else {
+      roundRect(-8, -8, 16, 16, 4, s.color, true);
+    }
+
+    ctx.fillStyle = "#fff";
+    ctx.fillRect(0, -3, 14, 6); // muzzle indicator
+    ctx.restore();
+
+    for (let i = 0; i < this.level; i++) {
+      ctx.fillStyle = s.color;
+      ctx.fillRect(x - 10 + i * 6, y + 18, 4, 4);
+    }
+  }
+}
+
+
+// ===== FILE: C:\Users\kurd7\Downloads\Tower\src\ui.js =====
+
+import { ctx, TILE } from "./core.js";
+import { roundRect, hit, clamp } from "./utils.js";
+import { TOWER_TYPES } from "./config.js";
+import { state, pulses, enemies, towers } from "./state.js";
+import { ui } from "./state.js";
+import { pointAt, blocked } from "./path.js";
+
+export function drawBackground(t, pathArr) {
+  ctx.fillStyle = "#0b0f1a";
+  ctx.fillRect(
+    0,
+    0,
+    Math.max(0, ctx.canvas.width),
+    Math.max(0, ctx.canvas.height)
+  );
+  ctx.save();
+  const W = ctx.canvas.clientWidth;
+  const H = ctx.canvas.clientHeight;
+  const g = ctx.createLinearGradient(0, 0, W, H);
+  g.addColorStop(0, "rgba(0,180,255,0.05)");
+  g.addColorStop(1, "rgba(255,0,220,0.05)");
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, W, H);
+  ctx.globalAlpha = 0.5;
+  ctx.strokeStyle = "rgba(255,255,255,0.05)";
+  ctx.lineWidth = 1;
+  for (let x = 0; x <= W; x += TILE) {
+    ctx.beginPath();
+    ctx.moveTo(x, 0);
+    ctx.lineTo(x, H);
+    ctx.stroke();
+  }
+  for (let y = 0; y <= H; y += TILE) {
+    ctx.beginPath();
+    ctx.moveTo(0, y);
+    ctx.lineTo(W, y);
+    ctx.stroke();
+  }
+  ctx.globalAlpha = 1;
+  ctx.restore();
+
+  // Neon path
+  if (pathArr && pathArr.length) {
+    ctx.strokeStyle = "#29e3ff";
+    ctx.lineWidth = 10;
+    ctx.globalAlpha = 0.15;
+    ctx.lineCap = "round";
+    ctx.beginPath();
+    ctx.moveTo(pathArr[0].x, pathArr[0].y);
+    for (let i = 1; i < pathArr.length; i++)
+      ctx.lineTo(pathArr[i].x, pathArr[i].y);
+    ctx.stroke();
+    ctx.globalAlpha = 1;
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = "#0cf";
+    ctx.beginPath();
+    ctx.moveTo(pathArr[0].x, pathArr[0].y);
+    for (let i = 1; i < pathArr.length; i++)
+      ctx.lineTo(pathArr[i].x, pathArr[i].y);
+    ctx.stroke();
+  }
+}
+
+export function drawTopbar(W) {
+  roundRect(
+    12,
+    12,
+    Math.max(200, W - 24),
+    64,
+    14,
+    "rgba(10,20,36,0.85)",
+    true,
+    "rgba(42,72,116,0.8)"
+  );
+  ctx.font = "700 22px Inter, system-ui, -apple-system, Segoe UI, Roboto";
+  ctx.fillStyle = "#bfe7ff";
+  ctx.fillText(`Wave ${state.wave}`, 28, 52);
+  ctx.fillStyle = "#e6ffb3";
+  ctx.fillText(`$ ${state.money}`, 160, 52);
+  ctx.fillStyle = state.lives > 5 ? "#b3ffd9" : "#ffc7c7";
+  ctx.fillText(`❤ ${state.lives}`, 260, 52);
+
+  for (const p of pulses) {
+    p.y -= 20 / 60;
+    p.life -= 1 / 60;
+    ctx.globalAlpha = Math.max(0, p.life);
+    ctx.fillStyle = p.c;
+    ctx.fillText(p.text, p.x || W - 120, p.y || 58);
+    ctx.globalAlpha = 1;
+  }
+  for (let i = pulses.length - 1; i >= 0; i--)
+    if (pulses[i].life <= 0) pulses.splice(i, 1);
+}
+
+export function getShopButtons(W, H) {
+  const pad = 18;
+  const y = H - 88;
+  const h = 74;
+  const w = 170;
+  const keys = Object.keys(TOWER_TYPES);
+  return keys.map((k, i) => ({ key: k, x: pad + i * (w + 12), y, w, h }));
+}
+
+// ===== FILE: C:\Users\kurd7\Downloads\Tower\src\ui.js =====
+
+export function drawShop(W, H) {
+  const buttons = getShopButtons(W, H);
+  for (const b of buttons) {
+    const spec = TOWER_TYPES[b.key];
+    const active = ui.selectedShopKey === b.key;
+    const canAfford = state.money >= spec.cost; // Check if player can afford
+
+    // Apply disabled styling if can't afford
+    const bgColor = canAfford
+      ? active
+        ? "rgba(26,46,76,0.95)"
+        : "rgba(12,22,36,0.9)"
+      : "rgba(36,36,48,0.8)"; // Darker, desaturated background
+
+    const borderColor = canAfford
+      ? active
+        ? "#3d6fb6"
+        : "#24496f"
+      : "#444455"; // Gray border for disabled
+
+    const textColor = canAfford ? spec.color : "#666677"; // Gray text for disabled
+    const costColor = canAfford ? "#bfe7ff" : "#888899"; // Gray cost text
+
+    roundRect(b.x, b.y, b.w, b.h, 12, bgColor, true, borderColor);
+
+    ctx.fillStyle = textColor;
+    ctx.font = "700 18px Inter, system-ui";
+    ctx.fillText(spec.name, b.x + 16, b.y + 28);
+    ctx.fillStyle = costColor;
+    ctx.font = "500 14px Inter, system-ui";
+    ctx.fillText(`$${spec.cost}  •  Rng ${spec.range}`, b.x + 16, b.y + 50);
+  }
+}
+export function drawGhost(
+  hoveredTile,
+  TILE,
+  selectedShopKey,
+  isDragging = false
+) {
+  if (!hoveredTile) return;
+
+  const gx = hoveredTile.gx;
+  const gy = hoveredTile.gy;
+  const x = gx * TILE;
+  const y = gy * TILE;
+
+  // Check if placement is valid
+  const valid =
+    gx >= 0 &&
+    gy >= 0 &&
+    gy < Math.floor(ctx.canvas.clientHeight / TILE) - 2 &&
+    !blocked.has(`${gx},${gy}`) &&
+    !towers.some((t) => t.gx === gx && t.gy === gy);
+
+  const spec = TOWER_TYPES[selectedShopKey];
+  const c = { x: x + TILE / 2, y: y + TILE / 2 };
+
+  // Draw range circle with higher opacity when dragging
+  ctx.globalAlpha = isDragging ? 0.2 : 0.12;
+  ctx.fillStyle = valid ? "#9f9" : "#f99";
+  ctx.beginPath();
+  ctx.arc(c.x, c.y, spec.range, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.globalAlpha = 1;
+
+  // Draw ghost tower with higher opacity when dragging
+  roundRect(
+    x + 4,
+    y + 4,
+    TILE - 8,
+    TILE - 8,
+    10,
+    valid
+      ? isDragging
+        ? "rgba(120,220,140,0.6)"
+        : "rgba(120,220,140,0.35)"
+      : isDragging
+      ? "rgba(255,120,120,0.6)"
+      : "rgba(255,120,120,0.35)"
+  );
+}
+
+export function drawInspector(selectedTower) {
+  if (!selectedTower) return;
+  const t = selectedTower;
+  const s = t.spec();
+  const c = t.center;
+  const panel = {
+    x: clamp(c.x - 90, 12, ctx.canvas.clientWidth - 192),
+    y: clamp(c.y - 110, 12, ctx.canvas.clientHeight - 210),
+    w: 180,
+    h: 120,
+  };
+  roundRect(
+    panel.x,
+    panel.y,
+    panel.w,
+    panel.h,
+    12,
+    "rgba(12,22,36,0.95)",
+    true,
+    "#2c527f"
+  );
+  ctx.fillStyle = "#bfe7ff";
+  ctx.font = "700 16px Inter";
+  ctx.fillText(`${s.name} Lv.${t.level}`, panel.x + 14, panel.y + 28);
+  ctx.font = "500 14px Inter";
+  ctx.fillText(
+    `Dmg ${Math.round(s.dmg)}  Rng ${Math.round(s.range)}`,
+    panel.x + 14,
+    panel.y + 50
+  );
+  ctx.fillText(`Rate ${s.fireRate.toFixed(1)}/s`, panel.x + 14, panel.y + 70);
+  ctx.fillText(`U: Upgrade $${t.upgradeCost()}`, panel.x + 14, panel.y + 92);
+  ctx.fillText(
+    `S: Sell $${Math.round(t.sellValue())}`,
+    panel.x + 14,
+    panel.y + 110
+  );
+}
+
+
+// ===== FILE: C:\Users\kurd7\Downloads\Tower\src\utils.js =====
+
+import { pulses } from "./state.js";
+import { ctx } from "./core.js";
+
+export const TAU = Math.PI * 2;
+export const rand = (a = 1, b = 0) => Math.random() * (a - b) + b;
+export const clamp = (v, min, max) => Math.max(min, Math.min(max, v));
+export const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
+export const lerp = (a, b, t) => a + (b - a) * t;
+
+export function roundRect(x, y, w, h, r, fillStyle, fill = true, strokeStyle) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y, x + w, y + h, r);
+  ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r);
+  ctx.arcTo(x, y, x + w, y, r);
+  ctx.closePath();
+  if (fill) {
+    ctx.fillStyle = fillStyle;
+    ctx.fill();
+  }
+  if (strokeStyle) {
+    ctx.strokeStyle = strokeStyle;
+    ctx.stroke();
+  }
+}
+
+export function hit(p, r) {
+  return p.x >= r.x && p.x <= r.x + r.w && p.y >= r.y && p.y <= r.y + r.h;
+}
+
+export function removeFromArray(arr, item) {
+  const i = arr.indexOf(item);
+  if (i >= 0) arr.splice(i, 1);
+}
+
+export function pulse(text, color = "#adf") {
+  pulses.push({ text, x: 0, y: 0, life: 1.2, c: color });
+}
+

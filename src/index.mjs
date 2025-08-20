@@ -1,13 +1,27 @@
-// Main entry - wires everything together
 import { canvas, ctx, TILE, resize, syncLogicalSize } from "./core.js";
 import { state, enemies, towers, projectiles, particles } from "./state.js";
 import { rand, clamp, dist, TAU, removeFromArray, pulse } from "./utils.js";
 import { TOWER_TYPES } from "./config.js";
 import { initPath, path, blocked, totalLen } from "./path.js";
 import { Enemy, Tower, Bullet } from "./entities.js";
-import { spawnMuzzle, spawnHit, spawnExplosion, spawnDeath, spawnBeam, updateEffects, drawEffects } from "./effects.js";
+import {
+  spawnMuzzle,
+  spawnHit,
+  spawnExplosion,
+  spawnDeath,
+  spawnBeam,
+  updateEffects,
+  drawEffects,
+} from "./effects.js";
 import { spawner, startNextWave } from "./spawner.js";
-import { drawBackground, drawTopbar, drawShop, drawGhost, drawInspector, getShopButtons } from "./ui.js";
+import {
+  drawBackground,
+  drawTopbar,
+  drawShop,
+  drawGhost,
+  drawInspector,
+  getShopButtons,
+} from "./ui.js";
 import { ui } from "./state.js";
 
 // Ensure sizes
@@ -15,8 +29,17 @@ resize();
 syncLogicalSize();
 initPath();
 
-// local shortcuts
-let mouse = { x: 0, y: 0, gx: 0, gy: 0 };
+// Mouse state with drag support
+let mouse = {
+  x: 0,
+  y: 0,
+  gx: 0,
+  gy: 0,
+  down: false,
+  draggingTower: false,
+  dragStartX: 0,
+  dragStartY: 0,
+};
 
 canvas.addEventListener("mousemove", (e) => {
   const rect = canvas.getBoundingClientRect();
@@ -26,42 +49,93 @@ canvas.addEventListener("mousemove", (e) => {
   mouse.gy = Math.floor(mouse.y / TILE);
   ui.hoveredTile = { gx: mouse.gx, gy: mouse.gy };
 });
-canvas.addEventListener("mouseleave", () => (ui.hoveredTile = null));
 
-canvas.addEventListener("click", () => {
-  // Click on UI shop?
+canvas.addEventListener("mousedown", (e) => {
+  const rect = canvas.getBoundingClientRect();
+  mouse.x = e.clientX - rect.left;
+  mouse.y = e.clientY - rect.top;
+  mouse.gx = Math.floor(mouse.x / TILE);
+  mouse.gy = Math.floor(mouse.y / TILE);
+  mouse.down = true;
+  mouse.dragStartX = mouse.x;
+  mouse.dragStartY = mouse.y;
+
+  // Check if clicking on shop button
   if (mouse.y > ctx.canvas.clientHeight - 100) {
-    const buttons = getShopButtons(ctx.canvas.clientWidth, ctx.canvas.clientHeight);
+    const buttons = getShopButtons(
+      ctx.canvas.clientWidth,
+      ctx.canvas.clientHeight
+    );
     for (const b of buttons) {
-      if (mouse.x >= b.x && mouse.x <= b.x + b.w && mouse.y >= b.y && mouse.y <= b.y + b.h) {
+      if (
+        mouse.x >= b.x &&
+        mouse.x <= b.x + b.w &&
+        mouse.y >= b.y &&
+        mouse.y <= b.y + b.h
+      ) {
+        const spec = TOWER_TYPES[b.key];
+        // Don't allow selection if can't afford
+        if (state.money < spec.cost) {
+          pulse("Not enough money!", "#f66");
+          return;
+        }
+
         ui.selectedShopKey = b.key;
         ui.selectedTower = null;
+        mouse.draggingTower = true;
         return;
       }
     }
   }
 
-  // Click existing tower to select
+  // Check if clicking on existing tower to select
   const t = towers.find((t) => t.gx === mouse.gx && t.gy === mouse.gy);
   if (t) {
     ui.selectedTower = t;
+    mouse.draggingTower = false;
     return;
   }
 
-  // Place tower if tile is valid
-  if (mouse.gx < 0 || mouse.gy < 0) return;
-  if (mouse.gy >= Math.floor(ctx.canvas.clientHeight / TILE) - 2) return;
-  if (blocked.has(`${mouse.gx},${mouse.gy}`)) return;
-  if (towers.some((t) => t.gx === mouse.gx && t.gy === mouse.gy)) return;
-
-  const spec = TOWER_TYPES[ui.selectedShopKey];
-  if (state.money >= spec.cost) {
-    towers.push(new Tower(mouse.gx, mouse.gy, ui.selectedShopKey));
-    state.money -= spec.cost;
-    pulse(`-${spec.cost}`);
-  } else {
-    pulse("Not enough $", "#f66");
+  // Start dragging if we have a tower selected from shop
+  if (ui.selectedShopKey) {
+    mouse.draggingTower = true;
   }
+});
+canvas.addEventListener("mouseup", (e) => {
+  const rect = canvas.getBoundingClientRect();
+  mouse.x = e.clientX - rect.left;
+  mouse.y = e.clientY - rect.top;
+  mouse.gx = Math.floor(mouse.x / TILE);
+  mouse.gy = Math.floor(mouse.y / TILE);
+  mouse.down = false;
+
+  if (mouse.draggingTower) {
+    // Place tower if tile is valid
+    if (
+      mouse.gx >= 0 &&
+      mouse.gy >= 0 &&
+      mouse.gy < Math.floor(ctx.canvas.clientHeight / TILE) - 2 &&
+      !blocked.has(`${mouse.gx},${mouse.gy}`) &&
+      !towers.some((t) => t.gx === mouse.gx && t.gy === mouse.gy)
+    ) {
+      const spec = TOWER_TYPES[ui.selectedShopKey];
+      if (state.money >= spec.cost) {
+        towers.push(new Tower(mouse.gx, mouse.gy, ui.selectedShopKey));
+        state.money -= spec.cost;
+        pulse(`-${spec.cost}`);
+      } else {
+        pulse("Not enough $", "#f66");
+      }
+    }
+  }
+
+  mouse.draggingTower = false;
+});
+
+canvas.addEventListener("mouseleave", () => {
+  ui.hoveredTile = null;
+  mouse.down = false;
+  mouse.draggingTower = false;
 });
 
 window.addEventListener("keydown", (e) => {
@@ -100,8 +174,10 @@ function loop(ts) {
   updateEffects(dt);
 
   // Cull
-  for (let i = projectiles.length - 1; i >= 0; i--) if (projectiles[i].dead) projectiles.splice(i, 1);
-  for (let i = enemies.length - 1; i >= 0; i--) if (enemies[i].dead) enemies.splice(i, 1);
+  for (let i = projectiles.length - 1; i >= 0; i--)
+    if (projectiles[i].dead) projectiles.splice(i, 1);
+  for (let i = enemies.length - 1; i >= 0; i--)
+    if (enemies[i].dead) enemies.splice(i, 1);
   if (state.lives <= 0) {
     gameOver();
     return;
@@ -111,7 +187,12 @@ function loop(ts) {
   drawBackground(state.time, path);
   drawTopbar(ctx.canvas.clientWidth);
   drawShop(ctx.canvas.clientWidth, ctx.canvas.clientHeight);
-  drawGhost(ui.hoveredTile, TILE, ui.selectedShopKey);
+
+  // Show ghost when dragging or when hovering with a tower selected
+  if (mouse.draggingTower || (ui.hoveredTile && ui.selectedShopKey)) {
+    drawGhost(ui.hoveredTile, TILE, ui.selectedShopKey, mouse.draggingTower);
+  }
+
   for (const t of towers) t.draw();
   for (const e of enemies) e.draw();
   for (const b of projectiles) b.draw();
@@ -130,10 +211,18 @@ function gameOver() {
   ctx.fillStyle = "#fff";
   ctx.font = "800 48px Inter";
   ctx.textAlign = "center";
-  ctx.fillText("Game Over", ctx.canvas.clientWidth / 2, ctx.canvas.clientHeight / 2 - 10);
+  ctx.fillText(
+    "Game Over",
+    ctx.canvas.clientWidth / 2,
+    ctx.canvas.clientHeight / 2 - 10
+  );
   ctx.font = "500 18px Inter";
   ctx.fillStyle = "#bfe7ff";
-  ctx.fillText(`You reached wave ${state.wave}. Refresh to try again!`, ctx.canvas.clientWidth / 2, ctx.canvas.clientHeight / 2 + 28);
+  ctx.fillText(
+    `You reached wave ${state.wave}. Refresh to try again!`,
+    ctx.canvas.clientWidth / 2,
+    ctx.canvas.clientHeight / 2 + 28
+  );
   ctx.textAlign = "start";
 }
 
@@ -150,9 +239,3 @@ function gameOver() {
     /* ignore */
   }
 })();
-
-// Notes:
-// - Import these files as ES modules in an environment that supports them (modern browsers).
-// - The project preserves the original class APIs (Enemy.pos getter, Tower.spec() method, Tower.center getter).
-// - Call syncLogicalSize() and initPath() after the canvas is in the DOM (done above).
-// - You can further split UI functions or tweak exports to taste.

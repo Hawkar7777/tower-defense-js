@@ -37,4 +37,3 @@ export function removeFromArray(arr, item) {
 export function pulse(text, color = "#adf") {
   pulses.push({ text, x: 0, y: 0, life: 1.2, c: color });
 }
-

@@ -6,6 +6,8 @@ import { DoubleCannonTower } from "./towers/DoubleCannonTower.js";
 import { LaserTower } from "./towers/LaserTower.js";
 import { IceTower } from "./towers/IceTower.js";
 import { TeslaTower } from "./towers/TeslaTower.js";
+import { PoisonTower } from "./towers/PoisonTower.js";
+import { MissileTower } from "./towers/MissileTower.js";
 
 export const TOWER_TYPES = {
   gun: {
@@ -76,5 +78,32 @@ export const TOWER_TYPES = {
     stunDuration: 1, // seconds
     color: "#9d4edd",
     class: TeslaTower,
+  },
+  poison: {
+    // Add Poison Tower
+    name: "Poison Tower",
+    cost: 190,
+    range: 110,
+    fireRate: 1.5,
+    dmg: 15,
+    dotDamage: 8, // Damage per second
+    dotDuration: 4, // seconds
+    spreadRange: 60, // Range for poison spread
+    cloudDuration: 3, // Lingering cloud duration
+    color: "#4CAF50",
+    class: PoisonTower,
+  },
+  missile: {
+    name: "Missile Tower",
+    cost: 280,
+    range: 160,
+    fireRate: 0.8,
+    dmg: 70,
+    splash: 80, // Splash damage radius
+    bulletSpeed: 180, // Slower but homing
+    homingStrength: 0.1, // How strongly missiles home in
+    retarget: true, // Can retarget if original target dies
+    color: "#FF5722",
+    class: MissileTower,
   },
 };

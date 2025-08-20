@@ -2,6 +2,8 @@
 
 // ===== FILE: C:\Users\kurd7\Downloads\Tower\src\bullet.js =====
 
+// ===== FILE: C:\Users\kurd7\Downloads\Tower\src\bullet.js =====
+
 import { ctx } from "./core.js";
 import { dist } from "./utils.js";
 import { enemies } from "./state.js";
@@ -17,6 +19,12 @@ export class Bullet {
     this.splash = spec.splash || 0;
     this.color = spec.color;
     this.dead = false;
+
+    // Ice properties (will be undefined for non-ice bullets)
+    this.isIce = spec.isIce;
+    this.slowAmount = spec.slowAmount;
+    this.slowDuration = spec.slowDuration;
+    this.freezeChance = spec.freezeChance;
   }
 
   update(dt) {
@@ -41,22 +49,95 @@ export class Bullet {
         spawnExplosion(this.x, this.y, this.splash, this.color);
       } else {
         this.target.damage(this.dmg);
+
+        // Apply ice effects if this is an ice bullet
+        if (this.isIce) {
+          this.applyIceEffect(this.target);
+        }
+
         spawnHit(this.x, this.y, this.color);
       }
       this.dead = true;
     }
   }
 
+  applyIceEffect(enemy) {
+    // Apply slow effect
+    if (enemy.slowEffect) {
+      // Refresh duration if already slowed
+      enemy.slowEffect.duration = this.slowDuration;
+    } else {
+      // Create new slow effect
+      enemy.slowEffect = {
+        originalSpeed: enemy.speed,
+        amount: this.slowAmount,
+        duration: this.slowDuration,
+      };
+      enemy.speed *= 1 - this.slowAmount;
+    }
+
+    // Apply freeze chance
+    if (Math.random() < this.freezeChance && !enemy.frozen) {
+      enemy.frozen = true;
+      enemy.speed = 0;
+
+      // Set timeout to unfreeze
+      setTimeout(() => {
+        if (!enemy.dead) {
+          enemy.frozen = false;
+          enemy.speed = enemy.slowEffect
+            ? enemy.slowEffect.originalSpeed * (1 - enemy.slowEffect.amount)
+            : enemy.slowEffect.originalSpeed;
+        }
+      }, this.slowDuration * 500); // Freeze for half the slow duration
+    }
+
+    // Visual ice effect on enemy
+    enemy.iceEffect = true;
+    enemy.iceEffectTime = this.slowDuration;
+  }
+
   draw() {
     ctx.fillStyle = this.color;
-    ctx.beginPath();
-    ctx.arc(this.x, this.y, 3, 0, Math.PI * 2);
-    ctx.fill();
+
+    // Different appearance for ice bullets
+    if (this.isIce) {
+      ctx.strokeStyle = "#ffffff";
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.arc(this.x, this.y, 4, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+
+      // Ice crystal effect
+      ctx.strokeStyle = "rgba(255, 255, 255, 0.8)";
+      ctx.beginPath();
+      ctx.moveTo(this.x, this.y - 5);
+      ctx.lineTo(this.x + 3.5, this.y);
+      ctx.lineTo(this.x, this.y + 5);
+      ctx.lineTo(this.x - 3.5, this.y);
+      ctx.closePath();
+      ctx.stroke();
+    } else {
+      ctx.beginPath();
+      ctx.arc(this.x, this.y, 3, 0, Math.PI * 2);
+      ctx.fill();
+    }
   }
 }
 
 
 // ===== FILE: C:\Users\kurd7\Downloads\Tower\src\config.js =====
+
+// ===== FILE: C:\Users\kurd7\Downloads\Tower\src\config.js =====
+
+import { GunTower } from "./towers/GunTower.js";
+import { CannonTower } from "./towers/CannonTower.js";
+import { DoubleCannonTower } from "./towers/DoubleCannonTower.js";
+import { LaserTower } from "./towers/LaserTower.js";
+import { IceTower } from "./towers/IceTower.js";
+import { TeslaTower } from "./towers/TeslaTower.js";
+import { PoisonTower } from "./towers/PoisonTower.js";
 
 export const TOWER_TYPES = {
   gun: {
@@ -67,6 +148,7 @@ export const TOWER_TYPES = {
     dmg: 12,
     bulletSpeed: 340,
     color: "#6cf",
+    class: GunTower,
   },
   cannon: {
     name: "Cannon",
@@ -77,6 +159,7 @@ export const TOWER_TYPES = {
     splash: 60,
     bulletSpeed: 260,
     color: "#f6c66a",
+    class: CannonTower,
   },
   doubleCanon: {
     name: "Double Canon",
@@ -87,6 +170,7 @@ export const TOWER_TYPES = {
     splash: 55,
     bulletSpeed: 240,
     color: "#f00",
+    class: DoubleCannonTower,
   },
   laser: {
     name: "Laser",
@@ -96,6 +180,48 @@ export const TOWER_TYPES = {
     dmg: 5,
     beam: true,
     color: "#ff69e0",
+    class: LaserTower,
+  },
+  ice: {
+    // Add Ice Tower
+    name: "Ice Tower",
+    cost: 180,
+    range: 130,
+    fireRate: 2.5,
+    dmg: 8,
+    slowAmount: 0.6,
+    slowDuration: 3,
+    freezeChance: 0.2,
+    bulletSpeed: 300,
+    color: "#6cfaff",
+    class: IceTower,
+  },
+  tesla: {
+    name: "Tesla Tower",
+    cost: 220,
+    range: 140,
+    fireRate: 1.8,
+    dmg: 25,
+    chainCount: 3, // Jumps to 3 additional targets
+    chainRange: 80, // Range for chain jumps
+    stunChance: 0.1, // 30% chance to stun
+    stunDuration: 1, // seconds
+    color: "#9d4edd",
+    class: TeslaTower,
+  },
+  poison: {
+    // Add Poison Tower
+    name: "Poison Tower",
+    cost: 190,
+    range: 110,
+    fireRate: 1.5,
+    dmg: 15,
+    dotDamage: 8, // Damage per second
+    dotDuration: 4, // seconds
+    spreadRange: 60, // Range for poison spread
+    cloudDuration: 3, // Lingering cloud duration
+    color: "#4CAF50",
+    class: PoisonTower,
   },
 };
 
@@ -227,34 +353,51 @@ export function updateEffects(dt) {
   for (const b of beams) {
     b.life -= dt;
   }
-  for (let i = beams.length - 1; i >= 0; i--) if (beams[i].life <= 0) beams.splice(i, 1);
+  for (let i = beams.length - 1; i >= 0; i--)
+    if (beams[i].life <= 0) beams.splice(i, 1);
   for (const c of circles) {
     c.life -= dt;
   }
-  for (let i = circles.length - 1; i >= 0; i--) if (circles[i].life <= 0) circles.splice(i, 1);
+  for (let i = circles.length - 1; i >= 0; i--)
+    if (circles[i].life <= 0) circles.splice(i, 1);
 }
 
 export function drawEffects() {
   // Beams
   for (const b of beams) {
-    ctx.strokeStyle = b.c;
-    ctx.globalAlpha = clamp(b.life / 0.06, 0, 1);
-    ctx.lineWidth = 3;
-    ctx.beginPath();
-    ctx.moveTo(b.a.x, b.a.y);
-    ctx.lineTo(b.b.x, b.b.y);
-    ctx.stroke();
+    if (b.type === "lightning") {
+      // Call the standalone function, not this.drawLightningArc
+      drawLightningArc(b.a, b.b, b.c, b.life / 0.15);
+    } else {
+      // Regular beam drawing code
+      ctx.strokeStyle = b.c;
+      ctx.globalAlpha = clamp(b.life / 0.06, 0, 1);
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(b.a.x, b.a.y);
+      ctx.lineTo(b.b.x, b.b.y);
+      ctx.stroke();
+    }
     ctx.globalAlpha = 1;
   }
   // Expanding shock circles
   for (const c of circles) {
-    const a = clamp(c.life / 0.3, 0, 1);
-    ctx.strokeStyle = c.c;
-    ctx.globalAlpha = a;
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.arc(c.x, c.y, (1 - a) * c.R, 0, TAU);
-    ctx.stroke();
+    if (c.type === "poison") {
+      const alpha = clamp((c.life / c.R) * 0.3, 0, 0.3); // Fade based on remaining life
+      ctx.fillStyle = `rgba(76, 175, 80, ${alpha})`;
+      ctx.beginPath();
+      ctx.arc(c.x, c.y, c.R * (1 - c.life / c.R), 0, TAU);
+      ctx.fill();
+    } else {
+      // Regular circle drawing code
+      const a = clamp(c.life / 0.3, 0, 1);
+      ctx.strokeStyle = c.c;
+      ctx.globalAlpha = a;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(c.x, c.y, (1 - a) * c.R, 0, TAU);
+      ctx.stroke();
+    }
     ctx.globalAlpha = 1;
   }
   // Particles
@@ -268,6 +411,97 @@ export function drawEffects() {
   }
 }
 
+export function spawnLightningArc(start, end, color) {
+  beams.push({
+    a: { ...start },
+    b: { ...end },
+    life: 0.15,
+    c: color,
+    type: "lightning",
+    jagged: true,
+  });
+}
+
+export function spawnElectricExplosion(x, y) {
+  circles.push({
+    x,
+    y,
+    R: 25,
+    life: 0.4,
+    c: "#e0aaff",
+    type: "electric",
+  });
+
+  for (let i = 0; i < 12; i++) {
+    const angle = Math.random() * TAU;
+    particles.push({
+      x,
+      y,
+      vx: Math.cos(angle) * rand(300, 100),
+      vy: Math.sin(angle) * rand(300, 100),
+      life: rand(0.4, 0.2),
+      r: rand(3, 1),
+      c: "#e0aaff",
+      gravity: 0.1,
+      fade: 0.85,
+    });
+  }
+}
+
+function drawLightningArc(start, end, color, progress) {
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 2;
+  ctx.globalAlpha = clamp(progress, 0, 1);
+
+  const segments = 8;
+  const dx = (end.x - start.x) / segments;
+  const dy = (end.y - start.y) / segments;
+
+  ctx.beginPath();
+  ctx.moveTo(start.x, start.y);
+
+  for (let i = 1; i <= segments; i++) {
+    const x = start.x + dx * i;
+    const y = start.y + dy * i;
+    const offsetX = (Math.random() - 0.5) * 15 * (1 - progress);
+    const offsetY = (Math.random() - 0.5) * 15 * (1 - progress);
+    ctx.lineTo(x + offsetX, y + offsetY);
+  }
+
+  ctx.stroke();
+  ctx.globalAlpha = 1;
+}
+
+export function spawnPoisonCloud(x, y, duration, radius) {
+  // Create a lingering poison cloud effect
+  circles.push({
+    x,
+    y,
+    R: radius,
+    life: duration,
+    c: "#4CAF50",
+    type: "poison",
+    alpha: 0.3,
+  });
+
+  // Add poison particles
+  for (let i = 0; i < 8; i++) {
+    const angle = Math.random() * TAU;
+    const distance = Math.random() * radius;
+
+    particles.push({
+      x: x + Math.cos(angle) * distance,
+      y: y + Math.sin(angle) * distance,
+      vx: (Math.random() - 0.5) * 20,
+      vy: (Math.random() - 0.5) * 20,
+      life: duration * 0.8,
+      r: 2 + Math.random() * 2,
+      c: "#4CAF50",
+      gravity: -0.1, // Reverse gravity for rising effect
+      fade: 0.97,
+    });
+  }
+}
 
 
 // ===== FILE: C:\Users\kurd7\Downloads\Tower\src\enemy.js =====
@@ -359,6 +593,23 @@ export class Enemy {
     this.dead = false;
     this.animationOffset = rand(Math.PI * 2);
     this.tier = tier;
+
+    this.slowEffect = null;
+    this.frozen = false;
+    this.iceEffect = false;
+    this.iceEffectTime = 0;
+
+    // Add these properties to the Enemy class constructor:
+    this.stunned = false;
+    this.originalSpeed = this.speed;
+    this.electricEffect = false;
+    this.electricEffectTime = 0;
+
+    // Add these properties to the Enemy class constructor:
+    this.poisoned = false;
+    this.poisonDamage = 0;
+    this.poisonDuration = 0;
+    this.poisonStartTime = 0;
   }
 
   get pos() {
@@ -374,6 +625,39 @@ export class Enemy {
       this.dead = true;
       state.lives = Math.max(0, state.lives - 1);
       spawnExplosion(this.pos.x, this.pos.y, 20, "#f44");
+    }
+
+    if (this.slowEffect) {
+      this.slowEffect.duration -= dt;
+      if (this.slowEffect.duration <= 0) {
+        this.speed = this.slowEffect.originalSpeed;
+        this.slowEffect = null;
+      }
+    }
+
+    if (this.iceEffect) {
+      this.iceEffectTime -= dt;
+      if (this.iceEffectTime <= 0) {
+        this.iceEffect = false;
+      }
+    }
+
+    if (this.stunned) {
+      this.speed = 0;
+    }
+
+    if (this.electricEffect) {
+      this.electricEffectTime -= dt;
+      if (this.electricEffectTime <= 0) {
+        this.electricEffect = false;
+      }
+    }
+
+    if (this.poisoned) {
+      const elapsed = (performance.now() - this.poisonStartTime) / 1000;
+      if (elapsed >= this.poisonDuration) {
+        this.poisoned = false;
+      }
     }
   }
 
@@ -392,6 +676,73 @@ export class Enemy {
     const { x, y } = this.pos;
     const TAU = Math.PI * 2;
     const { r } = this;
+
+    if (this.poisoned) {
+      const elapsed = (performance.now() - this.poisonStartTime) / 1000;
+      const progress = elapsed / this.poisonDuration;
+      const alpha = 0.5 - progress * 0.3; // Fade out as poison wears off
+
+      ctx.fillStyle = `rgba(76, 175, 80, ${alpha})`;
+      ctx.beginPath();
+      ctx.arc(x, y, this.r + 2, 0, TAU);
+      ctx.fill();
+
+      // Poison bubbles effect
+      if (Math.random() < 0.3) {
+        const bubbleX = x + (Math.random() - 0.5) * this.r * 1.5;
+        const bubbleY = y + (Math.random() - 0.5) * this.r * 1.5;
+        const size = 1 + Math.random() * 1.5;
+
+        ctx.fillStyle = "rgba(165, 214, 167, 0.8)";
+        ctx.beginPath();
+        ctx.arc(bubbleX, bubbleY, size, 0, TAU);
+        ctx.fill();
+      }
+    }
+
+    if (this.electricEffect || this.stunned) {
+      const alpha = this.stunned ? 0.7 : 0.4;
+      ctx.fillStyle = `rgba(157, 78, 221, ${alpha})`;
+      ctx.beginPath();
+      ctx.arc(x, y, this.r + 3, 0, TAU);
+      ctx.fill();
+
+      // Draw electric arcs on stunned enemies
+      if (this.stunned) {
+        ctx.strokeStyle = "rgba(224, 170, 255, 0.8)";
+        ctx.lineWidth = 1.5;
+
+        for (let i = 0; i < 3; i++) {
+          const angle1 = Math.random() * TAU;
+          const angle2 = angle1 + (Math.random() - 0.5) * Math.PI;
+          const dist1 = this.r * (0.5 + Math.random() * 0.5);
+          const dist2 = this.r * (0.8 + Math.random() * 0.2);
+
+          ctx.beginPath();
+          ctx.moveTo(
+            x + Math.cos(angle1) * dist1,
+            y + Math.sin(angle1) * dist1
+          );
+
+          // Create jagged lightning effect
+          const segments = 3;
+          const dx =
+            (Math.cos(angle2) * dist2 - Math.cos(angle1) * dist1) / segments;
+          const dy =
+            (Math.sin(angle2) * dist2 - Math.sin(angle1) * dist1) / segments;
+
+          for (let j = 1; j <= segments; j++) {
+            const segX = x + Math.cos(angle1) * dist1 + dx * j;
+            const segY = y + Math.sin(angle1) * dist1 + dy * j;
+            const offsetX = (Math.random() - 0.5) * 5;
+            const offsetY = (Math.random() - 0.5) * 5;
+            ctx.lineTo(segX + offsetX, segY + offsetY);
+          }
+
+          ctx.stroke();
+        }
+      }
+    }
 
     // Glow effect
     const grd = ctx.createRadialGradient(x, y, 4, x, y, r + 10);
@@ -412,6 +763,26 @@ export class Enemy {
     ctx.strokeStyle = this.detailColor;
     ctx.lineWidth = 2;
     ctx.beginPath();
+
+    if (this.iceEffect || this.frozen) {
+      const alpha = this.frozen ? 0.6 : 0.3;
+      ctx.fillStyle = `rgba(180, 230, 255, ${alpha})`;
+      ctx.beginPath();
+      ctx.arc(x, y, this.r + 2, 0, TAU);
+      ctx.fill();
+
+      if (this.frozen) {
+        // Draw ice cracks
+        ctx.strokeStyle = "rgba(255, 255, 255, 0.7)";
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(x - this.r * 0.7, y - this.r * 0.3);
+        ctx.lineTo(x + this.r * 0.5, y + this.r * 0.4);
+        ctx.moveTo(x + this.r * 0.2, y - this.r * 0.6);
+        ctx.lineTo(x - this.r * 0.3, y + this.r * 0.7);
+        ctx.stroke();
+      }
+    }
 
     const spikeCount = 6 + this.tier * 2;
     for (let i = 0; i < spikeCount; i++) {
@@ -502,8 +873,10 @@ export function getEnemiesForWave(wave) {
 
 // ===== FILE: C:\Users\kurd7\Downloads\Tower\src\entities.js =====
 
+// ===== FILE: C:\Users\kurd7\Downloads\Tower\src\entities.js =====
+
 export { Enemy } from "./enemy.js";
-export { Tower } from "./tower.js";
+export { BaseTower as Tower } from "./towers/BaseTower.js";
 export { Bullet } from "./bullet.js";
 
 
@@ -682,7 +1055,8 @@ canvas.addEventListener("mouseup", (e) => {
     ) {
       const spec = TOWER_TYPES[ui.selectedShopKey];
       if (state.money >= spec.cost) {
-        towers.push(new Tower(mouse.gx, mouse.gy, ui.selectedShopKey));
+        const spec = TOWER_TYPES[ui.selectedShopKey];
+        towers.push(new spec.class(mouse.gx, mouse.gy, ui.selectedShopKey));
         state.money -= spec.cost;
         pulse(`-${spec.cost}`);
 
@@ -943,7 +1317,7 @@ export function spawner(dt) {
 
 // Central mutable state (exported as objects so imported modules can mutate properties)
 export const state = {
-  money: 200,
+  money: 1000000,
   lives: 20,
   wave: 0,
   time: 0,
@@ -964,141 +1338,6 @@ export const ui = {
   hoveredTile: null,
   selectedTower: null,
 };
-
-
-// ===== FILE: C:\Users\kurd7\Downloads\Tower\src\tower.js =====
-
-import { ctx } from "./core.js";
-import { dist } from "./utils.js";
-import { spawnMuzzle, spawnBeam } from "./effects.js";
-import { projectiles } from "./state.js";
-import { TOWER_TYPES } from "./config.js";
-import { Bullet } from "./bullet.js";
-import { roundRect } from "./helpers.js";
-
-export class Tower {
-  constructor(gx, gy, key) {
-    this.gx = gx;
-    this.gy = gy;
-    this.key = key;
-    this.level = 1;
-    this.cool = 0;
-    this.rot = 0;
-  }
-
-  spec() {
-    const base = TOWER_TYPES[this.key];
-    const mult = 1 + (this.level - 1) * 0.35;
-    return {
-      name: base.name,
-      range: base.range * (1 + (this.level - 1) * 0.08),
-      fireRate: base.fireRate * (1 + (this.level - 1) * 0.05),
-      dmg: base.dmg * mult,
-      bulletSpeed: base.bulletSpeed,
-      splash: base.splash || 0,
-      beam: base.beam || false,
-      color: base.color,
-      cost: base.cost,
-    };
-  }
-
-  get center() {
-    return { x: this.gx * 40 + 20, y: this.gy * 40 + 20 };
-  }
-
-  upgradeCost() {
-    return Math.round(this.spec().cost * (0.75 + this.level * 0.75));
-  }
-
-  sellValue() {
-    return this.spec().cost * 0.7 + (this.level - 1) * this.spec().cost * 0.35;
-  }
-
-  update(dt, enemiesList) {
-    const s = this.spec();
-    this.cool -= dt;
-    let best = null,
-      bestScore = -1;
-
-    for (const e of enemiesList) {
-      if (e.dead) continue;
-      const p = e.pos;
-      const d = dist(this.center, p);
-      if (d <= s.range && e.t > bestScore) {
-        best = e;
-        bestScore = e.t;
-      }
-    }
-
-    if (!best) return;
-    const c = this.center,
-      bp = best.pos;
-    this.rot = Math.atan2(bp.y - c.y, bp.x - c.x);
-
-    if (s.beam) {
-      const dps = s.dmg * 60;
-      if (this.cool <= 0) {
-        best.damage(dps * dt);
-        spawnBeam(c, bp, s.color);
-      }
-      return;
-    }
-
-    if (this.cool <= 0) {
-      this.cool = 1 / s.fireRate;
-
-      // Check for double cannon
-      if (this.key === "doubleCanon") {
-        const offset = 6; // pixels from center
-        const sin = Math.sin(this.rot);
-        const cos = Math.cos(this.rot);
-        // left barrel
-        projectiles.push(
-          new Bullet(c.x - sin * offset, c.y + cos * offset, best, s)
-        );
-        // right barrel
-        projectiles.push(
-          new Bullet(c.x + sin * offset, c.y - cos * offset, best, s)
-        );
-        spawnMuzzle(c.x - sin * offset, c.y + cos * offset, this.rot, s.color);
-        spawnMuzzle(c.x + sin * offset, c.y - cos * offset, this.rot, s.color);
-      } else {
-        projectiles.push(new Bullet(c.x, c.y, best, s));
-        spawnMuzzle(c.x, c.y, this.rot, s.color);
-      }
-    }
-  }
-
-  draw() {
-    const s = this.spec();
-    const { x, y } = this.center;
-
-    roundRect(x - 16, y - 16, 32, 32, 8, "#0e1626", true, "#223c62");
-
-    ctx.save();
-    ctx.translate(x, y);
-    ctx.rotate(this.rot);
-    ctx.fillStyle = s.color;
-
-    if (this.key === "doubleCanon") {
-      // draw two barrels
-      const offset = 6;
-      roundRect(-8 - offset, -8, 16, 16, 4, s.color, true);
-      roundRect(-8 + offset, -8, 16, 16, 4, s.color, true);
-    } else {
-      roundRect(-8, -8, 16, 16, 4, s.color, true);
-    }
-
-    ctx.fillStyle = "#fff";
-    ctx.fillRect(0, -3, 14, 6); // muzzle indicator
-    ctx.restore();
-
-    for (let i = 0; i < this.level; i++) {
-      ctx.fillStyle = s.color;
-      ctx.fillRect(x - 10 + i * 6, y + 18, 4, 4);
-    }
-  }
-}
 
 
 // ===== FILE: C:\Users\kurd7\Downloads\Tower\src\ui.js =====
@@ -1201,12 +1440,10 @@ export function getShopButtons(W, H) {
   const pad = 18;
   const y = H - 88;
   const h = 74;
-  const w = 170;
+  const w = 150;
   const keys = Object.keys(TOWER_TYPES);
   return keys.map((k, i) => ({ key: k, x: pad + i * (w + 12), y, w, h }));
 }
-
-// ===== FILE: C:\Users\kurd7\Downloads\Tower\src\ui.js =====
 
 export function drawShop(W, H) {
   const buttons = getShopButtons(W, H);
@@ -1372,3 +1609,1579 @@ export function pulse(text, color = "#adf") {
   pulses.push({ text, x: 0, y: 0, life: 1.2, c: color });
 }
 
+
+
+// ===== FILE: C:\Users\kurd7\Downloads\Tower\src\towers\BaseTower.js =====
+
+// ===== FILE: C:\Users\kurd7\Downloads\Tower\src\towers\BaseTower.js =====
+
+import { ctx } from "../core.js";
+import { dist } from "../utils.js";
+import { spawnMuzzle } from "../effects.js";
+import { projectiles } from "../state.js";
+import { Bullet } from "../bullet.js";
+import { roundRect } from "../helpers.js";
+
+export class BaseTower {
+  constructor(gx, gy, key) {
+    this.gx = gx;
+    this.gy = gy;
+    this.key = key;
+    this.level = 1;
+    this.cool = 0;
+    this.rot = 0;
+  }
+
+  spec() {
+    const base = this.constructor.SPEC;
+    const mult = 1 + (this.level - 1) * 0.35;
+    return {
+      name: base.name,
+      range: base.range * (1 + (this.level - 1) * 0.08),
+      fireRate: base.fireRate * (1 + (this.level - 1) * 0.05),
+      dmg: base.dmg * mult,
+      bulletSpeed: base.bulletSpeed,
+      splash: base.splash || 0,
+      beam: base.beam || false,
+      color: base.color,
+      cost: base.cost,
+    };
+  }
+
+  get center() {
+    return { x: this.gx * 40 + 20, y: this.gy * 40 + 20 };
+  }
+
+  upgradeCost() {
+    return Math.round(this.spec().cost * (0.75 + this.level * 0.75));
+  }
+
+  sellValue() {
+    return this.spec().cost * 0.7 + (this.level - 1) * this.spec().cost * 0.35;
+  }
+
+  update(dt, enemiesList) {
+    const s = this.spec();
+    this.cool -= dt;
+    let best = null,
+      bestScore = -1;
+
+    for (const e of enemiesList) {
+      if (e.dead) continue;
+      const p = e.pos;
+      const d = dist(this.center, p);
+      if (d <= s.range && e.t > bestScore) {
+        best = e;
+        bestScore = e.t;
+      }
+    }
+
+    if (!best) return;
+    const c = this.center,
+      bp = best.pos;
+    this.rot = Math.atan2(bp.y - c.y, bp.x - c.x);
+
+    if (s.beam) {
+      const dps = s.dmg * 60;
+      if (this.cool <= 0) {
+        best.damage(dps * dt);
+        this.fireBeam(c, bp, s.color);
+      }
+      return;
+    }
+
+    if (this.cool <= 0) {
+      this.cool = 1 / s.fireRate;
+      this.fireProjectile(c, best, s);
+    }
+  }
+
+  fireProjectile(center, target, spec) {
+    projectiles.push(new Bullet(center.x, center.y, target, spec));
+    spawnMuzzle(center.x, center.y, this.rot, spec.color);
+  }
+
+  fireBeam(start, end, color) {
+    // This will be implemented in the LaserTower class
+  }
+
+  draw() {
+    const s = this.spec();
+    const { x, y } = this.center;
+
+    roundRect(x - 16, y - 16, 32, 32, 8, "#0e1626", true, "#223c62");
+
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(this.rot);
+    ctx.fillStyle = s.color;
+
+    // Default single barrel
+    roundRect(-8, -8, 16, 16, 4, s.color, true);
+
+    ctx.fillStyle = "#fff";
+    ctx.fillRect(0, -3, 14, 6); // muzzle indicator
+    ctx.restore();
+
+    for (let i = 0; i < this.level; i++) {
+      ctx.fillStyle = s.color;
+      ctx.fillRect(x - 10 + i * 6, y + 18, 4, 4);
+    }
+  }
+}
+
+
+// ===== FILE: C:\Users\kurd7\Downloads\Tower\src\towers\CannonTower.js =====
+
+// ===== FILE: C:\Users\kurd7\Downloads\Tower\src\towers\CannonTower.js =====
+
+import { BaseTower } from "./BaseTower.js";
+import { ctx } from "../core.js";
+
+export class CannonTower extends BaseTower {
+  static SPEC = {
+    name: "Cannon",
+    cost: 120,
+    range: 140,
+    fireRate: 1.2,
+    dmg: 55,
+    splash: 60,
+    bulletSpeed: 260,
+    color: "#f6c66a",
+  };
+
+  draw() {
+    const s = this.spec();
+    const { x, y } = this.center;
+
+    // Draw base platform
+    ctx.fillStyle = "#0e1626";
+    ctx.beginPath();
+    ctx.arc(x, y, 18, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Draw platform border
+    ctx.strokeStyle = "#223c62";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(x, y, 18, 0, Math.PI * 2);
+    ctx.stroke();
+
+    // Draw cannon body
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(this.rot);
+
+    // Cannon base
+    ctx.fillStyle = "#3a3a4a";
+    ctx.fillRect(-12, -8, 24, 16);
+
+    // Cannon barrel - main body
+    const gradient = ctx.createLinearGradient(0, -10, 0, 10);
+    gradient.addColorStop(0, "#8a7a6a");
+    gradient.addColorStop(0.5, "#b5a892");
+    gradient.addColorStop(1, "#8a7a6a");
+    ctx.fillStyle = gradient;
+
+    // Draw barrel with rounded front
+    ctx.beginPath();
+    ctx.roundRect(-8, -6, 30, 12, 6);
+    ctx.fill();
+
+    // Barrel rings/bands
+    ctx.fillStyle = "#5a5a6a";
+    ctx.fillRect(-5, -7, 3, 14);
+    ctx.fillRect(5, -7, 3, 14);
+    ctx.fillRect(15, -7, 3, 14);
+
+    // Cannon muzzle
+    ctx.fillStyle = "#4a4a5a";
+    ctx.beginPath();
+    ctx.arc(22, 0, 6, -Math.PI / 2, Math.PI / 2);
+    ctx.fill();
+
+    // Cannon interior (dark hole)
+    ctx.fillStyle = "#1a1a2a";
+    ctx.beginPath();
+    ctx.arc(24, 0, 3, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.restore();
+
+    // Draw level indicators
+    for (let i = 0; i < this.level; i++) {
+      ctx.fillStyle = s.color;
+      ctx.beginPath();
+      ctx.arc(x - 10 + i * 6, y + 18, 3, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+}
+
+// Add roundRect method to CanvasRenderingContext2D if it doesn't exist
+if (!CanvasRenderingContext2D.prototype.roundRect) {
+  CanvasRenderingContext2D.prototype.roundRect = function (
+    x,
+    y,
+    width,
+    height,
+    radius
+  ) {
+    if (width < 2 * radius) radius = width / 2;
+    if (height < 2 * radius) radius = height / 2;
+
+    this.beginPath();
+    this.moveTo(x + radius, y);
+    this.arcTo(x + width, y, x + width, y + height, radius);
+    this.arcTo(x + width, y + height, x, y + height, radius);
+    this.arcTo(x, y + height, x, y, radius);
+    this.arcTo(x, y, x + width, y, radius);
+    this.closePath();
+    return this;
+  };
+}
+
+
+// ===== FILE: C:\Users\kurd7\Downloads\Tower\src\towers\DoubleCannonTower.js =====
+
+// ===== FILE: C:\Users\kurd7\Downloads\Tower\src\towers\DoubleCannonTower.js =====
+
+import { BaseTower } from "./BaseTower.js";
+import { projectiles } from "../state.js";
+import { spawnMuzzle } from "../effects.js";
+import { Bullet } from "../bullet.js";
+import { ctx } from "../core.js";
+
+export class DoubleCannonTower extends BaseTower {
+  static SPEC = {
+    name: "Double Canon",
+    cost: 160,
+    range: 120,
+    fireRate: 0.9,
+    dmg: 75,
+    splash: 55,
+    bulletSpeed: 240,
+    color: "#f00",
+  };
+
+  fireProjectile(center, target, spec) {
+    const offset = 8; // Increased offset for wider barrels
+    const sin = Math.sin(this.rot);
+    const cos = Math.cos(this.rot);
+
+    // left barrel
+    projectiles.push(
+      new Bullet(center.x - sin * offset, center.y + cos * offset, target, spec)
+    );
+
+    // right barrel
+    projectiles.push(
+      new Bullet(center.x + sin * offset, center.y - cos * offset, target, spec)
+    );
+
+    spawnMuzzle(
+      center.x - sin * offset,
+      center.y + cos * offset,
+      this.rot,
+      spec.color
+    );
+    spawnMuzzle(
+      center.x + sin * offset,
+      center.y - cos * offset,
+      this.rot,
+      spec.color
+    );
+  }
+
+  draw() {
+    const s = this.spec();
+    const { x, y } = this.center;
+
+    // Draw base platform
+    ctx.fillStyle = "#0e1626";
+    ctx.beginPath();
+    ctx.arc(x, y, 20, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Draw platform border
+    ctx.strokeStyle = "#223c62";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(x, y, 20, 0, Math.PI * 2);
+    ctx.stroke();
+
+    // Draw cannon mounting platform
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(this.rot);
+
+    // Mounting base
+    ctx.fillStyle = "#4a4a5a";
+    ctx.beginPath();
+    ctx.roundRect(-14, -10, 28, 20, 6);
+    ctx.fill();
+
+    // Draw two cannon barrels
+    const barrelOffset = 8;
+
+    // Left cannon
+    this.drawCannonBarrel(-barrelOffset, 0, s.color);
+
+    // Right cannon
+    this.drawCannonBarrel(barrelOffset, 0, s.color);
+
+    // Central mounting hardware
+    ctx.fillStyle = "#5a5a6a";
+    ctx.beginPath();
+    ctx.arc(0, 0, 6, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Bolts on mounting platform
+    ctx.fillStyle = "#7a7a8a";
+    ctx.beginPath();
+    ctx.arc(-10, -6, 2, 0, Math.PI * 2);
+    ctx.arc(10, -6, 2, 0, Math.PI * 2);
+    ctx.arc(-10, 6, 2, 0, Math.PI * 2);
+    ctx.arc(10, 6, 2, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.restore();
+
+    // Draw level indicators
+    for (let i = 0; i < this.level; i++) {
+      ctx.fillStyle = s.color;
+      ctx.beginPath();
+      ctx.arc(x - 12 + i * 6, y + 22, 3, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Add glow effect for higher levels
+      if (this.level > 2 && i >= this.level - 2) {
+        ctx.fillStyle = "rgba(255, 100, 100, 0.4)";
+        ctx.beginPath();
+        ctx.arc(x - 12 + i * 6, y + 22, 5, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+  }
+
+  drawCannonBarrel(xOffset, yOffset, color) {
+    // Cannon barrel - main body
+    const gradient = ctx.createLinearGradient(xOffset - 5, -8, xOffset - 5, 8);
+    gradient.addColorStop(0, "#9a8a7a");
+    gradient.addColorStop(0.5, "#c5b8a2");
+    gradient.addColorStop(1, "#9a8a7a");
+    ctx.fillStyle = gradient;
+
+    // Draw barrel with rounded front
+    ctx.beginPath();
+    ctx.roundRect(xOffset - 8, -5, 26, 10, 5);
+    ctx.fill();
+
+    // Barrel rings/bands
+    ctx.fillStyle = "#6a6a7a";
+    ctx.fillRect(xOffset - 5, -6, 3, 12);
+    ctx.fillRect(xOffset + 5, -6, 3, 12);
+    ctx.fillRect(xOffset + 15, -6, 3, 12);
+
+    // Cannon muzzle
+    ctx.fillStyle = "#5a5a6a";
+    ctx.beginPath();
+    ctx.arc(xOffset + 18, 0, 5, -Math.PI / 2, Math.PI / 2);
+    ctx.fill();
+
+    // Cannon interior (dark hole)
+    ctx.fillStyle = "#1a1a2a";
+    ctx.beginPath();
+    ctx.arc(xOffset + 20, 0, 2.5, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Red accent on barrel (matching tower color)
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.arc(xOffset - 2, 0, 2, 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
+
+// Add roundRect method to CanvasRenderingContext2D if it doesn't exist
+if (!CanvasRenderingContext2D.prototype.roundRect) {
+  CanvasRenderingContext2D.prototype.roundRect = function (
+    x,
+    y,
+    width,
+    height,
+    radius
+  ) {
+    if (width < 2 * radius) radius = width / 2;
+    if (height < 2 * radius) radius = height / 2;
+
+    this.beginPath();
+    this.moveTo(x + radius, y);
+    this.arcTo(x + width, y, x + width, y + height, radius);
+    this.arcTo(x + width, y + height, x, y + height, radius);
+    this.arcTo(x, y + height, x, y, radius);
+    this.arcTo(x, y, x + width, y, radius);
+    this.closePath();
+    return this;
+  };
+}
+
+
+// ===== FILE: C:\Users\kurd7\Downloads\Tower\src\towers\GunTower.js =====
+
+// ===== FILE: C:\Users\kurd7\Downloads\Tower\src\towers\GunTower.js =====
+
+import { BaseTower } from "./BaseTower.js";
+
+export class GunTower extends BaseTower {
+  static SPEC = {
+    name: "Gunner",
+    cost: 80,
+    range: 120,
+    fireRate: 6,
+    dmg: 12,
+    bulletSpeed: 340,
+    color: "#6cf",
+  };
+}
+
+
+// ===== FILE: C:\Users\kurd7\Downloads\Tower\src\towers\IceTower.js =====
+
+// ===== FILE: C:\Users\kurd7\Downloads\Tower\src\towers\IceTower.js =====
+
+import { BaseTower } from "./BaseTower.js";
+import { projectiles } from "../state.js";
+import { spawnMuzzle } from "../effects.js";
+import { Bullet } from "../bullet.js";
+import { ctx } from "../core.js";
+
+export class IceTower extends BaseTower {
+  static SPEC = {
+    name: "Ice Tower",
+    cost: 180,
+    range: 130,
+    fireRate: 2.5,
+    dmg: 8,
+    slowAmount: 0.6,
+    slowDuration: 3,
+    freezeChance: 0.2,
+    bulletSpeed: 300,
+    color: "#6cfaff",
+  };
+
+  // Override spec to include ice properties
+  spec() {
+    const base = this.constructor.SPEC;
+    const mult = 1 + (this.level - 1) * 0.35;
+    return {
+      name: base.name,
+      range: base.range * (1 + (this.level - 1) * 0.08),
+      fireRate: base.fireRate * (1 + (this.level - 1) * 0.05),
+      dmg: base.dmg * mult,
+      slowAmount: base.slowAmount,
+      slowDuration: base.slowDuration * (1 + (this.level - 1) * 0.1),
+      freezeChance: base.freezeChance + (this.level - 1) * 0.05,
+      bulletSpeed: base.bulletSpeed,
+      color: base.color,
+      cost: base.cost,
+    };
+  }
+
+  fireProjectile(center, target, spec) {
+    // Create ice projectile with special properties
+    const iceBullet = new Bullet(center.x, center.y, target, spec);
+
+    // Add ice-specific properties to the bullet
+    iceBullet.isIce = true;
+    iceBullet.slowAmount = spec.slowAmount;
+    iceBullet.slowDuration = spec.slowDuration;
+    iceBullet.freezeChance = spec.freezeChance;
+
+    projectiles.push(iceBullet);
+    spawnMuzzle(center.x, center.y, this.rot, spec.color);
+
+    // Add frost particles effect
+    this.spawnFrostParticles(center.x, center.y);
+  }
+
+  spawnFrostParticles(x, y) {
+    for (let i = 0; i < 5; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const speed = 30 + Math.random() * 50;
+      const size = 2 + Math.random() * 3;
+
+      // Add to particles array (you might need to import it)
+      const particles = window.particles || [];
+      particles.push({
+        x,
+        y,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed,
+        life: 0.5 + Math.random() * 0.3,
+        r: size,
+        c: "#a0f0ff",
+        gravity: 0.2,
+        fade: 0.95,
+      });
+    }
+  }
+
+  draw() {
+    const s = this.spec();
+    const { x, y } = this.center;
+    const time = performance.now() / 1000;
+
+    // Draw icy base platform
+    ctx.fillStyle = "#0e1a2a";
+    ctx.beginPath();
+    ctx.arc(x, y, 18, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Icy glow effect
+    const gradient = ctx.createRadialGradient(x, y, 12, x, y, 22);
+    gradient.addColorStop(0, "rgba(108, 250, 255, 0.4)");
+    gradient.addColorStop(1, "rgba(108, 250, 255, 0)");
+    ctx.fillStyle = gradient;
+    ctx.beginPath();
+    ctx.arc(x, y, 22, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Icy platform border
+    ctx.strokeStyle = "#2a5a7a";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(x, y, 18, 0, Math.PI * 2);
+    ctx.stroke();
+
+    // Draw tower body
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(this.rot);
+
+    // Main icy structure
+    ctx.fillStyle = "#a0e0f0";
+    ctx.beginPath();
+    ctx.roundRect(-10, -10, 20, 20, 6);
+    ctx.fill();
+
+    // Ice crystal details
+    ctx.fillStyle = "#d0f8ff";
+    this.drawIceCrystal(-5, -5, 4, time);
+    this.drawIceCrystal(5, -5, 3, time);
+    this.drawIceCrystal(0, 5, 5, time);
+
+    // Frost emitter (main crystal)
+    const pulse = Math.sin(time * 3) * 1.5;
+    ctx.fillStyle = "#ffffff";
+    ctx.beginPath();
+    ctx.arc(12, 0, 4 + pulse, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Inner crystal glow
+    ctx.fillStyle = "rgba(176, 240, 255, 0.7)";
+    ctx.beginPath();
+    ctx.arc(12, 0, 2 + pulse * 0.5, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Frost patterns on body
+    ctx.strokeStyle = "rgba(200, 240, 255, 0.6)";
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(-8, 2);
+    ctx.lineTo(-2, -2);
+    ctx.lineTo(2, 3);
+    ctx.lineTo(6, -1);
+    ctx.stroke();
+
+    ctx.restore();
+
+    // Draw level indicators as ice shards
+    for (let i = 0; i < this.level; i++) {
+      const indicatorX = x - 10 + i * 6;
+      const indicatorY = y + 22;
+
+      // Glow effect
+      ctx.fillStyle = "rgba(108, 250, 255, 0.3)";
+      ctx.beginPath();
+      ctx.arc(indicatorX, indicatorY, 4, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Ice shard
+      ctx.fillStyle = s.color;
+      this.drawIceShard(indicatorX, indicatorY, 3);
+
+      // Frost effect for higher levels
+      if (this.level > 2 && i >= this.level - 2) {
+        ctx.fillStyle = "rgba(255, 255, 255, 0.4)";
+        ctx.beginPath();
+        ctx.arc(indicatorX, indicatorY, 5, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    // Occasional snowflake particles
+    if (Math.random() < 0.05) {
+      this.drawSnowflake(x, y, time);
+    }
+  }
+
+  drawIceCrystal(x, y, size, time) {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(time);
+
+    ctx.beginPath();
+    ctx.moveTo(0, -size);
+    ctx.lineTo(size * 0.7, 0);
+    ctx.lineTo(0, size);
+    ctx.lineTo(-size * 0.7, 0);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.restore();
+  }
+
+  drawIceShard(x, y, size) {
+    ctx.beginPath();
+    ctx.moveTo(x, y - size);
+    ctx.lineTo(x + size * 0.7, y);
+    ctx.lineTo(x, y + size);
+    ctx.lineTo(x - size * 0.7, y);
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  drawSnowflake(x, y, time) {
+    const flakeX = x + (Math.random() - 0.5) * 30;
+    const flakeY = y + (Math.random() - 0.5) * 30 - 20;
+    const size = 1 + Math.random() * 2;
+
+    ctx.save();
+    ctx.translate(flakeX, flakeY);
+    ctx.rotate(time);
+
+    ctx.strokeStyle = "rgba(255, 255, 255, 0.8)";
+    ctx.lineWidth = 1;
+
+    for (let i = 0; i < 6; i++) {
+      ctx.rotate(Math.PI / 3);
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.lineTo(size * 2, 0);
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.moveTo(size * 0.7, -size * 0.7);
+      ctx.lineTo(size * 0.7, size * 0.7);
+      ctx.stroke();
+    }
+
+    ctx.restore();
+  }
+}
+
+
+// ===== FILE: C:\Users\kurd7\Downloads\Tower\src\towers\LaserTower.js =====
+
+// ===== FILE: C:\Users\kurd7\Downloads\Tower\src\towers\LaserTower.js =====
+
+import { BaseTower } from "./BaseTower.js";
+import { spawnBeam } from "../effects.js";
+import { ctx } from "../core.js";
+
+export class LaserTower extends BaseTower {
+  static SPEC = {
+    name: "Laser",
+    cost: 250,
+    range: 150,
+    fireRate: 12,
+    dmg: 5,
+    beam: true,
+    color: "#ff69e0",
+  };
+
+  fireBeam(start, end, color) {
+    spawnBeam(start, end, color);
+  }
+
+  draw() {
+    const s = this.spec();
+    const { x, y } = this.center;
+    const time = performance.now() / 1000;
+
+    // Draw high-tech base platform with glow
+    ctx.fillStyle = "#0e1626";
+    ctx.beginPath();
+    ctx.arc(x, y, 18, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Platform glow effect
+    const gradient = ctx.createRadialGradient(x, y, 12, x, y, 22);
+    gradient.addColorStop(0, "rgba(255, 105, 224, 0.3)");
+    gradient.addColorStop(1, "rgba(255, 105, 224, 0)");
+    ctx.fillStyle = gradient;
+    ctx.beginPath();
+    ctx.arc(x, y, 22, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Platform border with energy effect
+    ctx.strokeStyle = "#223c62";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(x, y, 18, 0, Math.PI * 2);
+    ctx.stroke();
+
+    // Draw tower body
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(this.rot);
+
+    // Main housing - futuristic design
+    ctx.fillStyle = "#2a2a3a";
+    ctx.beginPath();
+    ctx.roundRect(-10, -12, 20, 24, 8);
+    ctx.fill();
+
+    // Energy core housing
+    ctx.fillStyle = "#1a1a2a";
+    ctx.beginPath();
+    ctx.arc(0, 0, 8, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Pulsing energy core
+    const pulseSize = 6 + Math.sin(time * 5) * 1.5;
+    const coreAlpha = 0.7 + Math.sin(time * 3) * 0.3;
+
+    ctx.fillStyle = `rgba(255, 220, 255, ${coreAlpha})`;
+    ctx.beginPath();
+    ctx.arc(0, 0, pulseSize, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = "rgba(255, 105, 224, 0.6)";
+    ctx.beginPath();
+    ctx.arc(0, 0, pulseSize * 0.6, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Laser emitter array
+    ctx.fillStyle = "#4a4a6a";
+    ctx.beginPath();
+    ctx.roundRect(8, -8, 16, 16, 4);
+    ctx.fill();
+
+    // Laser lenses
+    ctx.fillStyle = "#a0a0ff";
+    ctx.beginPath();
+    ctx.arc(16, -4, 3, 0, Math.PI * 2);
+    ctx.arc(16, 0, 3, 0, Math.PI * 2);
+    ctx.arc(16, 4, 3, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Main laser lens (center)
+    ctx.fillStyle = "#ffffff";
+    ctx.beginPath();
+    ctx.arc(16, 0, 4, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Energy conduits
+    ctx.strokeStyle = "#ff69e0";
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(-6, -6);
+    ctx.lineTo(6, -6);
+    ctx.lineTo(10, -2);
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.moveTo(-6, 6);
+    ctx.lineTo(6, 6);
+    ctx.lineTo(10, 2);
+    ctx.stroke();
+
+    // Cooling fins/heat sinks
+    ctx.fillStyle = "#3a3a5a";
+    for (let i = -10; i <= 10; i += 5) {
+      ctx.fillRect(-12, i, 4, 2);
+    }
+
+    ctx.restore();
+
+    // Draw level indicators with glow effect
+    for (let i = 0; i < this.level; i++) {
+      const indicatorX = x - 10 + i * 6;
+      const indicatorY = y + 22;
+
+      // Glow effect
+      ctx.fillStyle = "rgba(255, 105, 224, 0.3)";
+      ctx.beginPath();
+      ctx.arc(indicatorX, indicatorY, 5, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Main indicator
+      ctx.fillStyle = s.color;
+      ctx.beginPath();
+      ctx.arc(indicatorX, indicatorY, 3, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Pulsing effect for higher levels
+      if (this.level > 3 && i >= this.level - 3) {
+        const pulse = Math.sin(time * 4) * 2;
+        ctx.fillStyle = "rgba(255, 255, 255, 0.6)";
+        ctx.beginPath();
+        ctx.arc(indicatorX, indicatorY, 3 + pulse, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    // Add some particle effects around the tower
+    if (Math.random() < 0.1) {
+      this.drawEnergyParticle(x, y, time);
+    }
+  }
+
+  drawEnergyParticle(x, y, time) {
+    const angle = Math.random() * Math.PI * 2;
+    const distance = 15 + Math.random() * 10;
+    const size = 1 + Math.random() * 2;
+
+    const particleX = x + Math.cos(angle) * distance;
+    const particleY = y + Math.sin(angle) * distance;
+
+    ctx.fillStyle = `rgba(180, 100, 255, ${0.3 + Math.sin(time * 10) * 0.2})`;
+    ctx.beginPath();
+    ctx.arc(particleX, particleY, size, 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
+
+// Add roundRect method to CanvasRenderingContext2D if it doesn't exist
+if (!CanvasRenderingContext2D.prototype.roundRect) {
+  CanvasRenderingContext2D.prototype.roundRect = function (
+    x,
+    y,
+    width,
+    height,
+    radius
+  ) {
+    if (width < 2 * radius) radius = width / 2;
+    if (height < 2 * radius) radius = height / 2;
+
+    this.beginPath();
+    this.moveTo(x + radius, y);
+    this.arcTo(x + width, y, x + width, y + height, radius);
+    this.arcTo(x + width, y + height, x, y + height, radius);
+    this.arcTo(x, y + height, x, y, radius);
+    this.arcTo(x, y, x + width, y, radius);
+    this.closePath();
+    return this;
+  };
+}
+
+
+// ===== FILE: C:\Users\kurd7\Downloads\Tower\src\towers\PoisonTower.js =====
+
+// ===== FILE: C:\Users\kurd7\Downloads\Tower\src\towers\PoisonTower.js =====
+
+import { BaseTower } from "./BaseTower.js";
+import { ctx } from "../core.js";
+import { enemies, particles } from "../state.js";
+import { dist } from "../utils.js";
+import { spawnPoisonCloud } from "../effects.js";
+
+export class PoisonTower extends BaseTower {
+  static SPEC = {
+    name: "Poison Tower",
+    cost: 190,
+    range: 110,
+    fireRate: 1.5,
+    dmg: 15,
+    dotDamage: 8,
+    dotDuration: 4,
+    spreadRange: 60,
+    cloudDuration: 3,
+    color: "#4CAF50",
+  };
+
+  // Override spec to include poison properties
+  spec() {
+    const base = this.constructor.SPEC;
+    const mult = 1 + (this.level - 1) * 0.35;
+    return {
+      name: base.name,
+      range: base.range * (1 + (this.level - 1) * 0.08),
+      fireRate: base.fireRate * (1 + (this.level - 1) * 0.05),
+      dmg: base.dmg * mult,
+      dotDamage: base.dotDamage * mult,
+      dotDuration: base.dotDuration * (1 + (this.level - 1) * 0.1),
+      spreadRange: base.spreadRange * (1 + (this.level - 1) * 0.05),
+      cloudDuration: base.cloudDuration * (1 + (this.level - 1) * 0.1),
+      color: base.color,
+      cost: base.cost,
+    };
+  }
+
+  update(dt, enemiesList) {
+    const s = this.spec();
+    this.cool -= dt;
+
+    if (this.cool <= 0) {
+      let best = null;
+      let bestScore = -1;
+
+      for (const e of enemiesList) {
+        if (e.dead || e.poisoned) continue; // Don't target already poisoned enemies
+        const p = e.pos;
+        const d = dist(this.center, p);
+        if (d <= s.range && e.t > bestScore) {
+          best = e;
+          bestScore = e.t;
+        }
+      }
+
+      if (best) {
+        this.cool = 1 / s.fireRate;
+        this.rot = Math.atan2(
+          best.pos.y - this.center.y,
+          best.pos.x - this.center.x
+        );
+        this.firePoison(best, s);
+      }
+    }
+  }
+
+  firePoison(target, spec) {
+    const c = this.center;
+
+    // Initial damage
+    target.damage(spec.dmg);
+
+    // Apply poison effect
+    this.applyPoisonEffect(target, spec);
+
+    // Create poison cloud at target location
+    spawnPoisonCloud(
+      target.pos.x,
+      target.pos.y,
+      spec.cloudDuration,
+      spec.spreadRange
+    );
+
+    // Visual effects
+    this.spawnPoisonParticles(c.x, c.y, target.pos.x, target.pos.y);
+    this.spawnDrippingEffect(c.x, c.y);
+  }
+
+  applyPoisonEffect(enemy, spec) {
+    if (enemy.poisoned) return; // Already poisoned
+
+    enemy.poisoned = true;
+    enemy.poisonDamage = spec.dotDamage;
+    enemy.poisonDuration = spec.dotDuration;
+    enemy.poisonStartTime = performance.now();
+
+    // Start poison damage tick
+    const poisonInterval = setInterval(() => {
+      if (enemy.dead || !enemy.poisoned) {
+        clearInterval(poisonInterval);
+        return;
+      }
+
+      const elapsed = (performance.now() - enemy.poisonStartTime) / 1000;
+      if (elapsed >= enemy.poisonDuration) {
+        enemy.poisoned = false;
+        clearInterval(poisonInterval);
+        return;
+      }
+
+      // Apply damage
+      enemy.damage(enemy.poisonDamage / 4); // Damage 4 times per second
+
+      // Chance to spread to nearby enemies
+      if (Math.random() < 0.2) {
+        // 20% chance per tick to spread
+        this.spreadPoison(enemy, spec);
+      }
+    }, 250); // Tick 4 times per second
+  }
+
+  spreadPoison(sourceEnemy, spec) {
+    for (const e of enemies) {
+      if (e.dead || e.poisoned || e === sourceEnemy) continue;
+
+      const d = dist(sourceEnemy.pos, e.pos);
+      if (d <= spec.spreadRange) {
+        this.applyPoisonEffect(e, spec);
+        spawnPoisonCloud(
+          e.pos.x,
+          e.pos.y,
+          spec.cloudDuration / 2,
+          spec.spreadRange / 2
+        );
+        break; // Only spread to one enemy at a time
+      }
+    }
+  }
+
+  spawnPoisonParticles(startX, startY, endX, endY) {
+    for (let i = 0; i < 6; i++) {
+      const angle = Math.atan2(endY - startY, endX - startX);
+      const spread = (Math.random() - 0.5) * 0.5;
+      const speed = 120 + Math.random() * 80;
+      const size = 2 + Math.random() * 2;
+      const life = 0.8 + Math.random() * 0.4;
+
+      particles.push({
+        x: startX,
+        y: startY,
+        vx: Math.cos(angle + spread) * speed,
+        vy: Math.sin(angle + spread) * speed,
+        life,
+        r: size,
+        c: "#4CAF50",
+        gravity: 0.3,
+        fade: 0.9,
+      });
+    }
+  }
+
+  spawnDrippingEffect(x, y) {
+    // Create dripping poison effect from tower
+    for (let i = 0; i < 3; i++) {
+      const angle = Math.random() * Math.PI - Math.PI / 2; // Mostly downward
+      const speed = 40 + Math.random() * 30;
+      const size = 1.5 + Math.random() * 1.5;
+      const life = 1 + Math.random() * 0.5;
+
+      particles.push({
+        x: x + (Math.random() - 0.5) * 10,
+        y: y + 15,
+        vx: Math.cos(angle) * speed * 0.3,
+        vy: Math.sin(angle) * speed,
+        life,
+        r: size,
+        c: "#388E3C",
+        gravity: 0.5,
+        fade: 0.95,
+      });
+    }
+  }
+
+  draw() {
+    const s = this.spec();
+    const { x, y } = this.center;
+    const time = performance.now() / 1000;
+
+    // Draw toxic base platform
+    ctx.fillStyle = "#1a261a";
+    ctx.beginPath();
+    ctx.arc(x, y, 18, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Toxic glow effect
+    const pulse = Math.sin(time * 3) * 0.2 + 0.8;
+    const gradient = ctx.createRadialGradient(x, y, 10, x, y, 25);
+    gradient.addColorStop(0, `rgba(76, 175, 80, ${0.5 * pulse})`);
+    gradient.addColorStop(1, "rgba(76, 175, 80, 0)");
+    ctx.fillStyle = gradient;
+    ctx.beginPath();
+    ctx.arc(x, y, 25, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Platform border with toxic effect
+    ctx.strokeStyle = "#2d4d2d";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(x, y, 18, 0, Math.PI * 2);
+    ctx.stroke();
+
+    // Draw toxic container body
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(this.rot);
+
+    // Main toxic container
+    ctx.fillStyle = "#2d4d2d";
+    ctx.beginPath();
+    ctx.roundRect(-12, -12, 24, 24, 6);
+    ctx.fill();
+
+    // Toxic liquid level (animated)
+    const liquidLevel = 0.6 + Math.sin(time * 2) * 0.1;
+    ctx.fillStyle = "#4CAF50";
+    ctx.beginPath();
+    ctx.roundRect(-10, 10 - liquidLevel * 20, 20, liquidLevel * 20, 4);
+    ctx.fill();
+
+    // Container details
+    ctx.strokeStyle = "#388E3C";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.roundRect(-12, -12, 24, 24, 6);
+    ctx.stroke();
+
+    // Toxic emitter nozzle
+    ctx.fillStyle = "#3d6d3d";
+    ctx.beginPath();
+    ctx.roundRect(8, -6, 12, 12, 3);
+    ctx.fill();
+
+    // Nozzle opening
+    ctx.fillStyle = "#1a261a";
+    ctx.beginPath();
+    ctx.roundRect(16, -4, 4, 8, 1);
+    ctx.fill();
+
+    // Bubbles in toxic liquid
+    ctx.fillStyle = "#A5D6A7";
+    for (let i = 0; i < 3; i++) {
+      const bubbleX = -8 + Math.random() * 16;
+      const bubbleY = -5 + Math.random() * 10;
+      const bubbleSize = 1 + Math.random() * 2;
+      const bubblePulse = Math.sin(time * 3 + i) * 0.3 + 1;
+
+      ctx.beginPath();
+      ctx.arc(bubbleX, bubbleY, bubbleSize * bubblePulse, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // Hazard symbols
+    ctx.strokeStyle = "#FFEB3B";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    // Skull shape
+    ctx.arc(0, -5, 4, 0, Math.PI * 2);
+    ctx.moveTo(-3, 0);
+    ctx.lineTo(3, 0);
+    ctx.moveTo(-4, 2);
+    ctx.lineTo(4, 2);
+    ctx.stroke();
+
+    ctx.restore();
+
+    // Draw level indicators as toxic bubbles
+    for (let i = 0; i < this.level; i++) {
+      const indicatorX = x - 10 + i * 6;
+      const indicatorY = y + 22;
+      const bubblePulse = Math.sin(time * 4 + i) * 0.5 + 1;
+
+      // Bubble glow
+      ctx.fillStyle = `rgba(76, 175, 80, ${0.4 * bubblePulse})`;
+      ctx.beginPath();
+      ctx.arc(indicatorX, indicatorY, 5 * bubblePulse, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Main bubble
+      ctx.fillStyle = s.color;
+      ctx.beginPath();
+      ctx.arc(indicatorX, indicatorY, 3, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Bubble highlight
+      ctx.fillStyle = "rgba(255, 255, 255, 0.6)";
+      ctx.beginPath();
+      ctx.arc(indicatorX - 1, indicatorY - 1, 1, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // Occasional toxic bubbles rising from tower
+    if (Math.random() < 0.1) {
+      this.drawRisingBubble(x, y, time);
+    }
+
+    // Toxic dripping from nozzle
+    if (Math.random() < 0.3) {
+      this.drawToxicDrip(x, y, time);
+    }
+  }
+
+  drawRisingBubble(x, y, time) {
+    const bubbleX = x + (Math.random() - 0.5) * 15;
+    const bubbleY = y - 20 - Math.random() * 10;
+    const size = 1.5 + Math.random() * 1.5;
+
+    ctx.fillStyle = "rgba(165, 214, 167, 0.8)";
+    ctx.beginPath();
+    ctx.arc(bubbleX, bubbleY, size, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Bubble highlight
+    ctx.fillStyle = "rgba(255, 255, 255, 0.6)";
+    ctx.beginPath();
+    ctx.arc(
+      bubbleX - size * 0.3,
+      bubbleY - size * 0.3,
+      size * 0.4,
+      0,
+      Math.PI * 2
+    );
+    ctx.fill();
+  }
+
+  drawToxicDrip(x, y, time) {
+    const dripX = x + 18 + (Math.random() - 0.5) * 2;
+    const dripLength = 3 + Math.random() * 4;
+
+    ctx.strokeStyle = "#388E3C";
+    ctx.lineWidth = 2;
+    ctx.lineCap = "round";
+    ctx.beginPath();
+    ctx.moveTo(dripX, y - 5);
+    ctx.lineTo(dripX, y - 5 - dripLength);
+    ctx.stroke();
+
+    // Drip end
+    ctx.fillStyle = "#388E3C";
+    ctx.beginPath();
+    ctx.arc(dripX, y - 5 - dripLength, 2, 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
+
+
+// ===== FILE: C:\Users\kurd7\Downloads\Tower\src\towers\TeslaTower.js =====
+
+// ===== FILE: C:\Users\kurd7\Downloads\Tower\src\towers\TeslaTower.js =====
+
+import { BaseTower } from "./BaseTower.js";
+import { ctx } from "../core.js";
+import { enemies } from "../state.js";
+import { spawnLightningArc, spawnElectricExplosion } from "../effects.js";
+import { particles } from "../state.js";
+import { dist } from "../utils.js";
+
+export class TeslaTower extends BaseTower {
+  static SPEC = {
+    name: "Tesla Tower",
+    cost: 300,
+    range: 140,
+    fireRate: 1.3,
+    dmg: 25,
+    chainCount: 3,
+    chainRange: 80,
+    stunChance: 0.3,
+    stunDuration: 1.5,
+    color: "#9d4edd",
+  };
+
+  // Override spec to include tesla properties
+  spec() {
+    const base = this.constructor.SPEC;
+    const mult = 1 + (this.level - 1) * 0.35;
+    return {
+      name: base.name,
+      range: base.range * (1 + (this.level - 1) * 0.08),
+      fireRate: base.fireRate * (1 + (this.level - 1) * 0.05),
+      dmg: base.dmg * mult,
+      chainCount: base.chainCount + Math.floor(this.level / 2), // +1 chain every 2 levels
+      chainRange: base.chainRange * (1 + (this.level - 1) * 0.05),
+      stunChance: base.stunChance + (this.level - 1) * 0.05,
+      stunDuration: base.stunDuration * (1 + (this.level - 1) * 0.1),
+      color: base.color,
+      cost: base.cost,
+    };
+  }
+
+  update(dt, enemiesList) {
+    const s = this.spec();
+    this.cool -= dt;
+
+    if (this.cool <= 0) {
+      let best = null;
+      let bestScore = -1;
+
+      for (const e of enemiesList) {
+        if (e.dead) continue;
+        const p = e.pos;
+        const d = dist(this.center, p);
+        if (d <= s.range && e.t > bestScore) {
+          best = e;
+          bestScore = e.t;
+        }
+      }
+
+      if (best) {
+        this.cool = 1 / s.fireRate;
+        this.rot = Math.atan2(
+          best.pos.y - this.center.y,
+          best.pos.x - this.center.x
+        );
+        this.fireLightning(best, s);
+      }
+    }
+  }
+
+  fireLightning(primaryTarget, spec) {
+    const c = this.center;
+    const hitEnemies = new Set([primaryTarget]);
+
+    // Damage primary target
+    primaryTarget.damage(spec.dmg);
+    this.applyStun(primaryTarget, spec);
+
+    // Create primary lightning arc
+    spawnLightningArc(c, primaryTarget.pos, spec.color);
+    spawnElectricExplosion(primaryTarget.pos.x, primaryTarget.pos.y);
+
+    // Chain to additional targets
+    let currentTarget = primaryTarget;
+    for (let i = 0; i < spec.chainCount; i++) {
+      const nextTarget = this.findNextChainTarget(
+        currentTarget,
+        hitEnemies,
+        spec.chainRange
+      );
+      if (!nextTarget) break;
+
+      // Damage chained target (reduced damage)
+      const chainDmg = spec.dmg * (0.6 - i * 0.1); // 60%, 50%, 40%, etc.
+      nextTarget.damage(chainDmg);
+      this.applyStun(nextTarget, spec);
+
+      // Create chain lightning arc
+      spawnLightningArc(currentTarget.pos, nextTarget.pos, spec.color);
+      spawnElectricExplosion(nextTarget.pos.x, nextTarget.pos.y);
+
+      hitEnemies.add(nextTarget);
+      currentTarget = nextTarget;
+    }
+
+    // Visual effects on the tower itself
+    this.spawnElectricParticles(c.x, c.y);
+  }
+
+  findNextChainTarget(currentTarget, hitEnemies, chainRange) {
+    let bestTarget = null;
+    let bestDistance = Infinity;
+
+    for (const e of enemies) {
+      if (e.dead || hitEnemies.has(e)) continue;
+
+      const d = dist(currentTarget.pos, e.pos);
+      if (d <= chainRange && d < bestDistance) {
+        bestTarget = e;
+        bestDistance = d;
+      }
+    }
+
+    return bestTarget;
+  }
+
+  applyStun(enemy, spec) {
+    if (Math.random() < spec.stunChance && !enemy.stunned) {
+      enemy.stunned = true;
+      enemy.originalSpeed = enemy.speed;
+      enemy.speed = 0;
+
+      // Set timeout to remove stun
+      setTimeout(() => {
+        if (!enemy.dead) {
+          enemy.stunned = false;
+          enemy.speed = enemy.originalSpeed;
+          enemy.electricEffect = false;
+        }
+      }, spec.stunDuration * 1000);
+
+      enemy.electricEffect = true;
+      enemy.electricEffectTime = spec.stunDuration;
+    }
+  }
+
+  spawnElectricParticles(x, y) {
+    for (let i = 0; i < 8; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const speed = 50 + Math.random() * 100;
+      const size = 1 + Math.random() * 2;
+      const life = 0.3 + Math.random() * 0.2;
+
+      // Use the imported particles array instead of window.particles
+      particles.push({
+        x,
+        y,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed,
+        life,
+        r: size,
+        c: "#e0aaff",
+        gravity: 0.1,
+        fade: 0.9,
+      });
+    }
+  }
+
+  draw() {
+    const s = this.spec();
+    const { x, y } = this.center;
+    const time = performance.now() / 1000;
+
+    // Draw electrified base platform
+    ctx.fillStyle = "#1a1426";
+    ctx.beginPath();
+    ctx.arc(x, y, 20, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Electric glow effect
+    const pulse = Math.sin(time * 5) * 0.2 + 0.8;
+    const gradient = ctx.createRadialGradient(x, y, 10, x, y, 25);
+    gradient.addColorStop(0, `rgba(157, 78, 221, ${0.6 * pulse})`);
+    gradient.addColorStop(1, "rgba(157, 78, 221, 0)");
+    ctx.fillStyle = gradient;
+    ctx.beginPath();
+    ctx.arc(x, y, 25, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Platform border with electric effect
+    ctx.strokeStyle = "#5a2d91";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(x, y, 20, 0, Math.PI * 2);
+    ctx.stroke();
+
+    // Draw Tesla coil body
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(this.rot);
+
+    // Main coil base
+    ctx.fillStyle = "#2a1a3a";
+    ctx.beginPath();
+    ctx.roundRect(-12, -14, 24, 28, 8);
+    ctx.fill();
+
+    // Tesla coil primary
+    ctx.fillStyle = "#3a2a4a";
+    ctx.beginPath();
+    ctx.roundRect(-8, -16, 16, 32, 6);
+    ctx.fill();
+
+    // Coil windings
+    ctx.strokeStyle = "#7d5ba6";
+    ctx.lineWidth = 2;
+    for (let i = -12; i <= 12; i += 4) {
+      ctx.beginPath();
+      ctx.arc(0, i, 6, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+
+    // Top electrode (Tesla ball)
+    ctx.fillStyle = "#e0aaff";
+    ctx.beginPath();
+    ctx.arc(0, -20, 6, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Electric arc effect from top electrode
+    const arcPulse = Math.sin(time * 10) * 2;
+    ctx.strokeStyle = `rgba(224, 170, 255, ${0.7 + Math.sin(time * 15) * 0.3})`;
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(0, -26);
+    for (let i = 0; i < 3; i++) {
+      const offsetX = (Math.random() - 0.5) * 8;
+      const offsetY = -30 - i * 4 + (Math.random() - 0.5) * 3;
+      ctx.lineTo(offsetX, offsetY);
+    }
+    ctx.stroke();
+
+    // Secondary coils
+    ctx.fillStyle = "#4a3a5a";
+    ctx.beginPath();
+    ctx.roundRect(10, -10, 6, 20, 2);
+    ctx.fill();
+
+    ctx.beginPath();
+    ctx.roundRect(-16, -10, 6, 20, 2);
+    ctx.fill();
+
+    // Energy conduits
+    ctx.strokeStyle = "#9d4edd";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(-8, 12);
+    ctx.lineTo(-12, 16);
+    ctx.moveTo(8, 12);
+    ctx.lineTo(12, 16);
+    ctx.stroke();
+
+    ctx.restore();
+
+    // Draw level indicators as electric orbs
+    for (let i = 0; i < this.level; i++) {
+      const indicatorX = x - 12 + i * 6;
+      const indicatorY = y + 25;
+      const orbPulse = Math.sin(time * 4 + i) * 0.5 + 1;
+
+      // Energy glow
+      ctx.fillStyle = `rgba(157, 78, 221, ${0.4 * orbPulse})`;
+      ctx.beginPath();
+      ctx.arc(indicatorX, indicatorY, 5 * orbPulse, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Main orb
+      ctx.fillStyle = s.color;
+      ctx.beginPath();
+      ctx.arc(indicatorX, indicatorY, 3, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Electric spark effect for higher levels
+      if (this.level > 3 && i >= this.level - 3) {
+        this.drawElectricSpark(indicatorX, indicatorY, time);
+      }
+    }
+
+    // Random electric arcs between tower parts
+    if (Math.random() < 0.1) {
+      this.drawRandomArc(x, y, time);
+    }
+  }
+
+  drawElectricSpark(x, y, time) {
+    const angle = Math.random() * Math.PI * 2;
+    const length = 5 + Math.random() * 8;
+
+    ctx.strokeStyle = `rgba(255, 255, 255, ${0.8 + Math.sin(time * 20) * 0.2})`;
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+
+    for (let i = 0; i < 3; i++) {
+      const segX = x + (Math.cos(angle) * length * (i + 1)) / 3;
+      const segY = y + (Math.sin(angle) * length * (i + 1)) / 3;
+      const offsetX = (Math.random() - 0.5) * 3;
+      const offsetY = (Math.random() - 0.5) * 3;
+      ctx.lineTo(segX + offsetX, segY + offsetY);
+    }
+
+    ctx.stroke();
+  }
+
+  drawRandomArc(x, y, time) {
+    const startAngle = Math.random() * Math.PI * 2;
+    const endAngle = startAngle + (Math.random() - 0.5) * Math.PI;
+    const startDist = 15 + Math.random() * 10;
+    const endDist = 5 + Math.random() * 8;
+
+    const startX = x + Math.cos(startAngle) * startDist;
+    const startY = y + Math.sin(startAngle) * startDist;
+    const endX = x + Math.cos(endAngle) * endDist;
+    const endY = y + Math.sin(endAngle) * endDist;
+
+    ctx.strokeStyle = `rgba(224, 170, 255, ${0.7 + Math.sin(time * 20) * 0.3})`;
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(startX, startY);
+
+    // Create jagged lightning effect
+    const segments = 5;
+    const dx = (endX - startX) / segments;
+    const dy = (endY - startY) / segments;
+
+    for (let i = 1; i <= segments; i++) {
+      const segX = startX + dx * i;
+      const segY = startY + dy * i;
+      const offsetX = (Math.random() - 0.5) * 8;
+      const offsetY = (Math.random() - 0.5) * 8;
+      ctx.lineTo(segX + offsetX, segY + offsetY);
+    }
+
+    ctx.stroke();
+  }
+}

@@ -41,6 +41,43 @@ let mouse = {
   dragStartY: 0,
 };
 
+// Add this after the existing mouse event listeners
+canvas.addEventListener("wheel", (e) => {
+  // Only handle wheel events in the shop area
+  if (mouse.y > ctx.canvas.clientHeight - 100) {
+    e.preventDefault();
+
+    // Scroll the shop
+    ui.shopScrollOffset += e.deltaY > 0 ? 100 : -100;
+    ui.shopScrollOffset = Math.max(
+      0,
+      Math.min(ui.maxShopScroll, ui.shopScrollOffset)
+    );
+  }
+});
+
+// Also add touch support for mobile devices
+let touchStartX = 0;
+canvas.addEventListener("touchstart", (e) => {
+  if (e.touches[0].clientY > ctx.canvas.clientHeight - 100) {
+    touchStartX = e.touches[0].clientX;
+    e.preventDefault();
+  }
+});
+
+canvas.addEventListener("touchmove", (e) => {
+  if (e.touches[0].clientY > ctx.canvas.clientHeight - 100) {
+    const deltaX = touchStartX - e.touches[0].clientX;
+    ui.shopScrollOffset += deltaX;
+    ui.shopScrollOffset = Math.max(
+      0,
+      Math.min(ui.maxShopScroll, ui.shopScrollOffset)
+    );
+    touchStartX = e.touches[0].clientX;
+    e.preventDefault();
+  }
+});
+
 canvas.addEventListener("mousemove", (e) => {
   const rect = canvas.getBoundingClientRect();
   mouse.x = e.clientX - rect.left;
@@ -61,34 +98,38 @@ canvas.addEventListener("mousedown", (e) => {
   mouse.dragStartY = mouse.y;
 
   // Check if clicking on shop button
+  // In the mousedown event handler, update the shop button detection:
   if (mouse.y > ctx.canvas.clientHeight - 100) {
     const buttons = getShopButtons(
       ctx.canvas.clientWidth,
       ctx.canvas.clientHeight
     );
     for (const b of buttons) {
-      if (
-        mouse.x >= b.x &&
-        mouse.x <= b.x + b.w &&
-        mouse.y >= b.y &&
-        mouse.y <= b.y + b.h
-      ) {
-        const spec = TOWER_TYPES[b.key];
-        // Don't allow selection if can't afford
-        if (state.money < spec.cost) {
-          pulse("Not enough money!", "#f66");
+      // Check if button is visible (within canvas bounds)
+      if (b.x + b.w > 0 && b.x < ctx.canvas.clientWidth) {
+        if (
+          mouse.x >= b.x &&
+          mouse.x <= b.x + b.w &&
+          mouse.y >= b.y &&
+          mouse.y <= b.y + b.h
+        ) {
+          const spec = TOWER_TYPES[b.key];
+          // Don't allow selection if can't afford
+          if (state.money < spec.cost) {
+            pulse("Not enough money!", "#f66");
+            return;
+          }
+
+          // If clicking the same tower type that's already selected, deselect it
+          if (ui.selectedShopKey === b.key) {
+            ui.selectedShopKey = null;
+          } else {
+            ui.selectedShopKey = b.key;
+            ui.selectedTower = null;
+          }
+          mouse.draggingTower = false;
           return;
         }
-
-        // If clicking the same tower type that's already selected, deselect it
-        if (ui.selectedShopKey === b.key) {
-          ui.selectedShopKey = null;
-        } else {
-          ui.selectedShopKey = b.key;
-          ui.selectedTower = null;
-        }
-        mouse.draggingTower = false;
-        return;
       }
     }
     // Clicked in shop area but not on a button - deselect everything

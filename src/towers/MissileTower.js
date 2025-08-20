@@ -1,0 +1,316 @@
+// ===== FILE: C:\Users\kurd7\Downloads\Tower\src\towers\MissileTower.js =====
+
+import { BaseTower } from "./BaseTower.js";
+import { ctx } from "../core.js";
+import { enemies, projectiles, particles } from "../state.js";
+import { dist } from "../utils.js";
+import { spawnExplosion, spawnMuzzle } from "../effects.js";
+import { Missile } from "../missile.js"; // We'll create this special projectile
+
+export class MissileTower extends BaseTower {
+  static SPEC = {
+    name: "Missile Tower",
+    cost: 280,
+    range: 160,
+    fireRate: 0.8,
+    dmg: 70,
+    splash: 80,
+    bulletSpeed: 180,
+    homingStrength: 0.1,
+    retarget: true,
+    color: "#FF5722",
+  };
+
+  // Override spec to include missile properties
+  spec() {
+    const base = this.constructor.SPEC;
+    const mult = 1 + (this.level - 1) * 0.4; // Higher multiplier for damage
+    return {
+      name: base.name,
+      range: base.range * (1 + (this.level - 1) * 0.1), // Better range scaling
+      fireRate: base.fireRate * (1 + (this.level - 1) * 0.05),
+      dmg: base.dmg * mult,
+      splash: base.splash * (1 + (this.level - 1) * 0.08),
+      bulletSpeed: base.bulletSpeed,
+      homingStrength: base.homingStrength + (this.level - 1) * 0.02,
+      retarget: base.retarget,
+      color: base.color,
+      cost: base.cost,
+    };
+  }
+
+  update(dt, enemiesList) {
+    const s = this.spec();
+    this.cool -= dt;
+
+    // Always track enemies, not just when firing
+    let best = null;
+    let bestScore = -1;
+
+    for (const e of enemiesList) {
+      if (e.dead) continue;
+      const p = e.pos;
+      const d = dist(this.center, p);
+      if (d <= s.range && e.t > bestScore) {
+        best = e;
+        bestScore = e.t;
+      }
+    }
+
+    // Only rotate if there's a target
+    if (best) {
+      this.rot = Math.atan2(
+        best.pos.y - this.center.y,
+        best.pos.x - this.center.x
+      );
+    }
+
+    // Fire if cooldown is ready and there's a target
+    if (this.cool <= 0 && best) {
+      this.cool = 1 / s.fireRate;
+      this.fireMissile(best, s);
+    }
+  }
+
+  fireMissile(target, spec) {
+    const c = this.center;
+
+    // Calculate missile start position (in front of the tower)
+    const missileOffset = 20; // Distance in front of center
+    const startX = c.x + Math.cos(this.rot) * missileOffset;
+    const startY = c.y + Math.sin(this.rot) * missileOffset;
+
+    // Create homing missile at the correct position
+    const missile = new Missile(startX, startY, target, spec);
+    missile.rotation = this.rot; // Set initial rotation
+    projectiles.push(missile);
+
+    // Muzzle flash and smoke at the launch position
+    spawnMuzzle(startX, startY, this.rot, spec.color);
+    this.spawnLaunchSmoke(startX, startY);
+
+    // Tower recoil effect
+    this.recoilEffect = 0.3;
+  }
+
+  spawnLaunchSmoke(x, y) {
+    for (let i = 0; i < 12; i++) {
+      const angle = this.rot + Math.PI + (Math.random() - 0.5) * 0.5;
+      const speed = 60 + Math.random() * 60;
+      const size = 3 + Math.random() * 3;
+      const life = 1 + Math.random() * 0.5;
+
+      particles.push({
+        x,
+        y,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed,
+        life,
+        r: size,
+        c: "#888888",
+        gravity: 0.1,
+        fade: 0.92,
+        shrink: 0.95,
+      });
+    }
+
+    // Add some forward thrust particles too
+    for (let i = 0; i < 6; i++) {
+      const angle = this.rot + (Math.random() - 0.5) * 0.2;
+      const speed = 100 + Math.random() * 100;
+      const size = 2 + Math.random() * 2;
+      const life = 0.5 + Math.random() * 0.3;
+
+      particles.push({
+        x,
+        y,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed,
+        life,
+        r: size,
+        c: "#FF5722",
+        gravity: 0.05,
+        fade: 0.95,
+      });
+    }
+  }
+
+  draw() {
+    const s = this.spec();
+    const { x, y } = this.center;
+    const time = performance.now() / 1000;
+
+    // Draw missile base platform
+    ctx.fillStyle = "#261a1a";
+    ctx.beginPath();
+    ctx.arc(x, y, 22, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Rocket launch pad glow
+    const pulse = Math.sin(time * 4) * 0.2 + 0.8;
+    const gradient = ctx.createRadialGradient(x, y, 12, x, y, 28);
+    gradient.addColorStop(0, `rgba(255, 87, 34, ${0.6 * pulse})`);
+    gradient.addColorStop(1, "rgba(255, 87, 34, 0)");
+    ctx.fillStyle = gradient;
+    ctx.beginPath();
+    ctx.arc(x, y, 28, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Platform border
+    ctx.strokeStyle = "#4d2d2d";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(x, y, 22, 0, Math.PI * 2);
+    ctx.stroke();
+
+    // Draw missile launcher
+    ctx.save();
+    ctx.translate(x, y);
+
+    // Apply recoil effect if recently fired
+    if (this.recoilEffect > 0) {
+      ctx.translate(0, this.recoilEffect * 2);
+      this.recoilEffect -= 0.05;
+    }
+
+    ctx.rotate(this.rot);
+
+    // Launcher base
+    ctx.fillStyle = "#3d2d2d";
+    ctx.beginPath();
+    ctx.roundRect(-14, -10, 28, 20, 5);
+    ctx.fill();
+
+    // Launch rails
+    ctx.strokeStyle = "#666";
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(-8, -15);
+    ctx.lineTo(-8, 15);
+    ctx.moveTo(8, -15);
+    ctx.lineTo(8, 15);
+    ctx.stroke();
+
+    // Missile silo (if no recent fire)
+    if (!this.recoilEffect || this.recoilEffect <= 0) {
+      this.drawMissileInSilo();
+    }
+
+    // Targeting system
+    ctx.fillStyle = "#2196F3";
+    ctx.beginPath();
+    ctx.arc(0, 0, 6, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Targeting reticle
+    ctx.strokeStyle = "#2196F3";
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.arc(0, 0, 10, 0, Math.PI * 2);
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.moveTo(-8, 0);
+    ctx.lineTo(8, 0);
+    ctx.moveTo(0, -8);
+    ctx.lineTo(0, 8);
+    ctx.stroke();
+
+    ctx.restore();
+
+    // Draw level indicators as missile icons
+    for (let i = 0; i < this.level; i++) {
+      const indicatorX = x - 12 + i * 6;
+      const indicatorY = y + 25;
+
+      // Missile icon
+      ctx.fillStyle = s.color;
+      ctx.beginPath();
+      ctx.moveTo(indicatorX - 2, indicatorY - 4);
+      ctx.lineTo(indicatorX + 2, indicatorY - 4);
+      ctx.lineTo(indicatorX + 2, indicatorY + 4);
+      ctx.lineTo(indicatorX - 2, indicatorY + 4);
+      ctx.closePath();
+      ctx.fill();
+
+      // Missile tip
+      ctx.beginPath();
+      ctx.moveTo(indicatorX + 2, indicatorY);
+      ctx.lineTo(indicatorX + 4, indicatorY);
+      ctx.lineTo(indicatorX + 2, indicatorY - 2);
+      ctx.closePath();
+      ctx.fill();
+
+      // Fire effect for higher levels
+      if (this.level > 3 && i >= this.level - 3) {
+        this.drawMiniExhaust(indicatorX, indicatorY, time);
+      }
+    }
+
+    // Random targeting laser effect
+    if (Math.random() < 0.05) {
+      this.drawTargetingLaser(x, y, time);
+    }
+  }
+
+  drawMissileInSilo() {
+    // Missile body - positioned to fire forward
+    ctx.fillStyle = "#FFFFFF";
+    ctx.beginPath();
+    ctx.roundRect(-4, -24, 8, 24, 3); // Moved forward (negative Y)
+    ctx.fill();
+
+    // Missile stripes
+    ctx.fillStyle = "#FF5722";
+    ctx.fillRect(-4, -16, 8, 3); // Adjusted positions
+    ctx.fillRect(-4, -9, 8, 3); // Adjusted positions
+
+    // Missile nose cone - pointing forward
+    ctx.fillStyle = "#FF5722";
+    ctx.beginPath();
+    ctx.moveTo(-4, -24);
+    ctx.lineTo(4, -24);
+    ctx.lineTo(0, -30); // Pointing forward (negative Y)
+    ctx.closePath();
+    ctx.fill();
+
+    // Fins - adjusted position
+    ctx.fillStyle = "#FF5722";
+    ctx.beginPath();
+    ctx.moveTo(-4, -2); // Adjusted position
+    ctx.lineTo(-8, -2); // Adjusted position
+    ctx.lineTo(-4, 2); // Adjusted position
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.beginPath();
+    ctx.moveTo(4, -2); // Adjusted position
+    ctx.lineTo(8, -2); // Adjusted position
+    ctx.lineTo(4, 2); // Adjusted position
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  drawMiniExhaust(x, y, time) {
+    const pulse = Math.sin(time * 8) * 0.5 + 1;
+
+    ctx.fillStyle = `rgba(255, 87, 34, ${0.8 * pulse})`;
+    ctx.beginPath();
+    ctx.arc(x - 4, y, 2 * pulse, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  drawTargetingLaser(x, y, time) {
+    const angle = this.rot + (Math.random() - 0.5) * 0.2;
+    const length = 30 + Math.random() * 20;
+
+    ctx.strokeStyle = `rgba(33, 150, 243, ${0.6 + Math.sin(time * 10) * 0.4})`;
+    ctx.lineWidth = 1;
+    ctx.setLineDash([2, 2]);
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    ctx.lineTo(x + Math.cos(angle) * length, y + Math.sin(angle) * length);
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
+}

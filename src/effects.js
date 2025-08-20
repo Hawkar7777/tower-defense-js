@@ -102,13 +102,22 @@ export function drawEffects() {
   }
   // Expanding shock circles
   for (const c of circles) {
-    const a = clamp(c.life / 0.3, 0, 1);
-    ctx.strokeStyle = c.c;
-    ctx.globalAlpha = a;
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.arc(c.x, c.y, (1 - a) * c.R, 0, TAU);
-    ctx.stroke();
+    if (c.type === "poison") {
+      const alpha = clamp((c.life / c.R) * 0.3, 0, 0.3); // Fade based on remaining life
+      ctx.fillStyle = `rgba(76, 175, 80, ${alpha})`;
+      ctx.beginPath();
+      ctx.arc(c.x, c.y, c.R * (1 - c.life / c.R), 0, TAU);
+      ctx.fill();
+    } else {
+      // Regular circle drawing code
+      const a = clamp(c.life / 0.3, 0, 1);
+      ctx.strokeStyle = c.c;
+      ctx.globalAlpha = a;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(c.x, c.y, (1 - a) * c.R, 0, TAU);
+      ctx.stroke();
+    }
     ctx.globalAlpha = 1;
   }
   // Particles
@@ -181,4 +190,74 @@ function drawLightningArc(start, end, color, progress) {
 
   ctx.stroke();
   ctx.globalAlpha = 1;
+}
+
+export function spawnPoisonCloud(x, y, duration, radius) {
+  // Create a lingering poison cloud effect
+  circles.push({
+    x,
+    y,
+    R: radius,
+    life: duration,
+    c: "#4CAF50",
+    type: "poison",
+    alpha: 0.3,
+  });
+
+  // Add poison particles
+  for (let i = 0; i < 8; i++) {
+    const angle = Math.random() * TAU;
+    const distance = Math.random() * radius;
+
+    particles.push({
+      x: x + Math.cos(angle) * distance,
+      y: y + Math.sin(angle) * distance,
+      vx: (Math.random() - 0.5) * 20,
+      vy: (Math.random() - 0.5) * 20,
+      life: duration * 0.8,
+      r: 2 + Math.random() * 2,
+      c: "#4CAF50",
+      gravity: -0.1, // Reverse gravity for rising effect
+      fade: 0.97,
+    });
+  }
+}
+
+// Add to your existing effects.js:
+
+export function spawnMissileExplosion(x, y, radius, color) {
+  // Larger explosion for missiles
+  for (let i = 0; i < 25; i++) {
+    const a = rand(TAU);
+    particles.push({
+      x,
+      y,
+      vx: Math.cos(a) * rand(350, 100),
+      vy: Math.sin(a) * rand(350, 100),
+      life: rand(0.6, 0.3),
+      r: rand(5, 2),
+      c: color,
+      gravity: 0.15,
+      fade: 0.9,
+    });
+  }
+
+  circles.push({
+    x,
+    y,
+    R: radius,
+    life: 0.5,
+    c: color,
+    type: "explosion",
+  });
+
+  // Shockwave effect
+  circles.push({
+    x,
+    y,
+    R: radius * 1.5,
+    life: 0.4,
+    c: "#FF9800",
+    type: "shockwave",
+  });
 }

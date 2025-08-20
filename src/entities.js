@@ -3,3 +3,4 @@
 export { Enemy } from "./enemy.js";
 export { BaseTower as Tower } from "./towers/BaseTower.js";
 export { Bullet } from "./bullet.js";
+export { Missile } from "./missile.js";

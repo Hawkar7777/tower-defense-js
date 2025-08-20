@@ -96,6 +96,12 @@ export class Enemy {
     this.originalSpeed = this.speed;
     this.electricEffect = false;
     this.electricEffectTime = 0;
+
+    // Add these properties to the Enemy class constructor:
+    this.poisoned = false;
+    this.poisonDamage = 0;
+    this.poisonDuration = 0;
+    this.poisonStartTime = 0;
   }
 
   get pos() {
@@ -138,6 +144,13 @@ export class Enemy {
         this.electricEffect = false;
       }
     }
+
+    if (this.poisoned) {
+      const elapsed = (performance.now() - this.poisonStartTime) / 1000;
+      if (elapsed >= this.poisonDuration) {
+        this.poisoned = false;
+      }
+    }
   }
 
   damage(d) {
@@ -155,6 +168,29 @@ export class Enemy {
     const { x, y } = this.pos;
     const TAU = Math.PI * 2;
     const { r } = this;
+
+    if (this.poisoned) {
+      const elapsed = (performance.now() - this.poisonStartTime) / 1000;
+      const progress = elapsed / this.poisonDuration;
+      const alpha = 0.5 - progress * 0.3; // Fade out as poison wears off
+
+      ctx.fillStyle = `rgba(76, 175, 80, ${alpha})`;
+      ctx.beginPath();
+      ctx.arc(x, y, this.r + 2, 0, TAU);
+      ctx.fill();
+
+      // Poison bubbles effect
+      if (Math.random() < 0.3) {
+        const bubbleX = x + (Math.random() - 0.5) * this.r * 1.5;
+        const bubbleY = y + (Math.random() - 0.5) * this.r * 1.5;
+        const size = 1 + Math.random() * 1.5;
+
+        ctx.fillStyle = "rgba(165, 214, 167, 0.8)";
+        ctx.beginPath();
+        ctx.arc(bubbleX, bubbleY, size, 0, TAU);
+        ctx.fill();
+      }
+    }
 
     if (this.electricEffect || this.stunned) {
       const alpha = this.stunned ? 0.7 : 0.4;

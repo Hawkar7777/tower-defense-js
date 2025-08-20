@@ -91,40 +91,87 @@ export function drawTopbar(W) {
   for (let i = pulses.length - 1; i >= 0; i--)
     if (pulses[i].life <= 0) pulses.splice(i, 1);
 }
-
 export function getShopButtons(W, H) {
   const pad = 18;
   const y = H - 88;
   const h = 74;
-  const w = 170;
+  const w = 150;
   const keys = Object.keys(TOWER_TYPES);
-  return keys.map((k, i) => ({ key: k, x: pad + i * (w + 12), y, w, h }));
-}
 
-// ===== FILE: C:\Users\kurd7\Downloads\Tower\src\ui.js =====
+  // Calculate total width needed
+  const totalWidth = keys.length * (w + 12) - 12 + pad * 2;
+
+  // Add scroll offset if needed
+  const scrollOffset = ui.shopScrollOffset || 0;
+
+  return keys.map((k, i) => ({
+    key: k,
+    x: pad + i * (w + 12) - scrollOffset,
+    y,
+    w,
+    h,
+  }));
+}
 
 export function drawShop(W, H) {
   const buttons = getShopButtons(W, H);
+  const keys = Object.keys(TOWER_TYPES);
+
+  // Calculate max scroll needed
+  const totalWidth = keys.length * (150 + 12) - 12 + 18 * 2;
+  ui.maxShopScroll = Math.max(0, totalWidth - W);
+
+  // Draw scroll indicators if needed
+  if (ui.maxShopScroll > 0) {
+    // Left scroll indicator
+    if (ui.shopScrollOffset > 0) {
+      ctx.fillStyle = "rgba(255, 255, 255, 0.5)";
+      ctx.beginPath();
+      ctx.moveTo(10, H - 40);
+      ctx.lineTo(20, H - 50);
+      ctx.lineTo(20, H - 30);
+      ctx.closePath();
+      ctx.fill();
+    }
+
+    // Right scroll indicator
+    if (ui.shopScrollOffset < ui.maxShopScroll) {
+      ctx.fillStyle = "rgba(255, 255, 255, 0.5)";
+      ctx.beginPath();
+      ctx.moveTo(W - 10, H - 40);
+      ctx.lineTo(W - 20, H - 50);
+      ctx.lineTo(W - 20, H - 30);
+      ctx.closePath();
+      ctx.fill();
+    }
+  }
+
+  // Clip the shop area to prevent buttons from drawing outside
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(0, H - 100, W, 100);
+  ctx.clip();
+
   for (const b of buttons) {
     const spec = TOWER_TYPES[b.key];
     const active = ui.selectedShopKey === b.key;
-    const canAfford = state.money >= spec.cost; // Check if player can afford
+    const canAfford = state.money >= spec.cost;
 
     // Apply disabled styling if can't afford
     const bgColor = canAfford
       ? active
         ? "rgba(26,46,76,0.95)"
         : "rgba(12,22,36,0.9)"
-      : "rgba(36,36,48,0.8)"; // Darker, desaturated background
+      : "rgba(36,36,48,0.8)";
 
     const borderColor = canAfford
       ? active
         ? "#3d6fb6"
         : "#24496f"
-      : "#444455"; // Gray border for disabled
+      : "#444455";
 
-    const textColor = canAfford ? spec.color : "#666677"; // Gray text for disabled
-    const costColor = canAfford ? "#bfe7ff" : "#888899"; // Gray cost text
+    const textColor = canAfford ? spec.color : "#666677";
+    const costColor = canAfford ? "#bfe7ff" : "#888899";
 
     roundRect(b.x, b.y, b.w, b.h, 12, bgColor, true, borderColor);
 
@@ -135,6 +182,8 @@ export function drawShop(W, H) {
     ctx.font = "500 14px Inter, system-ui";
     ctx.fillText(`$${spec.cost}  •  Rng ${spec.range}`, b.x + 16, b.y + 50);
   }
+
+  ctx.restore(); // Restore clipping
 }
 export function drawGhost(
   hoveredTile,

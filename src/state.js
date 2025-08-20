@@ -20,4 +20,6 @@ export const ui = {
   selectedShopKey: "gun",
   hoveredTile: null,
   selectedTower: null,
+  shopScrollOffset: 0, // Add this line
+  maxShopScroll: 0, // And this line
 };

@@ -6,18 +6,84 @@ import { pointAt, totalLen } from "./path.js";
 import { spawnDeath, spawnExplosion } from "./effects.js";
 import { state } from "./state.js";
 
+// Enemy type definitions - encapsulated with all their properties
+export const ENEMY_TYPES = {
+  basic: {
+    name: "Scout",
+    baseHp: 100,
+    baseSpeed: 50,
+    baseReward: 8,
+    radius: 12,
+    color: "#7df",
+    glowColor: "#48f",
+    detailColor: "#5ac",
+    tierIndicator: 0,
+    spawnWeight: 1.0,
+    description: "Basic enemy unit",
+  },
+  brute: {
+    name: "Brute",
+    baseHp: 180,
+    baseSpeed: 40,
+    baseReward: 15,
+    radius: 16,
+    color: "#f96",
+    glowColor: "#f63",
+    detailColor: "#d54",
+    tierIndicator: 1,
+    spawnWeight: 0.7,
+    description: "Slow but tough enemy",
+  },
+  swift: {
+    name: "Swift",
+    baseHp: 80,
+    baseSpeed: 70,
+    baseReward: 12,
+    radius: 10,
+    color: "#9f6",
+    glowColor: "#6f3",
+    detailColor: "#5d4",
+    tierIndicator: 2,
+    spawnWeight: 0.8,
+    description: "Fast but fragile enemy",
+  },
+  elite: {
+    name: "Elite",
+    baseHp: 250,
+    baseSpeed: 45,
+    baseReward: 25,
+    radius: 14,
+    color: "#f6f",
+    glowColor: "#c3f",
+    detailColor: "#a3c",
+    tierIndicator: 3,
+    spawnWeight: 0.4,
+    description: "Powerful elite enemy",
+  },
+};
+
+// Difficulty scaling function
 let difficultyMult = () => 1 + state.wave * 0.15;
 
 export class Enemy {
-  constructor(tier = 0) {
+  constructor(type = "basic", tier = 0) {
+    const enemyType = ENEMY_TYPES[type] || ENEMY_TYPES.basic;
+
+    this.type = type;
     this.t = 0;
-    this.speed = 50 * difficultyMult();
-    this.maxHp = (100 + tier * 40) * difficultyMult();
+    this.speed = enemyType.baseSpeed * difficultyMult();
+    this.maxHp = (enemyType.baseHp + tier * 40) * difficultyMult();
     this.hp = this.maxHp;
-    this.reward = Math.round((8 + tier * 2) * difficultyMult());
-    this.r = 12;
+    this.reward = Math.round(
+      (enemyType.baseReward + tier * 2) * difficultyMult()
+    );
+    this.r = enemyType.radius;
+    this.color = enemyType.color;
+    this.glowColor = enemyType.glowColor;
+    this.detailColor = enemyType.detailColor;
+    this.tierIndicator = enemyType.tierIndicator;
     this.dead = false;
-    this.animationOffset = rand(Math.PI * 2); // Random starting point for animation
+    this.animationOffset = rand(Math.PI * 2);
     this.tier = tier;
   }
 
@@ -28,7 +94,8 @@ export class Enemy {
   update(dt) {
     if (this.dead) return;
     this.t += (this.speed * dt) / totalLen;
-    this.animationOffset += dt * 3; // Animate the enemy
+    this.animationOffset += dt * 3;
+
     if (this.t >= 1) {
       this.dead = true;
       state.lives = Math.max(0, state.lives - 1);
@@ -52,35 +119,9 @@ export class Enemy {
     const TAU = Math.PI * 2;
     const { r } = this;
 
-    // Different colors based on tier
-    let mainColor, glowColor, detailColor;
-
-    switch (this.tier % 4) {
-      case 0: // Basic enemy
-        mainColor = "#7df";
-        glowColor = "#48f";
-        detailColor = "#5ac";
-        break;
-      case 1: // Tier 1
-        mainColor = "#f96";
-        glowColor = "#f63";
-        detailColor = "#d54";
-        break;
-      case 2: // Tier 2
-        mainColor = "#9f6";
-        glowColor = "#6f3";
-        detailColor = "#5d4";
-        break;
-      case 3: // Tier 3
-        mainColor = "#f6f";
-        glowColor = "#c3f";
-        detailColor = "#a3c";
-        break;
-    }
-
     // Glow effect
     const grd = ctx.createRadialGradient(x, y, 4, x, y, r + 10);
-    grd.addColorStop(0, glowColor);
+    grd.addColorStop(0, this.glowColor);
     grd.addColorStop(1, "rgba(0,255,255,0.0)");
     ctx.fillStyle = grd;
     ctx.beginPath();
@@ -88,13 +129,13 @@ export class Enemy {
     ctx.fill();
 
     // Main body
-    ctx.fillStyle = mainColor;
+    ctx.fillStyle = this.color;
     ctx.beginPath();
     ctx.arc(x, y, r, 0, TAU);
     ctx.fill();
 
     // Enemy details - animated spikes/features
-    ctx.strokeStyle = detailColor;
+    ctx.strokeStyle = this.detailColor;
     ctx.lineWidth = 2;
     ctx.beginPath();
 
@@ -119,9 +160,9 @@ export class Enemy {
     ctx.arc(x, y, Math.max(2, eyeSize), 0, TAU);
     ctx.fill();
 
-    // Tier indicator - use visual markers instead of text
+    // Tier indicator
     if (this.tier > 0) {
-      ctx.fillStyle = "#ff0"; // Yellow for tier indicators
+      ctx.fillStyle = "#ff0";
       for (let i = 0; i < this.tier; i++) {
         ctx.beginPath();
         ctx.arc(x - 6 + i * 4, y - r - 6, 2, 0, TAU);
@@ -138,4 +179,48 @@ export class Enemy {
     ctx.fillStyle = p > 0.5 ? "#6f6" : p > 0.25 ? "#fd6" : "#f66";
     ctx.fillRect(x - w / 2, y - r - 14, w * p, h);
   }
+}
+
+// Helper function to get enemy types by wave
+export function getEnemiesForWave(wave) {
+  const enemies = [];
+  const totalCount = 8 + wave * 2;
+
+  // Determine which enemy types can spawn this wave
+  const availableTypes = [];
+
+  if (wave >= 1) availableTypes.push("basic");
+  if (wave >= 2) availableTypes.push("brute");
+  if (wave >= 3) availableTypes.push("swift");
+  if (wave >= 5) availableTypes.push("elite");
+
+  // Calculate tier based on wave
+  const tier = Math.floor((wave - 1) / 1.5);
+
+  // Distribute enemies based on type weights
+  for (let i = 0; i < totalCount; i++) {
+    let type;
+
+    // For early waves, use only basic enemies
+    if (wave < 2) {
+      type = "basic";
+    } else {
+      // Weighted random selection for later waves
+      const weights = availableTypes.map((t) => ENEMY_TYPES[t].spawnWeight);
+      const totalWeight = weights.reduce((sum, weight) => sum + weight, 0);
+      let random = Math.random() * totalWeight;
+
+      for (let j = 0; j < availableTypes.length; j++) {
+        random -= weights[j];
+        if (random <= 0) {
+          type = availableTypes[j];
+          break;
+        }
+      }
+    }
+
+    enemies.push({ type, tier });
+  }
+
+  return enemies;
 }

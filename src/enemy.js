@@ -90,6 +90,12 @@ export class Enemy {
     this.frozen = false;
     this.iceEffect = false;
     this.iceEffectTime = 0;
+
+    // Add these properties to the Enemy class constructor:
+    this.stunned = false;
+    this.originalSpeed = this.speed;
+    this.electricEffect = false;
+    this.electricEffectTime = 0;
   }
 
   get pos() {
@@ -121,6 +127,17 @@ export class Enemy {
         this.iceEffect = false;
       }
     }
+
+    if (this.stunned) {
+      this.speed = 0;
+    }
+
+    if (this.electricEffect) {
+      this.electricEffectTime -= dt;
+      if (this.electricEffectTime <= 0) {
+        this.electricEffect = false;
+      }
+    }
   }
 
   damage(d) {
@@ -138,6 +155,50 @@ export class Enemy {
     const { x, y } = this.pos;
     const TAU = Math.PI * 2;
     const { r } = this;
+
+    if (this.electricEffect || this.stunned) {
+      const alpha = this.stunned ? 0.7 : 0.4;
+      ctx.fillStyle = `rgba(157, 78, 221, ${alpha})`;
+      ctx.beginPath();
+      ctx.arc(x, y, this.r + 3, 0, TAU);
+      ctx.fill();
+
+      // Draw electric arcs on stunned enemies
+      if (this.stunned) {
+        ctx.strokeStyle = "rgba(224, 170, 255, 0.8)";
+        ctx.lineWidth = 1.5;
+
+        for (let i = 0; i < 3; i++) {
+          const angle1 = Math.random() * TAU;
+          const angle2 = angle1 + (Math.random() - 0.5) * Math.PI;
+          const dist1 = this.r * (0.5 + Math.random() * 0.5);
+          const dist2 = this.r * (0.8 + Math.random() * 0.2);
+
+          ctx.beginPath();
+          ctx.moveTo(
+            x + Math.cos(angle1) * dist1,
+            y + Math.sin(angle1) * dist1
+          );
+
+          // Create jagged lightning effect
+          const segments = 3;
+          const dx =
+            (Math.cos(angle2) * dist2 - Math.cos(angle1) * dist1) / segments;
+          const dy =
+            (Math.sin(angle2) * dist2 - Math.sin(angle1) * dist1) / segments;
+
+          for (let j = 1; j <= segments; j++) {
+            const segX = x + Math.cos(angle1) * dist1 + dx * j;
+            const segY = y + Math.sin(angle1) * dist1 + dy * j;
+            const offsetX = (Math.random() - 0.5) * 5;
+            const offsetY = (Math.random() - 0.5) * 5;
+            ctx.lineTo(segX + offsetX, segY + offsetY);
+          }
+
+          ctx.stroke();
+        }
+      }
+    }
 
     // Glow effect
     const grd = ctx.createRadialGradient(x, y, 4, x, y, r + 10);

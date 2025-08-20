@@ -5,6 +5,7 @@ import { CannonTower } from "./towers/CannonTower.js";
 import { DoubleCannonTower } from "./towers/DoubleCannonTower.js";
 import { LaserTower } from "./towers/LaserTower.js";
 import { IceTower } from "./towers/IceTower.js";
+import { TeslaTower } from "./towers/TeslaTower.js";
 
 export const TOWER_TYPES = {
   gun: {
@@ -62,5 +63,18 @@ export const TOWER_TYPES = {
     bulletSpeed: 300,
     color: "#6cfaff",
     class: IceTower,
+  },
+  tesla: {
+    name: "Tesla Tower",
+    cost: 220,
+    range: 140,
+    fireRate: 1.8,
+    dmg: 25,
+    chainCount: 3, // Jumps to 3 additional targets
+    chainRange: 80, // Range for chain jumps
+    stunChance: 0.1, // 30% chance to stun
+    stunDuration: 1, // seconds
+    color: "#9d4edd",
+    class: TeslaTower,
   },
 };

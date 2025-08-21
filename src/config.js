@@ -20,6 +20,7 @@ import { VolcanoTower } from "./towers/VolcanoTower.js";
 import { CarM249Tower } from "./towers/CarM249Tower.js";
 import { SmallTank } from "./towers/SmallTank.js";
 import { MediumTank } from "./towers/MediumTank.js";
+import { BigTank } from "./towers/BigTank.js";
 
 export const TOWER_TYPES = {
   gun: {
@@ -258,5 +259,20 @@ export const TOWER_TYPES = {
     bulletSpeed: 300,
     color: "#8b4513",
     class: MediumTank,
+  },
+  bigTank: {
+    name: "Big Tank",
+    cost: 950,
+    range: 200,
+    fireRate: 0.6, // main shells per second
+    dmg: 600, // main shell damage
+    splash: 110,
+    bulletSpeed: 220, // main shell speed
+    color: "#4b2e1e",
+    // top gun params (optional, defaults used if omitted)
+    topFireRate: 10, // bullets per second for top gun (continuous)
+    topDmg: 30, // damage per top-gun bullet
+    topBulletSpeed: 720, // speed of top-gun bullets
+    class: BigTank,
   },
 };

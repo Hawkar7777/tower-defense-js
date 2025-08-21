@@ -48,33 +48,6 @@ class MediumTankShell {
 
     if (distance < 14) {
       // Impact: burst, smoke and a single circular shock visual (simple circle)
-      for (let i = 0; i < 20; i++) {
-        const a = Math.random() * Math.PI * 2;
-        const s = Math.random() * 260 + 100;
-        particles.push({
-          x: this.pos.x,
-          y: this.pos.y,
-          vx: Math.cos(a) * s,
-          vy: Math.sin(a) * s,
-          life: 0.5 + Math.random() * 0.6,
-          r: 3 + Math.random() * 4,
-          c: ["#fff2b8", "#ffb65c", "#ff6b3a"][Math.floor(Math.random() * 3)],
-          fade: 0.88,
-        });
-      }
-
-      for (let i = 0; i < 12; i++) {
-        particles.push({
-          x: this.pos.x + (Math.random() - 0.5) * 20,
-          y: this.pos.y + (Math.random() - 0.5) * 20,
-          vx: (Math.random() - 0.5) * 80,
-          vy: -20 - Math.random() * 80,
-          life: 1.2 + Math.random() * 1.0,
-          r: 6 + Math.random() * 6,
-          c: "#333333",
-          fade: 0.72,
-        });
-      }
 
       for (let i = 0; i < 12; i++) {
         const a = Math.random() * Math.PI * 2;
@@ -92,16 +65,6 @@ class MediumTankShell {
       }
 
       // Replace special "shockwave" tag with a plain circular particle (single circle)
-      particles.push({
-        x: this.pos.x,
-        y: this.pos.y,
-        vx: 0,
-        vy: 0,
-        life: 0.45,
-        r: this.splash || 20,
-        c: "rgba(255,200,100,0.10)", // translucent circle color
-        fade: 0.9,
-      });
 
       // Apply splash damage
       if (this.splash > 0) {
@@ -305,18 +268,6 @@ export class MediumTank extends BaseTower {
       this._s.heat = Math.min(1.6, this._s.heat + 0.9);
 
       const origin = this.getAttackOrigin();
-      for (let i = 0; i < 8; i++) {
-        particles.push({
-          x: origin.x + (Math.random() - 0.5) * 8,
-          y: origin.y + (Math.random() - 0.5) * 8,
-          vx: (Math.random() - 0.5) * 80 - Math.cos(this._s.turretAngle) * 120,
-          vy: (Math.random() - 0.5) * 80 - Math.sin(this._s.turretAngle) * 120,
-          life: 0.7 + Math.random() * 0.6,
-          r: 3 + Math.random() * 3,
-          c: ["#ffeaa7", "#ffb76b"][Math.floor(Math.random() * 2)],
-          fade: 0.85,
-        });
-      }
 
       // Replace lingering "muzzleRing" particle with a simple translucent circle
       particles.push({

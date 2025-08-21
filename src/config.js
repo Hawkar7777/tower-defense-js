@@ -15,6 +15,7 @@ import { ArcherTower } from "./towers/ArcherTower.js";
 import { LightningTower } from "./towers/LightningTower.js";
 import { ShadowTower } from "./towers/ShadowTower.js";
 import { WizardTower } from "./towers/WizardTower.js";
+import { WindTower } from "./towers/WindTower.js";
 
 export const TOWER_TYPES = {
   gun: {
@@ -201,5 +202,16 @@ export const TOWER_TYPES = {
     chainRange: 80,
     color: "#7f00ff",
     class: WizardTower,
+  },
+  wind: {
+    name: "Wind Tower",
+    cost: 200,
+    range: 140,
+    fireRate: 1.2, // attacks per second
+    knockback: 40, // pixels
+    slowAmount: 0.5, // slows enemies by 50% for a short duration
+    slowDuration: 1.5, // seconds
+    color: "#00bfff",
+    class: WindTower,
   },
 };

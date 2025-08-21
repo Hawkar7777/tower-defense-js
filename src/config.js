@@ -14,6 +14,7 @@ import { ArtilleryTower } from "./towers/ArtilleryTower.js";
 import { ArcherTower } from "./towers/ArcherTower.js";
 import { LightningTower } from "./towers/LightningTower.js";
 import { ShadowTower } from "./towers/ShadowTower.js";
+import { WizardTower } from "./towers/WizardTower.js";
 
 export const TOWER_TYPES = {
   gun: {
@@ -189,5 +190,16 @@ export const TOWER_TYPES = {
     chainRange: 90,
     color: "#800080",
     class: ShadowTower,
+  },
+  wizard: {
+    name: "Wizard Tower",
+    cost: 330,
+    range: 150,
+    fireRate: 1.2,
+    dmg: 30,
+    chainCount: 2,
+    chainRange: 80,
+    color: "#7f00ff",
+    class: WizardTower,
   },
 };

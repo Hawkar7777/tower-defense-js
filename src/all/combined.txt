@@ -138,6 +138,7 @@ import { LaserTower } from "./towers/LaserTower.js";
 import { IceTower } from "./towers/IceTower.js";
 import { TeslaTower } from "./towers/TeslaTower.js";
 import { PoisonTower } from "./towers/PoisonTower.js";
+import { MissileTower } from "./towers/MissileTower.js";
 
 export const TOWER_TYPES = {
   gun: {
@@ -222,6 +223,19 @@ export const TOWER_TYPES = {
     cloudDuration: 3, // Lingering cloud duration
     color: "#4CAF50",
     class: PoisonTower,
+  },
+  missile: {
+    name: "Missile Tower",
+    cost: 280,
+    range: 160,
+    fireRate: 0.8,
+    dmg: 70,
+    splash: 80, // Splash damage radius
+    bulletSpeed: 180, // Slower but homing
+    homingStrength: 0.1, // How strongly missiles home in
+    retarget: true, // Can retarget if original target dies
+    color: "#FF5722",
+    class: MissileTower,
   },
 };
 
@@ -501,6 +515,45 @@ export function spawnPoisonCloud(x, y, duration, radius) {
       fade: 0.97,
     });
   }
+}
+
+// Add to your existing effects.js:
+
+export function spawnMissileExplosion(x, y, radius, color) {
+  // Larger explosion for missiles
+  for (let i = 0; i < 25; i++) {
+    const a = rand(TAU);
+    particles.push({
+      x,
+      y,
+      vx: Math.cos(a) * rand(350, 100),
+      vy: Math.sin(a) * rand(350, 100),
+      life: rand(0.6, 0.3),
+      r: rand(5, 2),
+      c: color,
+      gravity: 0.15,
+      fade: 0.9,
+    });
+  }
+
+  circles.push({
+    x,
+    y,
+    R: radius,
+    life: 0.5,
+    c: color,
+    type: "explosion",
+  });
+
+  // Shockwave effect
+  circles.push({
+    x,
+    y,
+    R: radius * 1.5,
+    life: 0.4,
+    c: "#FF9800",
+    type: "shockwave",
+  });
 }
 
 
@@ -878,6 +931,7 @@ export function getEnemiesForWave(wave) {
 export { Enemy } from "./enemy.js";
 export { BaseTower as Tower } from "./towers/BaseTower.js";
 export { Bullet } from "./bullet.js";
+export { Missile } from "./missile.js";
 
 
 // ===== FILE: C:\Users\kurd7\Downloads\Tower\src\helpers.js =====
@@ -955,6 +1009,43 @@ let mouse = {
   dragStartY: 0,
 };
 
+// Add this after the existing mouse event listeners
+canvas.addEventListener("wheel", (e) => {
+  // Only handle wheel events in the shop area
+  if (mouse.y > ctx.canvas.clientHeight - 100) {
+    e.preventDefault();
+
+    // Scroll the shop
+    ui.shopScrollOffset += e.deltaY > 0 ? 100 : -100;
+    ui.shopScrollOffset = Math.max(
+      0,
+      Math.min(ui.maxShopScroll, ui.shopScrollOffset)
+    );
+  }
+});
+
+// Also add touch support for mobile devices
+let touchStartX = 0;
+canvas.addEventListener("touchstart", (e) => {
+  if (e.touches[0].clientY > ctx.canvas.clientHeight - 100) {
+    touchStartX = e.touches[0].clientX;
+    e.preventDefault();
+  }
+});
+
+canvas.addEventListener("touchmove", (e) => {
+  if (e.touches[0].clientY > ctx.canvas.clientHeight - 100) {
+    const deltaX = touchStartX - e.touches[0].clientX;
+    ui.shopScrollOffset += deltaX;
+    ui.shopScrollOffset = Math.max(
+      0,
+      Math.min(ui.maxShopScroll, ui.shopScrollOffset)
+    );
+    touchStartX = e.touches[0].clientX;
+    e.preventDefault();
+  }
+});
+
 canvas.addEventListener("mousemove", (e) => {
   const rect = canvas.getBoundingClientRect();
   mouse.x = e.clientX - rect.left;
@@ -975,34 +1066,38 @@ canvas.addEventListener("mousedown", (e) => {
   mouse.dragStartY = mouse.y;
 
   // Check if clicking on shop button
+  // In the mousedown event handler, update the shop button detection:
   if (mouse.y > ctx.canvas.clientHeight - 100) {
     const buttons = getShopButtons(
       ctx.canvas.clientWidth,
       ctx.canvas.clientHeight
     );
     for (const b of buttons) {
-      if (
-        mouse.x >= b.x &&
-        mouse.x <= b.x + b.w &&
-        mouse.y >= b.y &&
-        mouse.y <= b.y + b.h
-      ) {
-        const spec = TOWER_TYPES[b.key];
-        // Don't allow selection if can't afford
-        if (state.money < spec.cost) {
-          pulse("Not enough money!", "#f66");
+      // Check if button is visible (within canvas bounds)
+      if (b.x + b.w > 0 && b.x < ctx.canvas.clientWidth) {
+        if (
+          mouse.x >= b.x &&
+          mouse.x <= b.x + b.w &&
+          mouse.y >= b.y &&
+          mouse.y <= b.y + b.h
+        ) {
+          const spec = TOWER_TYPES[b.key];
+          // Don't allow selection if can't afford
+          if (state.money < spec.cost) {
+            pulse("Not enough money!", "#f66");
+            return;
+          }
+
+          // If clicking the same tower type that's already selected, deselect it
+          if (ui.selectedShopKey === b.key) {
+            ui.selectedShopKey = null;
+          } else {
+            ui.selectedShopKey = b.key;
+            ui.selectedTower = null;
+          }
+          mouse.draggingTower = false;
           return;
         }
-
-        // If clicking the same tower type that's already selected, deselect it
-        if (ui.selectedShopKey === b.key) {
-          ui.selectedShopKey = null;
-        } else {
-          ui.selectedShopKey = b.key;
-          ui.selectedTower = null;
-        }
-        mouse.draggingTower = false;
-        return;
       }
     }
     // Clicked in shop area but not on a button - deselect everything
@@ -1202,6 +1297,225 @@ function gameOver() {
 })();
 
 
+// ===== FILE: C:\Users\kurd7\Downloads\Tower\src\missile.js =====
+
+// ===== FILE: C:\Users\kurd7\Downloads\Tower\src\missile.js =====
+
+import { ctx } from "./core.js";
+import { dist } from "./utils.js";
+import { enemies } from "./state.js";
+import { spawnExplosion } from "./effects.js";
+import { particles } from "./state.js";
+
+export class Missile {
+  constructor(x, y, target, spec, initialRotation = null) {
+    this.x = x;
+    this.y = y;
+    this.target = target;
+    this.speed = spec.bulletSpeed;
+    this.dmg = spec.dmg;
+    this.splash = spec.splash;
+    this.homingStrength = spec.homingStrength;
+    this.retarget = spec.retarget;
+    this.color = spec.color;
+    this.dead = false;
+
+    // Use provided rotation or calculate from target
+    this.rotation =
+      initialRotation !== null
+        ? initialRotation
+        : Math.atan2(target.pos.y - y, target.pos.x - x);
+
+    this.trailParticles = [];
+    this.smokeTimer = 0;
+  }
+
+  update(dt) {
+    // Handle target death and retargeting
+    if (!this.target || this.target.dead) {
+      if (this.retarget) {
+        this.findNewTarget();
+        if (!this.target) {
+          this.dead = true;
+          return;
+        }
+      } else {
+        this.dead = true;
+        return;
+      }
+    }
+
+    // Homing behavior
+    const tp = this.target.pos;
+    const desiredAngle = Math.atan2(tp.y - this.y, tp.x - this.x);
+    const angleDiff =
+      ((desiredAngle - this.rotation + Math.PI * 3) % (Math.PI * 2)) - Math.PI;
+    this.rotation += angleDiff * this.homingStrength;
+
+    // Movement
+    this.x += Math.cos(this.rotation) * this.speed * dt;
+    this.y += Math.sin(this.rotation) * this.speed * dt;
+
+    // Smoke trail
+    this.smokeTimer -= dt;
+    if (this.smokeTimer <= 0) {
+      this.spawnSmokeTrail();
+      this.smokeTimer = 0.05;
+    }
+
+    // Collision detection
+    if (this.target && !this.target.dead) {
+      const d = dist({ x: this.x, y: this.y }, this.target.pos);
+      if (d < 15) {
+        this.explode();
+        this.dead = true;
+      }
+    }
+  }
+
+  findNewTarget() {
+    let closest = null;
+    let closestDist = Infinity;
+
+    for (const e of enemies) {
+      if (e.dead) continue;
+      const d = dist({ x: this.x, y: this.y }, e.pos);
+      if (d < closestDist) {
+        closest = e;
+        closestDist = d;
+      }
+    }
+
+    this.target = closest;
+  }
+
+  explode() {
+    // Main explosion
+    spawnExplosion(this.x, this.y, this.splash, this.color);
+
+    // Damage all enemies in splash radius
+    for (const e of enemies) {
+      if (e.dead) continue;
+      const d = dist({ x: this.x, y: this.y }, e.pos);
+      if (d <= this.splash) {
+        const damageFactor = 1 - d / this.splash;
+        e.damage(this.dmg * damageFactor);
+      }
+    }
+  }
+
+  spawnSmokeTrail() {
+    for (let i = 0; i < 2; i++) {
+      const angle = this.rotation + Math.PI + (Math.random() - 0.5) * 0.3;
+      const speed = 20 + Math.random() * 30;
+      const size = 2 + Math.random() * 2;
+      const life = 0.8 + Math.random() * 0.4;
+
+      particles.push({
+        x: this.x - Math.cos(this.rotation) * 5,
+        y: this.y - Math.sin(this.rotation) * 5,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed,
+        life,
+        r: size,
+        c: i === 0 ? "#888888" : "#FF5722", // Gray smoke and orange fire
+        gravity: -0.05, // Smoke rises slightly
+        fade: 0.93,
+        shrink: 0.96,
+      });
+    }
+  }
+
+  draw() {
+    // Draw smoke trail
+    for (let i = 0; i < Math.min(10, this.trailParticles.length); i++) {
+      const p = this.trailParticles[i];
+      ctx.globalAlpha = p.life * 1.2;
+      ctx.fillStyle = p.c;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+
+    // Draw missile
+    ctx.save();
+    ctx.translate(this.x, this.y);
+    ctx.rotate(this.rotation);
+
+    // Missile body
+    ctx.fillStyle = "#FFFFFF";
+    ctx.beginPath();
+    ctx.roundRect(-6, -3, 12, 6, 2);
+    ctx.fill();
+
+    // Orange stripes
+    ctx.fillStyle = this.color;
+    ctx.fillRect(-4, -3, 8, 1);
+    ctx.fillRect(-4, 2, 8, 1);
+
+    // Nose cone
+    ctx.fillStyle = this.color;
+    ctx.beginPath();
+    ctx.moveTo(6, -3);
+    ctx.lineTo(6, 3);
+    ctx.lineTo(10, 0);
+    ctx.closePath();
+    ctx.fill();
+
+    // Fins
+    ctx.fillStyle = this.color;
+    ctx.beginPath();
+    ctx.moveTo(-6, -3);
+    ctx.lineTo(-8, -5);
+    ctx.lineTo(-6, -1);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.beginPath();
+    ctx.moveTo(-6, 3);
+    ctx.lineTo(-8, 5);
+    ctx.lineTo(-6, 1);
+    ctx.closePath();
+    ctx.fill();
+
+    // Engine exhaust
+    ctx.fillStyle = "#FF9800";
+    ctx.beginPath();
+    ctx.moveTo(-6, -2);
+    ctx.lineTo(-8, 0);
+    ctx.lineTo(-6, 2);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.restore();
+  }
+}
+
+// Add roundRect polyfill if needed
+if (!CanvasRenderingContext2D.prototype.roundRect) {
+  CanvasRenderingContext2D.prototype.roundRect = function (
+    x,
+    y,
+    width,
+    height,
+    radius
+  ) {
+    if (width < 2 * radius) radius = width / 2;
+    if (height < 2 * radius) radius = height / 2;
+
+    this.beginPath();
+    this.moveTo(x + radius, y);
+    this.arcTo(x + width, y, x + width, y + height, radius);
+    this.arcTo(x + width, y + height, x, y + height, radius);
+    this.arcTo(x, y + height, x, y, radius);
+    this.arcTo(x, y, x + width, y, radius);
+    this.closePath();
+    return this;
+  };
+}
+
+
 // ===== FILE: C:\Users\kurd7\Downloads\Tower\src\path.js =====
 
 import { TILE } from "./core.js";
@@ -1337,6 +1651,8 @@ export const ui = {
   selectedShopKey: "gun",
   hoveredTile: null,
   selectedTower: null,
+  shopScrollOffset: 0, // Add this line
+  maxShopScroll: 0, // And this line
 };
 
 
@@ -1435,38 +1751,87 @@ export function drawTopbar(W) {
   for (let i = pulses.length - 1; i >= 0; i--)
     if (pulses[i].life <= 0) pulses.splice(i, 1);
 }
-
 export function getShopButtons(W, H) {
   const pad = 18;
   const y = H - 88;
   const h = 74;
   const w = 150;
   const keys = Object.keys(TOWER_TYPES);
-  return keys.map((k, i) => ({ key: k, x: pad + i * (w + 12), y, w, h }));
+
+  // Calculate total width needed
+  const totalWidth = keys.length * (w + 12) - 12 + pad * 2;
+
+  // Add scroll offset if needed
+  const scrollOffset = ui.shopScrollOffset || 0;
+
+  return keys.map((k, i) => ({
+    key: k,
+    x: pad + i * (w + 12) - scrollOffset,
+    y,
+    w,
+    h,
+  }));
 }
 
 export function drawShop(W, H) {
   const buttons = getShopButtons(W, H);
+  const keys = Object.keys(TOWER_TYPES);
+
+  // Calculate max scroll needed
+  const totalWidth = keys.length * (150 + 12) - 12 + 18 * 2;
+  ui.maxShopScroll = Math.max(0, totalWidth - W);
+
+  // Draw scroll indicators if needed
+  if (ui.maxShopScroll > 0) {
+    // Left scroll indicator
+    if (ui.shopScrollOffset > 0) {
+      ctx.fillStyle = "rgba(255, 255, 255, 0.5)";
+      ctx.beginPath();
+      ctx.moveTo(10, H - 40);
+      ctx.lineTo(20, H - 50);
+      ctx.lineTo(20, H - 30);
+      ctx.closePath();
+      ctx.fill();
+    }
+
+    // Right scroll indicator
+    if (ui.shopScrollOffset < ui.maxShopScroll) {
+      ctx.fillStyle = "rgba(255, 255, 255, 0.5)";
+      ctx.beginPath();
+      ctx.moveTo(W - 10, H - 40);
+      ctx.lineTo(W - 20, H - 50);
+      ctx.lineTo(W - 20, H - 30);
+      ctx.closePath();
+      ctx.fill();
+    }
+  }
+
+  // Clip the shop area to prevent buttons from drawing outside
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(0, H - 100, W, 100);
+  ctx.clip();
+
   for (const b of buttons) {
     const spec = TOWER_TYPES[b.key];
     const active = ui.selectedShopKey === b.key;
-    const canAfford = state.money >= spec.cost; // Check if player can afford
+    const canAfford = state.money >= spec.cost;
 
     // Apply disabled styling if can't afford
     const bgColor = canAfford
       ? active
         ? "rgba(26,46,76,0.95)"
         : "rgba(12,22,36,0.9)"
-      : "rgba(36,36,48,0.8)"; // Darker, desaturated background
+      : "rgba(36,36,48,0.8)";
 
     const borderColor = canAfford
       ? active
         ? "#3d6fb6"
         : "#24496f"
-      : "#444455"; // Gray border for disabled
+      : "#444455";
 
-    const textColor = canAfford ? spec.color : "#666677"; // Gray text for disabled
-    const costColor = canAfford ? "#bfe7ff" : "#888899"; // Gray cost text
+    const textColor = canAfford ? spec.color : "#666677";
+    const costColor = canAfford ? "#bfe7ff" : "#888899";
 
     roundRect(b.x, b.y, b.w, b.h, 12, bgColor, true, borderColor);
 
@@ -1477,6 +1842,8 @@ export function drawShop(W, H) {
     ctx.font = "500 14px Inter, system-ui";
     ctx.fillText(`$${spec.cost}  •  Rng ${spec.range}`, b.x + 16, b.y + 50);
   }
+
+  ctx.restore(); // Restore clipping
 }
 export function drawGhost(
   hoveredTile,
@@ -1608,7 +1975,6 @@ export function removeFromArray(arr, item) {
 export function pulse(text, color = "#adf") {
   pulses.push({ text, x: 0, y: 0, life: 1.2, c: color });
 }
-
 
 
 // ===== FILE: C:\Users\kurd7\Downloads\Tower\src\towers\BaseTower.js =====
@@ -2475,6 +2841,326 @@ if (!CanvasRenderingContext2D.prototype.roundRect) {
     this.closePath();
     return this;
   };
+}
+
+
+// ===== FILE: C:\Users\kurd7\Downloads\Tower\src\towers\MissileTower.js =====
+
+// ===== FILE: C:\Users\kurd7\Downloads\Tower\src\towers\MissileTower.js =====
+
+import { BaseTower } from "./BaseTower.js";
+import { ctx } from "../core.js";
+import { enemies, projectiles, particles } from "../state.js";
+import { dist } from "../utils.js";
+import { spawnExplosion, spawnMuzzle } from "../effects.js";
+import { Missile } from "../missile.js"; // We'll create this special projectile
+
+export class MissileTower extends BaseTower {
+  static SPEC = {
+    name: "Missile Tower",
+    cost: 280,
+    range: 160,
+    fireRate: 0.8,
+    dmg: 70,
+    splash: 80,
+    bulletSpeed: 180,
+    homingStrength: 0.1,
+    retarget: true,
+    color: "#FF5722",
+  };
+
+  // Override spec to include missile properties
+  spec() {
+    const base = this.constructor.SPEC;
+    const mult = 1 + (this.level - 1) * 0.4; // Higher multiplier for damage
+    return {
+      name: base.name,
+      range: base.range * (1 + (this.level - 1) * 0.1), // Better range scaling
+      fireRate: base.fireRate * (1 + (this.level - 1) * 0.05),
+      dmg: base.dmg * mult,
+      splash: base.splash * (1 + (this.level - 1) * 0.08),
+      bulletSpeed: base.bulletSpeed,
+      homingStrength: base.homingStrength + (this.level - 1) * 0.02,
+      retarget: base.retarget,
+      color: base.color,
+      cost: base.cost,
+    };
+  }
+
+  update(dt, enemiesList) {
+    const s = this.spec();
+    this.cool -= dt;
+
+    // Always track enemies, not just when firing
+    let best = null;
+    let bestScore = -1;
+
+    for (const e of enemiesList) {
+      if (e.dead) continue;
+      const p = e.pos;
+      const d = dist(this.center, p);
+      if (d <= s.range && e.t > bestScore) {
+        best = e;
+        bestScore = e.t;
+      }
+    }
+
+    // Only rotate if there's a target
+    if (best) {
+      this.rot = Math.atan2(
+        best.pos.y - this.center.y,
+        best.pos.x - this.center.x
+      );
+    }
+
+    // Fire if cooldown is ready and there's a target
+    if (this.cool <= 0 && best) {
+      this.cool = 1 / s.fireRate;
+      this.fireMissile(best, s);
+    }
+  }
+
+  fireMissile(target, spec) {
+    const c = this.center;
+
+    // Calculate missile start position (in front of the tower)
+    const missileOffset = 20; // Distance in front of center
+    const startX = c.x + Math.cos(this.rot) * missileOffset;
+    const startY = c.y + Math.sin(this.rot) * missileOffset;
+
+    // Create homing missile at the correct position
+    const missile = new Missile(startX, startY, target, spec);
+    missile.rotation = this.rot; // Set initial rotation
+    projectiles.push(missile);
+
+    // Muzzle flash and smoke at the launch position
+    spawnMuzzle(startX, startY, this.rot, spec.color);
+    this.spawnLaunchSmoke(startX, startY);
+
+    // Tower recoil effect
+    this.recoilEffect = 0.3;
+  }
+
+  spawnLaunchSmoke(x, y) {
+    for (let i = 0; i < 12; i++) {
+      const angle = this.rot + Math.PI + (Math.random() - 0.5) * 0.5;
+      const speed = 60 + Math.random() * 60;
+      const size = 3 + Math.random() * 3;
+      const life = 1 + Math.random() * 0.5;
+
+      particles.push({
+        x,
+        y,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed,
+        life,
+        r: size,
+        c: "#888888",
+        gravity: 0.1,
+        fade: 0.92,
+        shrink: 0.95,
+      });
+    }
+
+    // Add some forward thrust particles too
+    for (let i = 0; i < 6; i++) {
+      const angle = this.rot + (Math.random() - 0.5) * 0.2;
+      const speed = 100 + Math.random() * 100;
+      const size = 2 + Math.random() * 2;
+      const life = 0.5 + Math.random() * 0.3;
+
+      particles.push({
+        x,
+        y,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed,
+        life,
+        r: size,
+        c: "#FF5722",
+        gravity: 0.05,
+        fade: 0.95,
+      });
+    }
+  }
+
+  draw() {
+    const s = this.spec();
+    const { x, y } = this.center;
+    const time = performance.now() / 1000;
+
+    // Draw missile base platform
+    ctx.fillStyle = "#261a1a";
+    ctx.beginPath();
+    ctx.arc(x, y, 22, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Rocket launch pad glow
+    const pulse = Math.sin(time * 4) * 0.2 + 0.8;
+    const gradient = ctx.createRadialGradient(x, y, 12, x, y, 28);
+    gradient.addColorStop(0, `rgba(255, 87, 34, ${0.6 * pulse})`);
+    gradient.addColorStop(1, "rgba(255, 87, 34, 0)");
+    ctx.fillStyle = gradient;
+    ctx.beginPath();
+    ctx.arc(x, y, 28, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Platform border
+    ctx.strokeStyle = "#4d2d2d";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(x, y, 22, 0, Math.PI * 2);
+    ctx.stroke();
+
+    // Draw missile launcher
+    ctx.save();
+    ctx.translate(x, y);
+
+    // Apply recoil effect if recently fired
+    if (this.recoilEffect > 0) {
+      ctx.translate(0, this.recoilEffect * 2);
+      this.recoilEffect -= 0.05;
+    }
+
+    ctx.rotate(this.rot);
+
+    // Launcher base
+    ctx.fillStyle = "#3d2d2d";
+    ctx.beginPath();
+    ctx.roundRect(-14, -10, 28, 20, 5);
+    ctx.fill();
+
+    // Launch rails
+    ctx.strokeStyle = "#666";
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(-8, -15);
+    ctx.lineTo(-8, 15);
+    ctx.moveTo(8, -15);
+    ctx.lineTo(8, 15);
+    ctx.stroke();
+
+    // Missile silo (if no recent fire)
+    if (!this.recoilEffect || this.recoilEffect <= 0) {
+      this.drawMissileInSilo();
+    }
+
+    // Targeting system
+    ctx.fillStyle = "#2196F3";
+    ctx.beginPath();
+    ctx.arc(0, 0, 6, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Targeting reticle
+    ctx.strokeStyle = "#2196F3";
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.arc(0, 0, 10, 0, Math.PI * 2);
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.moveTo(-8, 0);
+    ctx.lineTo(8, 0);
+    ctx.moveTo(0, -8);
+    ctx.lineTo(0, 8);
+    ctx.stroke();
+
+    ctx.restore();
+
+    // Draw level indicators as missile icons
+    for (let i = 0; i < this.level; i++) {
+      const indicatorX = x - 12 + i * 6;
+      const indicatorY = y + 25;
+
+      // Missile icon
+      ctx.fillStyle = s.color;
+      ctx.beginPath();
+      ctx.moveTo(indicatorX - 2, indicatorY - 4);
+      ctx.lineTo(indicatorX + 2, indicatorY - 4);
+      ctx.lineTo(indicatorX + 2, indicatorY + 4);
+      ctx.lineTo(indicatorX - 2, indicatorY + 4);
+      ctx.closePath();
+      ctx.fill();
+
+      // Missile tip
+      ctx.beginPath();
+      ctx.moveTo(indicatorX + 2, indicatorY);
+      ctx.lineTo(indicatorX + 4, indicatorY);
+      ctx.lineTo(indicatorX + 2, indicatorY - 2);
+      ctx.closePath();
+      ctx.fill();
+
+      // Fire effect for higher levels
+      if (this.level > 3 && i >= this.level - 3) {
+        this.drawMiniExhaust(indicatorX, indicatorY, time);
+      }
+    }
+
+    // Random targeting laser effect
+    if (Math.random() < 0.05) {
+      this.drawTargetingLaser(x, y, time);
+    }
+  }
+
+  drawMissileInSilo() {
+    // Missile body - positioned to fire forward
+    ctx.fillStyle = "#FFFFFF";
+    ctx.beginPath();
+    ctx.roundRect(-4, -24, 8, 24, 3); // Moved forward (negative Y)
+    ctx.fill();
+
+    // Missile stripes
+    ctx.fillStyle = "#FF5722";
+    ctx.fillRect(-4, -16, 8, 3); // Adjusted positions
+    ctx.fillRect(-4, -9, 8, 3); // Adjusted positions
+
+    // Missile nose cone - pointing forward
+    ctx.fillStyle = "#FF5722";
+    ctx.beginPath();
+    ctx.moveTo(-4, -24);
+    ctx.lineTo(4, -24);
+    ctx.lineTo(0, -30); // Pointing forward (negative Y)
+    ctx.closePath();
+    ctx.fill();
+
+    // Fins - adjusted position
+    ctx.fillStyle = "#FF5722";
+    ctx.beginPath();
+    ctx.moveTo(-4, -2); // Adjusted position
+    ctx.lineTo(-8, -2); // Adjusted position
+    ctx.lineTo(-4, 2); // Adjusted position
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.beginPath();
+    ctx.moveTo(4, -2); // Adjusted position
+    ctx.lineTo(8, -2); // Adjusted position
+    ctx.lineTo(4, 2); // Adjusted position
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  drawMiniExhaust(x, y, time) {
+    const pulse = Math.sin(time * 8) * 0.5 + 1;
+
+    ctx.fillStyle = `rgba(255, 87, 34, ${0.8 * pulse})`;
+    ctx.beginPath();
+    ctx.arc(x - 4, y, 2 * pulse, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  drawTargetingLaser(x, y, time) {
+    const angle = this.rot + (Math.random() - 0.5) * 0.2;
+    const length = 30 + Math.random() * 20;
+
+    ctx.strokeStyle = `rgba(33, 150, 243, ${0.6 + Math.sin(time * 10) * 0.4})`;
+    ctx.lineWidth = 1;
+    ctx.setLineDash([2, 2]);
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    ctx.lineTo(x + Math.cos(angle) * length, y + Math.sin(angle) * length);
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
 }
 
 

@@ -43,10 +43,9 @@ export class MissileTower extends BaseTower {
     const s = this.spec();
     this.cool -= dt;
 
-    // Always track enemies, not just when firing
+    // pick best target as before
     let best = null;
     let bestScore = -1;
-
     for (const e of enemiesList) {
       if (e.dead) continue;
       const p = e.pos;
@@ -57,36 +56,103 @@ export class MissileTower extends BaseTower {
       }
     }
 
-    // Only rotate if there's a target
+    // If we found a best right now => lock onto it
     if (best) {
-      this.rot = Math.atan2(
-        best.pos.y - this.center.y,
-        best.pos.x - this.center.x
-      );
+      this.lockedTarget = best;
+      this.lockTimer = this.LOCK_HOLD;
+    } else {
+      // If no immediate best, but we have a locked target, keep it for a short time
+      if (this.lockedTarget && !this.lockedTarget.dead) {
+        const d = dist(this.center, this.lockedTarget.pos);
+        if (d <= s.range && this.lockTimer > 0) {
+          this.lockTimer -= dt;
+          best = this.lockedTarget; // keep aiming at the locked target
+        } else {
+          // lock expired or target out of range -> clear lock
+          this.lockedTarget = null;
+          this.lockTimer = 0;
+        }
+      } else {
+        // no locked target, ensure timer cleared
+        this.lockTimer = 0;
+        this.lockedTarget = null;
+      }
+    }
+
+    // Only rotate if we have a target (either new best or locked one)
+    // Only rotate if we have a target (either new best or locked one)
+    if (best) {
+      // local coordinates of the missile nose (must match drawMissileInSilo & fireMissile)
+      const localX = 0;
+      const localY = -30;
+
+      // Include recoil translation used in draw() (translate(0, this.recoilEffect * 2) before rotate)
+      const recoilLocal =
+        this.recoilEffect && this.recoilEffect > 0 ? this.recoilEffect * 2 : 0;
+      const localYWithRecoil = localY + recoilLocal;
+
+      // If target sits exactly at tower centre, do nothing
+      if (!(best.pos.x === this.center.x && best.pos.y === this.center.y)) {
+        // Start with a reasonable guess (center -> target) but add PI/2 because nose points -Y
+        let rotGuess =
+          Math.atan2(best.pos.y - this.center.y, best.pos.x - this.center.x) +
+          Math.PI / 2;
+
+        // Iterate: compute nose world position for rotGuess, then compute angle from that nose to the target,
+        // then add PI/2 to get the rotation that orients the launcher so the nose faces the target.
+        for (let i = 0; i < 4; i++) {
+          const sx =
+            this.center.x +
+            Math.cos(rotGuess) * localX -
+            Math.sin(rotGuess) * localYWithRecoil;
+          const sy =
+            this.center.y +
+            Math.sin(rotGuess) * localX +
+            Math.cos(rotGuess) * localYWithRecoil;
+
+          // angle from nose (sx,sy) to target, then +PI/2 to convert to launcher rotation
+          rotGuess = Math.atan2(best.pos.y - sy, best.pos.x - sx) + Math.PI / 2;
+        }
+
+        // instant set — or lerp for smooth turning (see notes)
+        this.rot = rotGuess;
+      }
     }
 
     // Fire if cooldown is ready and there's a target
     if (this.cool <= 0 && best) {
       this.cool = 1 / s.fireRate;
       this.fireMissile(best, s);
+
+      // keep locked target after firing so it doesn't snap away
+      this.lockedTarget = best;
+      this.lockTimer = this.LOCK_HOLD;
     }
   }
 
   fireMissile(target, spec) {
     const c = this.center;
 
-    // Calculate missile start position (in front of the tower)
-    const missileOffset = 20; // Distance in front of center
-    const startX = c.x + Math.cos(this.rot) * missileOffset;
-    const startY = c.y + Math.sin(this.rot) * missileOffset;
+    // Local coordinates of the missile nose in the launcher space
+    // (matches drawMissileInSilo: nose cone goes up to about -30)
+    const localX = 0;
+    const localY = -30;
 
-    // Create homing missile at the correct position
-    const missile = new Missile(startX, startY, target, spec);
-    missile.rotation = this.rot; // Set initial rotation
+    // Transform local -> world using rotation matrix (rotate, then translate)
+    const startX =
+      c.x + Math.cos(this.rot) * localX - Math.sin(this.rot) * localY;
+    const startY =
+      c.y + Math.sin(this.rot) * localX + Math.cos(this.rot) * localY;
+
+    // Compute initial rotation based on spawn position toward the target
+    const initialRot = Math.atan2(target.pos.y - startY, target.pos.x - startX);
+
+    // Create homing missile at the correct position — pass initial rotation
+    const missile = new Missile(startX, startY, target, spec, initialRot);
     projectiles.push(missile);
 
     // Muzzle flash and smoke at the launch position
-    spawnMuzzle(startX, startY, this.rot, spec.color);
+    spawnMuzzle(startX, startY, initialRot, spec.color);
     this.spawnLaunchSmoke(startX, startY);
 
     // Tower recoil effect

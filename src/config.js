@@ -9,6 +9,7 @@ import { TeslaTower } from "./towers/TeslaTower.js";
 import { PoisonTower } from "./towers/PoisonTower.js";
 import { MissileTower } from "./towers/MissileTower.js";
 import { FlamethrowerTower } from "./towers/FlamethrowerTower.js";
+import { SniperTower } from "./towers/SniperTower.js";
 
 export const TOWER_TYPES = {
   gun: {
@@ -120,5 +121,18 @@ export const TOWER_TYPES = {
     spreadRange: 40,
     color: "#FF6B35",
     class: FlamethrowerTower,
+  },
+  sniper: {
+    name: "Sniper Tower",
+    cost: 350,
+    range: 400,
+    fireRate: 0.3,
+    dmg: 200,
+    bulletSpeed: 1200,
+    penetration: 2,
+    critChance: 0.25,
+    critMultiplier: 2.5,
+    color: "#2b4ff2",
+    class: SniperTower,
   },
 };

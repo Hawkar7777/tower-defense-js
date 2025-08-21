@@ -12,6 +12,7 @@ import { FlamethrowerTower } from "./towers/FlamethrowerTower.js";
 import { SniperTower } from "./towers/SniperTower.js";
 import { ArtilleryTower } from "./towers/ArtilleryTower.js";
 import { ArcherTower } from "./towers/ArcherTower.js";
+import { LightningTower } from "./towers/LightningTower.js";
 
 export const TOWER_TYPES = {
   gun: {
@@ -161,5 +162,18 @@ export const TOWER_TYPES = {
     critMultiplier: 1.5,
     color: "#8bc34a",
     class: ArcherTower,
+  },
+  lightning: {
+    name: "Lightning Tower",
+    cost: 300,
+    range: 150,
+    fireRate: 1.5,
+    dmg: 30,
+    chainCount: 4,
+    chainRange: 100,
+    stunChance: 0.2,
+    stunDuration: 1.2,
+    color: "#00ffff",
+    class: LightningTower,
   },
 };

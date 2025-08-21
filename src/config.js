@@ -13,6 +13,7 @@ import { SniperTower } from "./towers/SniperTower.js";
 import { ArtilleryTower } from "./towers/ArtilleryTower.js";
 import { ArcherTower } from "./towers/ArcherTower.js";
 import { LightningTower } from "./towers/LightningTower.js";
+import { ShadowTower } from "./towers/ShadowTower.js";
 
 export const TOWER_TYPES = {
   gun: {
@@ -175,5 +176,18 @@ export const TOWER_TYPES = {
     stunDuration: 1.2,
     color: "#00ffff",
     class: LightningTower,
+  },
+  shadow: {
+    name: "Shadow Tower",
+    cost: 320,
+    range: 140,
+    fireRate: 1.2,
+    dmg: 15,
+    curseDmg: 5,
+    curseDuration: 4,
+    chainCount: 3,
+    chainRange: 90,
+    color: "#800080",
+    class: ShadowTower,
   },
 };

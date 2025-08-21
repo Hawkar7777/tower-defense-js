@@ -261,3 +261,28 @@ export function spawnMissileExplosion(x, y, radius, color) {
     type: "shockwave",
   });
 }
+
+export function spawnFlameStream(start, end, intensity) {
+  const distance = Math.hypot(end.x - start.x, end.y - start.y);
+  const angle = Math.atan2(end.y - start.y, end.x - start.x);
+
+  for (let i = 0; i < intensity * 8; i++) {
+    const t = Math.random();
+    const x = start.x + Math.cos(angle) * distance * t;
+    const y = start.y + Math.sin(angle) * distance * t;
+
+    particles.push({
+      x: x + (Math.random() - 0.5) * 10,
+      y: y + (Math.random() - 0.5) * 10,
+      vx: (Math.random() - 0.5) * 60,
+      vy: (Math.random() - 0.5) * 60 - 20, // Rise upward
+      life: 0.3 + Math.random() * 0.4,
+      r: 2 + Math.random() * 2,
+      c: ["#FF6B35", "#FF8C42", "#FF4500", "#FFA500"][
+        Math.floor(Math.random() * 4)
+      ],
+      gravity: -0.1, // Fire rises
+      fade: 0.9,
+    });
+  }
+}

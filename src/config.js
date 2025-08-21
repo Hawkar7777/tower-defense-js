@@ -8,6 +8,7 @@ import { IceTower } from "./towers/IceTower.js";
 import { TeslaTower } from "./towers/TeslaTower.js";
 import { PoisonTower } from "./towers/PoisonTower.js";
 import { MissileTower } from "./towers/MissileTower.js";
+import { FlamethrowerTower } from "./towers/FlamethrowerTower.js";
 
 export const TOWER_TYPES = {
   gun: {
@@ -105,5 +106,19 @@ export const TOWER_TYPES = {
     retarget: true, // Can retarget if original target dies
     color: "#FF5722",
     class: MissileTower,
+  },
+  flamethrower: {
+    name: "Flamethrower",
+    cost: 140,
+    range: 80,
+    fireRate: 15,
+    dmg: 8,
+    burnDamage: 6,
+    burnDuration: 3,
+    coneAngle: Math.PI / 3, // 60 degree cone
+    spreadChance: 0.4,
+    spreadRange: 40,
+    color: "#FF6B35",
+    class: FlamethrowerTower,
   },
 };

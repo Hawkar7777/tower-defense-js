@@ -102,6 +102,12 @@ export class Enemy {
     this.poisonDamage = 0;
     this.poisonDuration = 0;
     this.poisonStartTime = 0;
+
+    // Add burning properties
+    this.burning = false;
+    this.burnDamage = 0;
+    this.burnDuration = 0;
+    this.burnStartTime = 0;
   }
 
   get pos() {
@@ -151,6 +157,13 @@ export class Enemy {
         this.poisoned = false;
       }
     }
+
+    if (this.burning) {
+      const elapsed = (performance.now() - this.burnStartTime) / 1000;
+      if (elapsed >= this.burnDuration) {
+        this.burning = false;
+      }
+    }
   }
 
   damage(d) {
@@ -164,6 +177,58 @@ export class Enemy {
   }
 
   draw() {
+    if (this.dead) return;
+    const { x: px, y: py } = this.pos;
+    const FULL_ROT = Math.PI * 2;
+    const { r: radius } = this;
+
+    // Add burning effect
+    if (this.burning) {
+      const elapsed = (performance.now() - this.burnStartTime) / 1000;
+      const progress = elapsed / this.burnDuration;
+      const alpha = 0.8 - progress * 0.3; // Fade out as burn wears off
+      const time = performance.now() / 1000;
+
+      // Fire glow
+      ctx.fillStyle = `rgba(255, 107, 53, ${alpha * 0.5})`;
+      ctx.beginPath();
+      ctx.arc(px, py, radius + 4, 0, FULL_ROT);
+      ctx.fill();
+
+      // Dancing flames on enemy
+      for (let i = 0; i < 4; i++) {
+        const angle = (i * FULL_ROT) / 4 + time * 3;
+        const flameX = px + Math.cos(angle) * (radius + 2);
+        const flameY = py + Math.sin(angle) * (radius + 2);
+        const flameHeight = 3 + Math.sin(time * 8 + i) * 2;
+
+        ctx.fillStyle = i % 2 === 0 ? "#FF6B35" : "#FFA500";
+        ctx.beginPath();
+        ctx.ellipse(
+          flameX,
+          flameY - flameHeight / 2,
+          2,
+          flameHeight,
+          0,
+          0,
+          FULL_ROT
+        );
+        ctx.fill();
+      }
+
+      // Occasional fire particles
+      if (Math.random() < 0.3) {
+        const particleX = px + (Math.random() - 0.5) * radius * 1.5;
+        const particleY = py + (Math.random() - 0.5) * radius * 1.5;
+        const size = 1 + Math.random() * 1.5;
+
+        ctx.fillStyle = "rgba(255, 140, 66, 0.8)";
+        ctx.beginPath();
+        ctx.arc(particleX, particleY, size, 0, FULL_ROT);
+        ctx.fill();
+      }
+    }
+
     if (this.dead) return;
     const { x, y } = this.pos;
     const TAU = Math.PI * 2;

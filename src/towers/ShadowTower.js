@@ -29,13 +29,28 @@ class ShadowOrb {
     if (distToTarget < 4) {
       if (typeof this.target.damage === "function")
         this.target.damage(this.dmg);
-      if (!this.target.curse) {
+
+      if (!this.target.curse)
         this.target.curse = {
           dmg: this.curseDmg,
           duration: this.curseDuration,
           timer: 0,
         };
+
+      // Shadow explosion particles on hit
+      for (let i = 0; i < 8; i++) {
+        particles.push({
+          x: this.target.pos.x + (Math.random() - 0.5) * 12,
+          y: this.target.pos.y + (Math.random() - 0.5) * 12,
+          vx: (Math.random() - 0.5) * 50,
+          vy: (Math.random() - 0.5) * 50,
+          life: 0.4 + Math.random() * 0.3,
+          r: 2 + Math.random() * 2,
+          c: this.color,
+          fade: 0.9,
+        });
       }
+
       this.done = true;
       return;
     }
@@ -115,6 +130,12 @@ export class ShadowTower extends BaseTower {
         this.cool = 1 / s.fireRate;
         this.castShadow(target, s);
       }
+    }
+
+    // Remove finished ShadowOrbs from projectiles
+    for (let i = projectiles.length - 1; i >= 0; i--) {
+      const p = projectiles[i];
+      if (p instanceof ShadowOrb && p.done) projectiles.splice(i, 1);
     }
   }
 

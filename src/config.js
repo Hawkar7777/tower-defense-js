@@ -17,6 +17,8 @@ import { ShadowTower } from "./towers/ShadowTower.js";
 import { WizardTower } from "./towers/WizardTower.js";
 import { WindTower } from "./towers/WindTower.js";
 import { VolcanoTower } from "./towers/VolcanoTower.js";
+import { CarM249Tower } from "./towers/CarM249Tower.js";
+import { SmallTank } from "./towers/SmallTank.js";
 
 export const TOWER_TYPES = {
   gun: {
@@ -224,5 +226,25 @@ export const TOWER_TYPES = {
     splash: 60, // area of effect radius
     color: "#ff3300",
     class: VolcanoTower,
+  },
+  carM249: {
+    name: "Car M249 Tower",
+    cost: 600,
+    range: 180,
+    fireRate: 5, // bullets per second
+    dmg: 15, // per bullet
+    color: "#2288ff",
+    class: CarM249Tower, // reference your tower class
+  },
+  smallTank: {
+    name: "Small Tank",
+    cost: 220,
+    range: 160,
+    fireRate: 1.2,
+    dmg: 45,
+    splash: 40,
+    bulletSpeed: 380,
+    color: "#556b2f",
+    class: SmallTank,
   },
 };

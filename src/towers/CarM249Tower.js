@@ -4,6 +4,7 @@ import { BaseTower } from "./BaseTower.js";
 import { ctx } from "../core.js";
 import { enemies, projectiles, particles } from "../state.js";
 import { dist } from "../utils.js";
+import { TOWER_TYPES } from "../config.js";
 
 // Bullet projectile (with tracer)
 class Bullet {
@@ -81,14 +82,9 @@ class Bullet {
 }
 
 export class CarM249Tower extends BaseTower {
-  static SPEC = {
-    name: "Car M249 Tower",
-    cost: 600,
-    range: 180,
-    fireRate: 5, // bullets per second
-    dmg: 14,
-    color: "#2a8cff",
-  };
+  static get SPEC() {
+    return TOWER_TYPES.carM249;
+  }
 
   spec() {
     const base = this.constructor.SPEC;

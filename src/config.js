@@ -19,6 +19,7 @@ import { WindTower } from "./towers/WindTower.js";
 import { VolcanoTower } from "./towers/VolcanoTower.js";
 import { CarM249Tower } from "./towers/CarM249Tower.js";
 import { SmallTank } from "./towers/SmallTank.js";
+import { MediumTank } from "./towers/MediumTank.js";
 
 export const TOWER_TYPES = {
   gun: {
@@ -238,13 +239,24 @@ export const TOWER_TYPES = {
   },
   smallTank: {
     name: "Small Tank",
-    cost: 220,
+    cost: 320,
     range: 160,
-    fireRate: 1.2,
-    dmg: 45,
+    fireRate: 1.5,
+    dmg: 150,
     splash: 40,
     bulletSpeed: 380,
     color: "#556b2f",
     class: SmallTank,
+  },
+  mediumTank: {
+    name: "Medium Tank",
+    cost: 500,
+    range: 180,
+    fireRate: 1.0, // slower
+    dmg: 300, // stronger
+    splash: 60,
+    bulletSpeed: 300,
+    color: "#8b4513",
+    class: MediumTank,
   },
 };

@@ -4,6 +4,7 @@ import { BaseTower } from "./BaseTower.js";
 import { ctx } from "../core.js";
 import { enemies, projectiles, particles } from "../state.js";
 import { dist } from "../utils.js";
+import { TOWER_TYPES } from "../config.js";
 
 // Tank Shell projectile
 class TankShell {
@@ -16,7 +17,7 @@ class TankShell {
     this.dead = false;
     this.done = false;
     this.trailTimer = 0;
-    this.size = 4;
+    this.size = 3;
   }
 
   update(dt) {
@@ -135,17 +136,9 @@ class TankShell {
 }
 
 export class SmallTank extends BaseTower {
-  static SPEC = {
-    name: "Small Tank",
-    cost: 220,
-    range: 160,
-    fireRate: 0.5,
-    dmg: 300,
-    splash: 40,
-    bulletSpeed: 380,
-    color: "#556b2f",
-  };
-
+  static get SPEC() {
+    return TOWER_TYPES.smallTank;
+  }
   spec() {
     const base = this.constructor.SPEC;
     const mult = 1 + (this.level - 1) * 0.25;

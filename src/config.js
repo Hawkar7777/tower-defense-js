@@ -16,6 +16,7 @@ import { LightningTower } from "./towers/LightningTower.js";
 import { ShadowTower } from "./towers/ShadowTower.js";
 import { WizardTower } from "./towers/WizardTower.js";
 import { WindTower } from "./towers/WindTower.js";
+import { VolcanoTower } from "./towers/VolcanoTower.js";
 
 export const TOWER_TYPES = {
   gun: {
@@ -213,5 +214,15 @@ export const TOWER_TYPES = {
     slowDuration: 1.5, // seconds
     color: "#00bfff",
     class: WindTower,
+  },
+  volcano: {
+    name: "Volcano Tower",
+    cost: 600,
+    range: 200,
+    fireRate: 0.3, // slow but powerful
+    dmg: 80, // direct damage
+    splash: 60, // area of effect radius
+    color: "#ff3300",
+    class: VolcanoTower,
   },
 };

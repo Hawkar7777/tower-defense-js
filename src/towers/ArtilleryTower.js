@@ -158,32 +158,48 @@ export class ArtilleryTower extends BaseTower {
     const { x, y } = this.center;
     const time = performance.now() / 1000;
 
-    // Draw artillery base
-    ctx.fillStyle = "#5d4037";
-    ctx.beginPath();
-    ctx.arc(x, y, 24, 0, Math.PI * 2);
-    ctx.fill();
-
-    // Platform border
-    ctx.strokeStyle = "#4e342e";
-    ctx.lineWidth = 3;
-    ctx.beginPath();
-    ctx.arc(x, y, 24, 0, Math.PI * 2);
-    ctx.stroke();
-
-    // Draw artillery body
     ctx.save();
     ctx.translate(x, y);
 
-    // Apply recoil effect if recently fired
+    // Shadow for depth
+    ctx.fillStyle = "rgba(0,0,0,0.25)";
+    ctx.beginPath();
+    ctx.arc(4, 4, 24, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Base platform
+    ctx.fillStyle = "#5d4037";
+    ctx.beginPath();
+    ctx.arc(0, 0, 24, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.strokeStyle = "#4e342e";
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.arc(0, 0, 24, 0, Math.PI * 2);
+    ctx.stroke();
+
+    // Layered bolts / metallic trim
+    ctx.fillStyle = "#b0bec5";
+    for (let i = 0; i < 6; i++) {
+      const angle = (i * Math.PI * 2) / 6;
+      const bx = Math.cos(angle) * 16;
+      const by = Math.sin(angle) * 16;
+      ctx.beginPath();
+      ctx.arc(bx, by, 3, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    ctx.save();
+    // Apply recoil
     if (this.recoilEffect > 0) {
-      ctx.translate(0, this.recoilEffect * 3);
+      ctx.translate(0, this.recoilEffect * 4);
       this.recoilEffect -= 0.03;
     }
 
     ctx.rotate(this.rot);
 
-    // Mount
+    // Turret mount
     ctx.fillStyle = "#4e342e";
     ctx.beginPath();
     ctx.roundRect(-18, -8, 36, 16, 4);
@@ -195,19 +211,28 @@ export class ArtilleryTower extends BaseTower {
     ctx.roundRect(-10, -20, 20, 12, 3);
     ctx.fill();
 
-    // Barrel
+    // Barrel with highlights
     ctx.fillStyle = "#5d4037";
     ctx.beginPath();
     ctx.roundRect(-8, -45, 16, 30, 4);
     ctx.fill();
 
-    // Barrel tip
-    ctx.fillStyle = "#4e342e";
+    ctx.strokeStyle = "#3e2723";
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(-8, -45);
+    ctx.lineTo(-8, -15);
+    ctx.moveTo(8, -45);
+    ctx.lineTo(8, -15);
+    ctx.stroke();
+
+    // Barrel tip glow
+    ctx.fillStyle = "#ff8c00";
     ctx.beginPath();
     ctx.roundRect(-7, -50, 14, 8, 3);
     ctx.fill();
 
-    // Aiming mechanism
+    // Aiming gear
     ctx.fillStyle = "#3e2723";
     ctx.beginPath();
     ctx.arc(0, -15, 6, 0, Math.PI * 2);
@@ -215,40 +240,31 @@ export class ArtilleryTower extends BaseTower {
 
     ctx.restore();
 
-    // Draw level indicators as explosion icons
+    // Level indicators as explosive icons
     for (let i = 0; i < this.level; i++) {
-      const indicatorX = x - 12 + i * 6;
-      const indicatorY = y + 25;
+      const ix = x - 12 + i * 6;
+      const iy = y + 28;
 
-      // Explosion icon
       ctx.fillStyle = s.color;
       ctx.beginPath();
-      ctx.arc(indicatorX, indicatorY, 2, 0, Math.PI * 2);
+      ctx.arc(ix, iy, 2, 0, Math.PI * 2);
       ctx.fill();
 
-      // Explosion spikes
       ctx.strokeStyle = s.color;
       ctx.lineWidth = 1.5;
       ctx.beginPath();
       for (let j = 0; j < 8; j++) {
         const angle = (j * Math.PI * 2) / 8;
-        ctx.moveTo(
-          indicatorX + Math.cos(angle) * 2,
-          indicatorY + Math.sin(angle) * 2
-        );
-        ctx.lineTo(
-          indicatorX + Math.cos(angle) * 4,
-          indicatorY + Math.sin(angle) * 4
-        );
+        ctx.moveTo(ix + Math.cos(angle) * 2, iy + Math.sin(angle) * 2);
+        ctx.lineTo(ix + Math.cos(angle) * 4, iy + Math.sin(angle) * 4);
       }
       ctx.stroke();
     }
 
-    // Random smoke puffs from barrel
-    if (
-      Math.random() < 0.02 &&
-      (!this.recoilEffect || this.recoilEffect <= 0)
-    ) {
+    ctx.restore();
+
+    // Idle smoke puffs
+    if (Math.random() < 0.02) {
       this.drawIdleSmoke(x, y, time);
     }
   }
@@ -258,20 +274,20 @@ export class ArtilleryTower extends BaseTower {
     const barrelTipX = x + Math.cos(angle) * 45;
     const barrelTipY = y + Math.sin(angle) * 45;
 
-    for (let i = 0; i < 3; i++) {
+    for (let i = 0; i < 4; i++) {
       const offset = (Math.random() - 0.5) * 5;
-      const life = 0.8 + Math.random() * 0.4;
+      const life = 0.8 + Math.random() * 0.5;
       const size = 2 + Math.random() * 2;
 
       particles.push({
         x: barrelTipX + Math.cos(angle + Math.PI / 2) * offset,
         y: barrelTipY + Math.sin(angle + Math.PI / 2) * offset,
         vx: Math.cos(angle) * 20 + (Math.random() - 0.5) * 10,
-        vy: Math.sin(angle) * 20 + (Math.random() - 0.5) * 10 - 10, // Rise slightly
+        vy: Math.sin(angle) * 20 + (Math.random() - 0.5) * 10 - 10,
         life,
         r: size,
         c: "#888",
-        gravity: -0.1, // Negative gravity makes it rise
+        gravity: -0.1,
         fade: 0.95,
       });
     }

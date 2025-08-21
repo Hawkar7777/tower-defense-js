@@ -11,6 +11,7 @@ import { MissileTower } from "./towers/MissileTower.js";
 import { FlamethrowerTower } from "./towers/FlamethrowerTower.js";
 import { SniperTower } from "./towers/SniperTower.js";
 import { ArtilleryTower } from "./towers/ArtilleryTower.js";
+import { ArcherTower } from "./towers/ArcherTower.js";
 
 export const TOWER_TYPES = {
   gun: {
@@ -148,5 +149,17 @@ export const TOWER_TYPES = {
     minRange: 60,
     color: "#8d6e63",
     class: ArtilleryTower,
+  },
+  archer: {
+    name: "Archer Tower",
+    cost: 90,
+    range: 130,
+    fireRate: 5,
+    dmg: 100,
+    bulletSpeed: 400,
+    critChance: 0.1,
+    critMultiplier: 1.5,
+    color: "#8bc34a",
+    class: ArcherTower,
   },
 };

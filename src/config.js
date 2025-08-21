@@ -10,6 +10,7 @@ import { PoisonTower } from "./towers/PoisonTower.js";
 import { MissileTower } from "./towers/MissileTower.js";
 import { FlamethrowerTower } from "./towers/FlamethrowerTower.js";
 import { SniperTower } from "./towers/SniperTower.js";
+import { ArtilleryTower } from "./towers/ArtilleryTower.js";
 
 export const TOWER_TYPES = {
   gun: {
@@ -134,5 +135,18 @@ export const TOWER_TYPES = {
     critMultiplier: 2.5,
     color: "#2b4ff2",
     class: SniperTower,
+  },
+  artillery: {
+    name: "Artillery",
+    cost: 500,
+    range: 350,
+    fireRate: 0.15,
+    dmg: 60,
+    splash: 120,
+    bulletSpeed: 150,
+    arcHeight: 80,
+    minRange: 60,
+    color: "#8d6e63",
+    class: ArtilleryTower,
   },
 };

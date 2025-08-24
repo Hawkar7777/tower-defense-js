@@ -40,7 +40,7 @@ export const ui = {
  * This is called every time a new level is started.
  */
 export function resetState() {
-  state.money = 250; // Initial money for a new level
+  state.money = 100000; // Initial money for a new level
   state.lives = 20;
   state.wave = 0;
   state.time = 0;

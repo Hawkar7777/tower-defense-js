@@ -1,4 +1,4 @@
-// state.js
+// ===== FILE: state.js =====
 
 // Central mutable state
 export const state = {
@@ -9,6 +9,10 @@ export const state = {
   running: false,
   camera: { x: 0, y: 0 },
   zoom: 1,
+  // ADDED: To hold the config of the current level
+  currentLevelConfig: null,
+  // ADDED: An array of enemies waiting to be spawned for the current wave
+  toSpawn: [],
 };
 
 // ... (enemies, towers, etc. remain the same) ...
@@ -46,6 +50,9 @@ export function resetState(levelConfig) {
   state.running = true; // Set to true to allow the game loop to run
   state.camera = { x: 0, y: 0 };
   state.zoom = 1.0;
+
+  // ADDED: Clear the list of enemies to spawn
+  state.toSpawn.length = 0;
 
   // Clear all dynamic entity arrays
   towers.length = 0;

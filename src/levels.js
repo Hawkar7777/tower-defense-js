@@ -1,6 +1,7 @@
-// levels.js
+// ===== FILE: levels.js =====
 
-// This array will hold the configuration for all 30 levels.
+// This array holds the configuration for all levels.
+// You can now define custom waves for each level.
 export const levels = [
   // Level 1: A classic S-curve on a standard map.
   {
@@ -8,12 +9,23 @@ export const levels = [
     map: { width: 40, height: 25 },
     startMoney: 1000,
     startLives: 30,
-    maxWaves: 10,
     path: (TILE, T_HALF, MAP_W, MAP_H) => [
       { x: 0, y: TILE * 5 + T_HALF },
       { x: MAP_W * 0.25, y: TILE * 5 + T_HALF },
       { x: MAP_W * 0.25, y: MAP_H * 0.75 },
       { x: MAP_W, y: MAP_H * 0.75 },
+    ],
+    waves: [
+      { count: 10, types: { basic: 1.0 } }, // Wave 1
+      { count: 12, types: { basic: 1.0 } }, // Wave 2
+      { count: 15, types: { basic: 0.8, brute: 0.2 } }, // Wave 3
+      { count: 18, types: { basic: 0.7, brute: 0.3 } }, // Wave 4
+      { count: 20, types: { basic: 0.5, brute: 0.3, swift: 0.2 } }, // Wave 5
+      { count: 22, types: { basic: 0.4, brute: 0.4, swift: 0.2 } }, // Wave 6
+      { count: 25, types: { brute: 0.5, swift: 0.5 } }, // Wave 7
+      { count: 28, types: { basic: 0.2, brute: 0.4, swift: 0.3, elite: 0.1 } }, // Wave 8
+      { count: 30, types: { brute: 0.5, swift: 0.2, elite: 0.3 } }, // Wave 9
+      { count: 35, types: { elite: 0.7, brute: 0.3 } }, // Wave 10
     ],
   },
   {
@@ -21,7 +33,6 @@ export const levels = [
     map: { width: 30, height: 30 },
     startMoney: 800,
     startLives: 20,
-    maxWaves: 15,
     path: (TILE, T_HALF, MAP_W, MAP_H) => [
       { x: 0, y: T_HALF },
       { x: MAP_W * 0.8, y: T_HALF },
@@ -30,13 +41,23 @@ export const levels = [
       { x: MAP_W * 0.2, y: MAP_H * 0.25 },
       { x: MAP_W, y: MAP_H * 0.25 },
     ],
+    waves: [
+      { count: 15, types: { swift: 1.0 } }, // Wave 1
+      { count: 20, types: { basic: 0.5, swift: 0.5 } }, // Wave 2
+      { count: 25, types: { basic: 0.7, swift: 0.3 } }, // Wave 3
+      { count: 25, types: { brute: 0.4, swift: 0.6 } }, // Wave 4
+      { count: 30, types: { brute: 0.6, swift: 0.4 } }, // Wave 5
+      { count: 30, types: { brute: 0.7, elite: 0.3 } }, // Wave 6
+      { count: 35, types: { swift: 0.5, elite: 0.5 } }, // Wave 7
+      { count: 40, types: { brute: 0.3, swift: 0.3, elite: 0.4 } }, // Wave 8
+      { count: 45, types: { swift: 0.8, elite: 0.2 } }, // Wave 9
+      { count: 50, types: { brute: 0.8, elite: 0.2 } }, // Wave 10
+    ],
   },
-  // Level 3: A long, winding path on a large map.
   {
     level: 3,
     startMoney: 800,
     startLives: 20,
-    maxWaves: 15,
     map: { width: 50, height: 30 },
     path: (TILE, T_HALF, MAP_W, MAP_H) => [
       { x: 0, y: TILE * 3 + T_HALF },
@@ -46,30 +67,17 @@ export const levels = [
       { x: MAP_W * 0.8, y: TILE * 3 + T_HALF },
       { x: MAP_W, y: TILE * 3 + T_HALF },
     ],
+    waves: [
+      { count: 20, types: { basic: 1.0 } }, // Wave 1
+      { count: 25, types: { basic: 0.8, brute: 0.2 } }, // Wave 2
+      { count: 30, types: { basic: 0.6, brute: 0.4 } }, // Wave 3
+      { count: 35, types: { brute: 0.5, swift: 0.5 } }, // Wave 4
+      { count: 40, types: { basic: 0.3, brute: 0.3, swift: 0.4 } }, // Wave 5
+      { count: 45, types: { elite: 0.2, swift: 0.8 } }, // Wave 6
+      { count: 50, types: { elite: 0.3, brute: 0.7 } }, // Wave 7
+      { count: 55, types: { basic: 0.1, brute: 0.4, swift: 0.2, elite: 0.3 } }, // Wave 8
+      { count: 60, types: { elite: 0.5, brute: 0.25, swift: 0.25 } }, // Wave 9
+      { count: 70, types: { elite: 1.0 } }, // Wave 10
+    ],
   },
-  // ... Additional unique level designs would go here.
 ];
-
-// Auto-generate the remaining levels for demonstration purposes.
-for (let i = 4; i <= 30; i++) {
-  const width = 35 + Math.floor(Math.random() * 16); // width between 35-50
-  const height = 22 + Math.floor(Math.random() * 9); // height between 22-30
-  levels.push({
-    level: i,
-    map: { width, height },
-    // A simple, randomized path generator for variety.
-    path: (TILE, T_HALF, MAP_W, MAP_H) => {
-      const y1 = (3 + (i % 6)) * TILE + T_HALF;
-      const y2 = (height - 5 - (i % 5)) * TILE + T_HALF;
-      const x1 = width * (0.6 + Math.random() * 0.25) * TILE;
-      const x2 = width * (0.2 + Math.random() * 0.25) * TILE;
-      return [
-        { x: 0, y: y1 },
-        { x: x1, y: y1 },
-        { x: x1, y: y2 },
-        { x: x2, y: y2 },
-        { x: x2, y: MAP_H },
-      ];
-    },
-  });
-}

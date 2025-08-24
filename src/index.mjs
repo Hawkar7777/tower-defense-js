@@ -173,7 +173,11 @@ function loop(ts) {
     gameOver();
     return;
   }
-  if (state.wave > currentLevelConfig.maxWaves && enemies.length === 0) {
+  if (
+    state.wave >= currentLevelConfig.waves.length &&
+    enemies.length === 0 &&
+    state.toSpawn.length === 0
+  ) {
     levelComplete();
     return;
   }
@@ -236,6 +240,9 @@ export function startGame(levelNumber) {
     return;
   }
 
+  // Make the level config globally accessible
+  state.currentLevelConfig = currentLevelConfig;
+
   resetState(currentLevelConfig);
   setMapDimensions(currentLevelConfig.map.width, currentLevelConfig.map.height);
   resize();
@@ -245,7 +252,9 @@ export function startGame(levelNumber) {
   precomputeGrid();
   precomputePath();
 
-  startNextWave(currentLevelConfig.maxWaves);
+  // The spawner will now automatically start the first wave
+  // so we can remove the startNextWave() call from here.
+
   last = performance.now();
   if (animationFrameId) cancelAnimationFrame(animationFrameId);
   state.running = true; // Set running state before requesting frame

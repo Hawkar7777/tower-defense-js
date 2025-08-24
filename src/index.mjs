@@ -70,9 +70,9 @@ let touch = {
   startY: 0,
   currentX: 0,
   currentY: 0,
-  isHolding: false,
+  isHolding: false, // True for ANY active drag (from map or shop)
   holdTimer: null,
-  potentialSelection: null,
+  potentialSelection: null, // Holds object/key being held over
 };
 
 let initialPinchDist = null;
@@ -126,7 +126,7 @@ function loop(ts) {
   ctx.translate(-state.camera.x * state.zoom, -state.camera.y * state.zoom);
   ctx.scale(state.zoom, state.zoom);
 
-  // Draw grid
+  // Draw grid and path...
   ctx.strokeStyle = "rgba(255, 255, 255, 0.05)";
   ctx.lineWidth = 1 / state.zoom;
   ctx.beginPath();
@@ -139,8 +139,6 @@ function loop(ts) {
     ctx.lineTo(MAP_GRID_W * TILE, i * TILE);
   }
   ctx.stroke();
-
-  // Draw path
   if (path && path.length) {
     ctx.strokeStyle = "#29e3ff";
     ctx.lineWidth = 10;
@@ -159,15 +157,27 @@ function loop(ts) {
     ctx.stroke();
   }
 
-  // Draw game elements
+  // --- MODIFIED: Ghost Drawing Logic ---
   drawPlacementOverlay();
   if (ui.heldTower) drawHeldTowerRange(ui.heldTower);
+
+  const pointerY = touch.action !== "idle" ? touch.currentY : mouse.y;
+  const isDraggingNewTowerFromShop =
+    mouse.draggingTower || (touch.isHolding && !!ui.selectedShopKey);
+
   if (
-    (mouse.draggingTower || (ui.hoveredTile && ui.selectedShopKey)) &&
-    mouse.y <= canvas.clientHeight - 100
+    (isDraggingNewTowerFromShop || (ui.hoveredTile && ui.selectedShopKey)) &&
+    pointerY <= canvas.clientHeight - 100
   ) {
-    drawGhost(ui.hoveredTile, TILE, ui.selectedShopKey, mouse.draggingTower);
+    drawGhost(
+      ui.hoveredTile,
+      TILE,
+      ui.selectedShopKey,
+      isDraggingNewTowerFromShop
+    );
   }
+
+  // Draw game entities
   for (const t of towers) t.draw();
   for (const e of enemies) e.draw();
   for (const b of projectiles) b.draw();
@@ -188,13 +198,11 @@ export function startGame(levelNumber) {
     alert(`Error: Level ${levelNumber} configuration not found!`);
     return;
   }
-
   resetState(currentLevelConfig);
   setMapDimensions(currentLevelConfig.map.width, currentLevelConfig.map.height);
   resize();
   initPath(currentLevelConfig.path);
   startNextWave(currentLevelConfig.maxWaves);
-
   last = performance.now();
   if (animationFrameId) cancelAnimationFrame(animationFrameId);
   animationFrameId = requestAnimationFrame(loop);
@@ -217,14 +225,14 @@ function gameOver() {
   ctx.font = "500 18px Inter";
   ctx.fillStyle = "#bfe7ff";
   ctx.fillText(
-    `You reached wave ${state.wave}. Click to return to menu.`,
+    `You reached wave ${state.wave}. Tap or click to return.`,
     canvas.clientWidth / 2,
     canvas.clientHeight / 2 + 28
   );
   ctx.textAlign = "start";
-  canvas.addEventListener("click", () => window.location.reload(), {
-    once: true,
-  });
+  const reload = () => window.location.reload();
+  canvas.addEventListener("click", reload, { once: true });
+  canvas.addEventListener("touchend", reload, { once: true });
 }
 
 function levelComplete() {
@@ -238,7 +246,6 @@ function levelComplete() {
       currentLevelConfig.level + 1
     );
   }
-
   drawBackground(state.time, path);
   drawTopbar(canvas.clientWidth);
   ctx.fillStyle = "rgba(10, 36, 20, 0.86)";
@@ -254,17 +261,17 @@ function levelComplete() {
   ctx.font = "500 18px Inter";
   ctx.fillStyle = "#bfe7ff";
   ctx.fillText(
-    `You completed Level ${currentLevelConfig.level}! Click to continue.`,
+    `Level ${currentLevelConfig.level} complete! Tap or click to continue.`,
     canvas.clientWidth / 2,
     canvas.clientHeight / 2 + 28
   );
   ctx.textAlign = "start";
-  canvas.addEventListener("click", () => window.location.reload(), {
-    once: true,
-  });
+  const reload = () => window.location.reload();
+  canvas.addEventListener("click", reload, { once: true });
+  canvas.addEventListener("touchend", reload, { once: true });
 }
 
-// --- ALL INPUT HANDLING LOGIC IS UNCHANGED ---
+// --- INPUT HANDLING ---
 function getCanvasPos(clientX, clientY) {
   const rect = canvas.getBoundingClientRect();
   return { x: clientX - rect.left, y: clientY - rect.top };
@@ -329,7 +336,6 @@ function handleInspectorClick(pos) {
   }
   return false;
 }
-
 canvas.addEventListener("wheel", (e) => {
   e.preventDefault();
   const pos = getCanvasPos(e.clientX, e.clientY);
@@ -518,9 +524,36 @@ canvas.addEventListener(
     touch.startY = pos.y;
     touch.currentX = pos.x;
     touch.currentY = pos.y;
+
     if (pos.y > canvas.clientHeight - 100) {
+      // Interaction is in the SHOP area
       touch.action = "scrollingShop";
+      const button = getShopButtons(
+        canvas.clientWidth,
+        canvas.clientHeight
+      ).find(
+        (b) =>
+          pos.x >= b.x &&
+          pos.x <= b.x + b.w &&
+          pos.y >= b.y &&
+          pos.y <= b.y + b.h
+      );
+      if (button) {
+        const spec = TOWER_TYPES[button.key];
+        if (state.money >= spec.cost) {
+          touch.potentialSelection = button.key;
+          touch.holdTimer = setTimeout(() => {
+            touch.isHolding = true;
+            ui.selectedShopKey = button.key;
+            ui.selectedTower = null;
+            touch.potentialSelection = null;
+          }, HOLD_DURATION);
+        } else {
+          pulse("Not enough money!", "#f66");
+        }
+      }
     } else {
+      // Interaction is on the MAP area
       touch.action = "panning";
       mouse.camStart.x = state.camera.x;
       mouse.camStart.y = state.camera.y;
@@ -541,6 +574,7 @@ canvas.addEventListener(
   },
   { passive: false }
 );
+
 canvas.addEventListener(
   "touchmove",
   (e) => {
@@ -553,12 +587,13 @@ canvas.addEventListener(
       );
       const zoomFactor = currentDist / initialPinchDist;
       const newZoom = clamp(initialZoom * zoomFactor, MIN_ZOOM, MAX_ZOOM);
-      const zoomDelta = newZoom - state.zoom;
-      const midPoint = getCanvasPos(
-        (t1.clientX + t2.clientX) / 2,
-        (t1.clientY + t2.clientY) / 2
+      applyZoom(
+        newZoom - state.zoom,
+        getCanvasPos(
+          (t1.clientX + t2.clientX) / 2,
+          (t1.clientY + t2.clientY) / 2
+        )
       );
-      applyZoom(zoomDelta, midPoint);
       return;
     }
     if (e.touches.length !== 1) return;
@@ -566,87 +601,99 @@ canvas.addEventListener(
     const pos = getCanvasPos(t.clientX, t.clientY);
     touch.currentX = pos.x;
     touch.currentY = pos.y;
-    if (
-      dist({ x: touch.startX, y: touch.startY }, { x: pos.x, y: pos.y }) > 10
-    ) {
+
+    const worldX = pos.x / state.zoom + state.camera.x;
+    const worldY = pos.y / state.zoom + state.camera.y;
+    ui.hoveredTile = {
+      gx: Math.floor(worldX / TILE),
+      gy: Math.floor(worldY / TILE),
+    };
+
+    if (dist({ x: touch.startX, y: touch.startY }, pos) > 10) {
       clearTimeout(touch.holdTimer);
-      ui.heldTower = null;
-      touch.potentialSelection = null;
-      touch.isHolding = false;
+      if (!touch.isHolding) {
+        touch.potentialSelection = null;
+        ui.heldTower = null;
+      }
     }
-    if (touch.action === "scrollingShop") {
-      const deltaX = touch.startX - pos.x;
-      ui.shopScrollOffset = Math.max(
-        0,
-        Math.min(ui.maxShopScroll || 0, (ui.shopScrollOffset || 0) + deltaX)
-      );
-      touch.startX = pos.x;
-    } else if (touch.action === "panning") {
-      const dx = pos.x - touch.startX;
-      const dy = pos.y - touch.startY;
-      state.camera.x = mouse.camStart.x - dx * TOUCH_PAN_SENSITIVITY;
-      state.camera.y = mouse.camStart.y - dy * TOUCH_PAN_SENSITIVITY;
-      const maxCamX = Math.max(
-        0,
-        MAP_GRID_W * TILE - canvas.clientWidth / state.zoom
-      );
-      const maxCamY = Math.max(
-        0,
-        MAP_GRID_H * TILE - canvas.clientHeight / state.zoom
-      );
-      state.camera.x = clamp(state.camera.x, 0, maxCamX);
-      state.camera.y = clamp(state.camera.y, 0, maxCamY);
+
+    if (!touch.isHolding) {
+      if (touch.action === "scrollingShop") {
+        const deltaX = touch.startX - pos.x;
+        ui.shopScrollOffset = Math.max(
+          0,
+          Math.min(ui.maxShopScroll || 0, (ui.shopScrollOffset || 0) + deltaX)
+        );
+        touch.startX = pos.x;
+      } else if (touch.action === "panning") {
+        const dx = pos.x - touch.startX;
+        const dy = pos.y - touch.startY;
+        state.camera.x = mouse.camStart.x - dx * TOUCH_PAN_SENSITIVITY;
+        state.camera.y = mouse.camStart.y - dy * TOUCH_PAN_SENSITIVITY;
+        const maxCamX = Math.max(
+          0,
+          MAP_GRID_W * TILE - canvas.clientWidth / state.zoom
+        );
+        const maxCamY = Math.max(
+          0,
+          MAP_GRID_H * TILE - canvas.clientHeight / state.zoom
+        );
+        state.camera.x = clamp(state.camera.x, 0, maxCamX);
+        state.camera.y = clamp(state.camera.y, 0, maxCamY);
+      }
     }
   },
   { passive: false }
 );
+
 canvas.addEventListener(
   "touchend",
   (e) => {
     e.preventDefault();
     clearTimeout(touch.holdTimer);
+
     const wasHolding = touch.isHolding;
-    const pos = { x: touch.startX, y: touch.startY };
     const wasJustATap =
       dist(
         { x: touch.startX, y: touch.startY },
         { x: touch.currentX, y: touch.currentY }
       ) < 10;
-    if (wasJustATap && handleInspectorClick(pos)) {
-      touch.action = "idle";
-      initialPinchDist = null;
-      ui.heldTower = null;
-      touch.isHolding = false;
-      touch.potentialSelection = null;
-      return;
-    }
-    if (!wasHolding && wasJustATap && touch.action !== "zooming") {
-      if (touch.action === "scrollingShop") {
-        const buttons = getShopButtons(canvas.clientWidth, canvas.clientHeight);
-        for (const b of buttons) {
-          if (
-            pos.x >= b.x &&
-            pos.x <= b.x + b.w &&
-            pos.y >= b.y &&
-            pos.y <= b.y + b.h
-          ) {
-            const spec = TOWER_TYPES[b.key];
-            if (state.money >= spec.cost) {
-              ui.selectedShopKey = ui.selectedShopKey === b.key ? null : b.key;
-              ui.selectedTower = null;
-            } else {
-              pulse("Not enough money!", "#f66");
-            }
-            break;
-          }
+
+    if (wasHolding && ui.selectedShopKey) {
+      // A drag-and-drop from the SHOP ended
+      const gx = ui.hoveredTile ? ui.hoveredTile.gx : -1;
+      const gy = ui.hoveredTile ? ui.hoveredTile.gy : -1;
+      if (touch.currentY < canvas.clientHeight - 100) {
+        const spec = TOWER_TYPES[ui.selectedShopKey];
+        if (isPlacementValid(gx, gy, spec)) {
+          towers.push(new spec.class(gx, gy, ui.selectedShopKey));
+          state.money -= spec.cost;
+          pulse(`-${spec.cost}`);
+          updateOccupiedCells();
         }
+      }
+      ui.selectedShopKey = null; // Deselect from shop after drop
+    } else if (!wasHolding && wasJustATap) {
+      // It was a TAP, not a drag
+      if (handleInspectorClick({ x: touch.startX, y: touch.startY })) {
+        // Action was handled by inspector, do nothing else
+      } else if (touch.action === "scrollingShop" && touch.potentialSelection) {
+        // Tap in the shop
+        ui.selectedShopKey =
+          ui.selectedShopKey === touch.potentialSelection
+            ? null
+            : touch.potentialSelection;
+        ui.selectedTower = null;
       } else if (touch.action === "panning") {
-        const worldX = pos.x / state.zoom + state.camera.x;
-        const worldY = pos.y / state.zoom + state.camera.y;
+        // Tap on the map
+        const worldX = touch.startX / state.zoom + state.camera.x;
+        const worldY = touch.startY / state.zoom + state.camera.y;
         const gx = Math.floor(worldX / TILE);
         const gy = Math.floor(worldY / TILE);
         const clickedTower = findTowerAt(gx, gy);
+
         if (ui.selectedShopKey) {
+          // Place a tower
           const spec = TOWER_TYPES[ui.selectedShopKey];
           if (isPlacementValid(gx, gy, spec)) {
             if (state.money >= spec.cost) {
@@ -660,23 +707,26 @@ canvas.addEventListener(
             }
           }
         } else if (clickedTower) {
+          // Select an existing tower
           ui.selectedTower =
             ui.selectedTower === clickedTower ? null : clickedTower;
         } else {
+          // Deselect everything
           ui.selectedTower = null;
         }
       }
     }
-    if (e.touches.length === 0) {
-      touch.action = "idle";
-      initialPinchDist = null;
-    }
+
+    // Universal Reset Logic
+    if (e.touches.length === 0) touch.action = "idle";
     ui.heldTower = null;
     touch.isHolding = false;
     touch.potentialSelection = null;
+    initialPinchDist = null;
   },
   { passive: false }
 );
+
 canvas.addEventListener("touchcancel", (e) => {
   e.preventDefault();
   clearTimeout(touch.holdTimer);
@@ -685,4 +735,5 @@ canvas.addEventListener("touchcancel", (e) => {
   ui.heldTower = null;
   touch.isHolding = false;
   touch.potentialSelection = null;
+  ui.selectedShopKey = null;
 });

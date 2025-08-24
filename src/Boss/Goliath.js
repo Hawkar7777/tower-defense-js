@@ -6,7 +6,7 @@ import { Enemy } from "../enemy.js";
 import { BaseBoss } from "./BaseBoss.js";
 import { BOSS_TYPES } from "./boss-types.js";
 
-export class Goliath extends BaseBoss {
+export class goliath extends BaseBoss {
   constructor() {
     const bossType = BOSS_TYPES.Goliath;
     const difficultyMult = 1 + state.wave * 0.1;

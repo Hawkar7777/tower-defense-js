@@ -3,10 +3,9 @@
 import { enemies, state } from "./state.js";
 import { Enemy } from "./enemy.js";
 import { pulse } from "./utils.js";
-// --- ADDITION 1: Import the new Warlock class ---
-import { Goliath } from "./Boss/Goliath.js";
-import { Phantom } from "./Boss/Phantom.js";
-import { Warlock } from "./Boss/Warlock.js";
+import { goliath } from "./boss/goliath.js";
+import { phantom } from "./boss/phantom.js";
+import { warlock } from "./boss/warlock.js";
 
 let spawnTimer = 0;
 
@@ -43,14 +42,14 @@ export function startNextWave() {
     let bossInstance;
     switch (waveConfig.boss) {
       case "Goliath":
-        bossInstance = new Goliath();
+        bossInstance = new goliath();
         break;
       case "Phantom":
-        bossInstance = new Phantom();
+        bossInstance = new phantom();
         break;
       // --- ADDITION 2: Add Warlock to the spawner ---
       case "Warlock":
-        bossInstance = new Warlock();
+        bossInstance = new warlock();
         break;
       // --- END OF ADDITION ---
       default:

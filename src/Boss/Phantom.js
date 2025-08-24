@@ -4,7 +4,7 @@ import { state } from "../state.js";
 import { BaseBoss } from "./BaseBoss.js";
 import { BOSS_TYPES } from "./boss-types.js";
 
-export class Phantom extends BaseBoss {
+export class phantom extends BaseBoss {
   constructor() {
     const bossType = BOSS_TYPES.Phantom;
     const difficultyMult = 1 + state.wave * 0.12;

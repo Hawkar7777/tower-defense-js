@@ -6,7 +6,7 @@ import { state, towers } from "../state.js"; // 'towers' is already imported, wh
 import { BaseBoss } from "./BaseBoss.js";
 import { BOSS_TYPES } from "./boss-types.js";
 
-export class Warlock extends BaseBoss {
+export class warlock extends BaseBoss {
   constructor() {
     const bossType = BOSS_TYPES.Warlock;
     const difficultyMult = 1 + state.wave * 0.15;

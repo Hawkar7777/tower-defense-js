@@ -22,7 +22,7 @@ export function setMapDimensions(width, height) {
 export const canvas = document.createElement("canvas");
 canvas.id = "game";
 canvas.style.width = "100%";
-canvas.style.display = "block";
+canvas.style.display = "none";
 canvas.style.background = "#0b0f1a";
 canvas.style.boxShadow =
   "0 30px 60px rgba(0,0,0,0.35), inset 0 0 120px rgba(0,180,255,0.04)";

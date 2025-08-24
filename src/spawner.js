@@ -1,15 +1,16 @@
-// ===== FILE: spawner.js =====
+// ===== FILE: spawner.js (Corrected) =====
 
 import { enemies, state } from "./state.js";
 import { Enemy } from "./enemy.js";
 import { pulse } from "./utils.js";
+// --- CHANGE 1: Import the boss classes ---
+import { Goliath, Phantom } from "./boss/bosses.js";
 
 let spawnTimer = 0;
 
 export function startNextWave() {
   const levelConfig = state.currentLevelConfig;
 
-  // Do not start a new wave if the previous one was the last.
   if (!levelConfig || state.wave >= levelConfig.waves.length) {
     return;
   }
@@ -17,26 +18,50 @@ export function startNextWave() {
   state.wave++;
   const waveConfig = levelConfig.waves[state.wave - 1];
 
-  // Generate the enemies for the wave based on the configuration
-  const enemyTypes = Object.keys(waveConfig.types);
-  for (let i = 0; i < waveConfig.count; i++) {
-    const weights = enemyTypes.map((t) => waveConfig.types[t]);
-    const totalWeight = weights.reduce((sum, weight) => sum + weight, 0);
-    let random = Math.random() * totalWeight;
+  // --- CHANGE 2: The Core Fix ---
+  // First, check if there are regular enemies to spawn in this wave
+  if (waveConfig.types && waveConfig.count) {
+    const enemyTypes = Object.keys(waveConfig.types);
+    for (let i = 0; i < waveConfig.count; i++) {
+      const weights = enemyTypes.map((t) => waveConfig.types[t]);
+      const totalWeight = weights.reduce((sum, weight) => sum + weight, 0);
+      let random = Math.random() * totalWeight;
 
-    let chosenType = enemyTypes[0]; // Default to the first type as a fallback
-    for (let j = 0; j < enemyTypes.length; j++) {
-      random -= weights[j];
-      if (random <= 0) {
-        chosenType = enemyTypes[j];
-        break;
+      let chosenType = enemyTypes[0];
+      for (let j = 0; j < enemyTypes.length; j++) {
+        random -= weights[j];
+        if (random <= 0) {
+          chosenType = enemyTypes[j];
+          break;
+        }
       }
+
+      const tier = Math.floor((state.wave - 1) / 1.5);
+      state.toSpawn.push({ type: chosenType, tier });
+    }
+  }
+
+  // Second, check if there is a boss to spawn in this wave
+  if (waveConfig.boss) {
+    let bossInstance;
+    switch (waveConfig.boss) {
+      case "Goliath":
+        bossInstance = new Goliath();
+        break;
+      case "Phantom":
+        bossInstance = new Phantom();
+        break;
+      default:
+        console.error("Unknown boss type in levels.js:", waveConfig.boss);
     }
 
-    // Tier can still be calculated based on wave number, as in the original logic.
-    const tier = Math.floor((state.wave - 1) / 1.5);
-    state.toSpawn.push({ type: chosenType, tier });
+    if (bossInstance) {
+      // Add the boss directly to the active enemies list.
+      // It doesn't need to wait in the toSpawn queue.
+      enemies.push(bossInstance);
+    }
   }
+  // --- END OF CHANGES ---
 
   spawnTimer = 0;
   pulse(`Wave ${state.wave}!`, "#adf");
@@ -44,7 +69,8 @@ export function startNextWave() {
 
 export function spawner(dt) {
   if (state.toSpawn.length === 0) {
-    // If there are no enemies left on the map and there are more waves to come, start the next one.
+    // This condition still works. If there are no more enemies to spawn
+    // AND the map is clear of active enemies, the next wave starts.
     if (
       enemies.length === 0 &&
       state.wave < state.currentLevelConfig.waves.length
@@ -61,7 +87,6 @@ export function spawner(dt) {
       enemies.push(new Enemy(nextEnemy.type, nextEnemy.tier));
     }
 
-    // Adjust spawn timer based on wave difficulty
     spawnTimer = Math.max(0.25, 0.9 - state.wave * 0.03);
   }
 }

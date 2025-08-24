@@ -16,16 +16,8 @@ export const levels = [
       { x: MAP_W, y: MAP_H * 0.75 },
     ],
     waves: [
+      { boss: "Phantom" },
       { count: 10, types: { basic: 1.0 } }, // Wave 1
-      { count: 12, types: { basic: 1.0 } }, // Wave 2
-      { count: 15, types: { basic: 0.8, brute: 0.2 } }, // Wave 3
-      { count: 18, types: { basic: 0.7, brute: 0.3 } }, // Wave 4
-      { count: 20, types: { basic: 0.5, brute: 0.3, swift: 0.2 } }, // Wave 5
-      { count: 22, types: { basic: 0.4, brute: 0.4, swift: 0.2 } }, // Wave 6
-      { count: 25, types: { brute: 0.5, swift: 0.5 } }, // Wave 7
-      { count: 28, types: { basic: 0.2, brute: 0.4, swift: 0.3, elite: 0.1 } }, // Wave 8
-      { count: 30, types: { brute: 0.5, swift: 0.2, elite: 0.3 } }, // Wave 9
-      { count: 35, types: { elite: 0.7, brute: 0.3 } }, // Wave 10
     ],
   },
   {

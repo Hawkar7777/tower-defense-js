@@ -5,7 +5,6 @@ import {
   ctx,
   TILE,
   resize,
-  syncLogicalSize,
   MIN_ZOOM,
   MAX_ZOOM,
   MAP_GRID_W,
@@ -42,9 +41,13 @@ import {
 } from "./occupation.js";
 import { levels } from "./levels.js";
 
+// --- GLOBAL STATE FOR THE CURRENT LEVEL ---
+let currentLevelConfig = null;
+
 const TOUCH_PAN_SENSITIVITY = 1.5;
 const HOLD_DURATION = 200;
 
+// --- State objects for input ---
 let mouse = {
   x: 0,
   y: 0,
@@ -60,6 +63,7 @@ let mouse = {
   holdTimer: null,
   shopInteraction: false,
 };
+
 let touch = {
   action: "idle",
   startX: 0,
@@ -70,59 +74,17 @@ let touch = {
   holdTimer: null,
   potentialSelection: null,
 };
+
 let initialPinchDist = null;
 let initialZoom = 1.0;
 
+// --- GAME LOOP CONTROL ---
 let last = performance.now();
 let animationFrameId = null;
 
 /**
- * Draws a beautiful, animated sci-fi path.
- * @param {Array<Object>} pathArr The array of points defining the path.
- * @param {number} time The current game time, used for animation.
+ * The main game loop. Only runs when state.running is true.
  */
-function drawPath(pathArr, time) {
-  if (!pathArr || pathArr.length < 2) {
-    return;
-  }
-  // --- 1. The Outer Glow ---
-  ctx.strokeStyle = "rgba(0, 225, 255, 0.2)";
-  ctx.lineWidth = 25;
-  ctx.lineCap = "round";
-  ctx.lineJoin = "round";
-  ctx.shadowBlur = 30;
-  ctx.shadowColor = "rgba(0, 180, 255, 0.7)";
-  ctx.beginPath();
-  ctx.moveTo(pathArr[0].x, pathArr[0].y);
-  for (let i = 1; i < pathArr.length; i++) {
-    ctx.lineTo(pathArr[i].x, pathArr[i].y);
-  }
-  ctx.stroke();
-
-  // --- 2. The Inner Core Line ---
-  ctx.strokeStyle = "rgba(200, 245, 255, 0.8)";
-  ctx.lineWidth = 4;
-  ctx.shadowBlur = 10;
-  ctx.shadowColor = "#00ffff";
-  ctx.stroke();
-
-  // --- 3. Animated Dashes ---
-  ctx.strokeStyle = "#ffffff";
-  ctx.lineWidth = 4;
-  ctx.lineCap = "butt";
-  ctx.setLineDash([15, 45]);
-  ctx.lineDashOffset = -(time * 100) % 60;
-  ctx.shadowBlur = 5;
-  ctx.shadowColor = "#fff";
-  ctx.stroke();
-
-  // --- IMPORTANT: Reset styles ---
-  ctx.shadowBlur = 0;
-  ctx.setLineDash([]);
-  ctx.lineCap = "round";
-  ctx.lineJoin = "round";
-}
-
 function loop(ts) {
   if (!state.running) {
     if (animationFrameId) cancelAnimationFrame(animationFrameId);
@@ -144,14 +106,18 @@ function loop(ts) {
     if (projectiles[i].dead) projectiles.splice(i, 1);
   for (let i = enemies.length - 1; i >= 0; i--)
     if (enemies[i].dead) enemies.splice(i, 1);
+
+  // --- WIN/LOSS CHECKS ---
   if (state.lives <= 0) {
     gameOver();
     return;
   }
+  if (state.wave > currentLevelConfig.maxWaves && enemies.length === 0) {
+    levelComplete();
+    return;
+  }
 
-  // --- START OF RESTORED DRAWING LOGIC ---
-  // This entire block was missing from your previous code.
-
+  // --- DRAWING LOGIC ---
   drawBackground(state.time, path);
   drawTopbar(canvas.clientWidth);
   drawShop(canvas.clientWidth, canvas.clientHeight);
@@ -174,52 +140,63 @@ function loop(ts) {
   }
   ctx.stroke();
 
-  // Draw the new, beautiful path
-  drawPath(path, state.time);
-
-  drawPlacementOverlay();
-
-  if (ui.heldTower) {
-    drawHeldTowerRange(ui.heldTower);
+  // Draw path
+  if (path && path.length) {
+    ctx.strokeStyle = "#29e3ff";
+    ctx.lineWidth = 10;
+    ctx.globalAlpha = 0.15;
+    ctx.lineCap = "round";
+    ctx.beginPath();
+    ctx.moveTo(path[0].x, path[0].y);
+    for (let i = 1; i < path.length; i++) ctx.lineTo(path[i].x, path[i].y);
+    ctx.stroke();
+    ctx.globalAlpha = 1;
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = "#0cf";
+    ctx.beginPath();
+    ctx.moveTo(path[0].x, path[0].y);
+    for (let i = 1; i < path.length; i++) ctx.lineTo(path[i].x, path[i].y);
+    ctx.stroke();
   }
 
+  // Draw game elements
+  drawPlacementOverlay();
+  if (ui.heldTower) drawHeldTowerRange(ui.heldTower);
   if (
     (mouse.draggingTower || (ui.hoveredTile && ui.selectedShopKey)) &&
     mouse.y <= canvas.clientHeight - 100
   ) {
     drawGhost(ui.hoveredTile, TILE, ui.selectedShopKey, mouse.draggingTower);
   }
-
-  // Draw entities
   for (const t of towers) t.draw();
   for (const e of enemies) e.draw();
   for (const b of projectiles) b.draw();
   drawEffects();
 
   ctx.restore();
-
   drawInspector(ui.selectedTower, state.camera, state.zoom);
-
-  // --- END OF RESTORED DRAWING LOGIC ---
 
   animationFrameId = requestAnimationFrame(loop);
 }
 
+/**
+ * Public function to initialize and start a specific level.
+ */
 export function startGame(levelNumber) {
-  const levelConfig = levels.find((l) => l.level === levelNumber);
-  if (!levelConfig) {
+  currentLevelConfig = levels.find((l) => l.level === levelNumber);
+  if (!currentLevelConfig) {
     alert(`Error: Level ${levelNumber} configuration not found!`);
     return;
   }
-  resetState();
-  setMapDimensions(levelConfig.map.width, levelConfig.map.height);
+
+  resetState(currentLevelConfig);
+  setMapDimensions(currentLevelConfig.map.width, currentLevelConfig.map.height);
   resize();
-  initPath(levelConfig.path);
-  startNextWave();
+  initPath(currentLevelConfig.path);
+  startNextWave(currentLevelConfig.maxWaves);
+
   last = performance.now();
-  if (animationFrameId) {
-    cancelAnimationFrame(animationFrameId);
-  }
+  if (animationFrameId) cancelAnimationFrame(animationFrameId);
   animationFrameId = requestAnimationFrame(loop);
 }
 
@@ -240,22 +217,61 @@ function gameOver() {
   ctx.font = "500 18px Inter";
   ctx.fillStyle = "#bfe7ff";
   ctx.fillText(
-    `You reached wave ${state.wave}. Refresh to try again!`,
+    `You reached wave ${state.wave}. Click to return to menu.`,
     canvas.clientWidth / 2,
     canvas.clientHeight / 2 + 28
   );
   ctx.textAlign = "start";
+  canvas.addEventListener("click", () => window.location.reload(), {
+    once: true,
+  });
+}
+
+function levelComplete() {
+  state.running = false;
+  const unlocked = parseInt(
+    localStorage.getItem("towerDefenseHighestLevel") || "1"
+  );
+  if (currentLevelConfig.level >= unlocked) {
+    localStorage.setItem(
+      "towerDefenseHighestLevel",
+      currentLevelConfig.level + 1
+    );
+  }
+
+  drawBackground(state.time, path);
+  drawTopbar(canvas.clientWidth);
+  ctx.fillStyle = "rgba(10, 36, 20, 0.86)";
+  ctx.fillRect(0, 0, canvas.clientWidth, canvas.clientHeight);
+  ctx.fillStyle = "#fff";
+  ctx.font = "800 48px Inter";
+  ctx.textAlign = "center";
+  ctx.fillText(
+    "Victory!",
+    canvas.clientWidth / 2,
+    canvas.clientHeight / 2 - 10
+  );
+  ctx.font = "500 18px Inter";
+  ctx.fillStyle = "#bfe7ff";
+  ctx.fillText(
+    `You completed Level ${currentLevelConfig.level}! Click to continue.`,
+    canvas.clientWidth / 2,
+    canvas.clientHeight / 2 + 28
+  );
+  ctx.textAlign = "start";
+  canvas.addEventListener("click", () => window.location.reload(), {
+    once: true,
+  });
 }
 
 // --- ALL INPUT HANDLING LOGIC IS UNCHANGED ---
 function getCanvasPos(clientX, clientY) {
-  /* ... */ return {
-    x: clientX - canvas.getBoundingClientRect().left,
-    y: clientY - canvas.getBoundingClientRect().top,
-  };
+  const rect = canvas.getBoundingClientRect();
+  return { x: clientX - rect.left, y: clientY - rect.top };
 }
+
 function applyZoom(zoomDelta, zoomCenter) {
-  /* ... */ const oldZoom = state.zoom;
+  const oldZoom = state.zoom;
   const newZoom = clamp(state.zoom + zoomDelta, MIN_ZOOM, MAX_ZOOM);
   if (newZoom === oldZoom) return;
   const worldX = zoomCenter.x / oldZoom + state.camera.x;
@@ -274,11 +290,10 @@ function applyZoom(zoomDelta, zoomCenter) {
   state.camera.x = clamp(state.camera.x, 0, maxCamX);
   state.camera.y = clamp(state.camera.y, 0, maxCamY);
 }
+
 function handleInspectorClick(pos) {
-  /* ... */ if (!ui.selectedTower || !ui.inspectorButtons) {
-    return false;
-  }
-  const { panel, upgrade, sell } = ui.inspectorButtons;
+  if (!ui.selectedTower || !ui.inspectorButtons) return false;
+  const { upgrade, sell } = ui.inspectorButtons;
   if (
     upgrade &&
     pos.x >= upgrade.x &&
@@ -306,59 +321,181 @@ function handleInspectorClick(pos) {
     const sellValue = Math.round(ui.selectedTower.sellValue());
     state.money += sellValue;
     const towerIndex = towers.indexOf(ui.selectedTower);
-    if (towerIndex > -1) {
-      towers.splice(towerIndex, 1);
-      updateOccupiedCells();
-    }
+    if (towerIndex > -1) towers.splice(towerIndex, 1);
+    updateOccupiedCells();
     pulse(`+$${sellValue}`, "#afa");
     ui.selectedTower = null;
-    return true;
-  }
-  if (
-    panel &&
-    pos.x >= panel.x &&
-    pos.x <= panel.x + panel.w &&
-    pos.y >= panel.y &&
-    pos.y <= panel.y + panel.h
-  ) {
     return true;
   }
   return false;
 }
 
-// All canvas.addEventListener(...) calls remain exactly the same.
-canvas.addEventListener("touchstart", (e) => {
-  /* ... unchanged ... */
-});
-canvas.addEventListener("touchmove", (e) => {
-  /* ... unchanged ... */
-});
-canvas.addEventListener("touchend", (e) => {
-  /* ... unchanged ... */
-});
-canvas.addEventListener("touchcancel", (e) => {
-  /* ... unchanged ... */
-});
 canvas.addEventListener("wheel", (e) => {
-  /* ... unchanged ... */
-});
-canvas.addEventListener("mousemove", (e) => {
-  /* ... unchanged ... */
-});
-canvas.addEventListener("mousedown", (e) => {
-  /* ... unchanged ... */
-});
-canvas.addEventListener("mouseup", (e) => {
-  /* ... unchanged ... */
-});
-canvas.addEventListener("mouseleave", () => {
-  /* ... unchanged ... */
-});
-window.addEventListener("keydown", (e) => {
-  /* ... unchanged ... */
+  e.preventDefault();
+  const pos = getCanvasPos(e.clientX, e.clientY);
+  if (pos.y > canvas.clientHeight - 100) {
+    ui.shopScrollOffset =
+      (ui.shopScrollOffset || 0) + (e.deltaY > 0 ? 150 : -150);
+    ui.shopScrollOffset = Math.max(
+      0,
+      Math.min(ui.maxShopScroll || 0, ui.shopScrollOffset)
+    );
+  } else {
+    applyZoom(e.deltaY * -0.005, pos);
+  }
 });
 
-// All canvas.addEventListener(...) calls remain exactly the same as your original file
+canvas.addEventListener("mousemove", (e) => {
+  const pos = getCanvasPos(e.clientX, e.clientY);
+  mouse.x = pos.x;
+  mouse.y = pos.y;
+  if (mouse.isPanning) {
+    const dx = mouse.x - mouse.panStartX;
+    const dy = mouse.y - mouse.panStartY;
+    state.camera.x = mouse.camStart.x - dx;
+    state.camera.y = mouse.camStart.y - dy;
+    const maxCamX = Math.max(
+      0,
+      MAP_GRID_W * TILE - canvas.clientWidth / state.zoom
+    );
+    const maxCamY = Math.max(
+      0,
+      MAP_GRID_H * TILE - canvas.clientHeight / state.zoom
+    );
+    state.camera.x = clamp(state.camera.x, 0, maxCamX);
+    state.camera.y = clamp(state.camera.y, 0, maxCamY);
+  }
+  const worldX = mouse.x / state.zoom + state.camera.x;
+  const worldY = mouse.y / state.zoom + state.camera.y;
+  mouse.gx = Math.floor(worldX / TILE);
+  mouse.gy = Math.floor(worldY / TILE);
+  ui.hoveredTile = { gx: mouse.gx, gy: mouse.gy };
+});
+
+canvas.addEventListener("mousedown", (e) => {
+  mouse.shopInteraction = false;
+  const pos = getCanvasPos(e.clientX, e.clientY);
+  mouse.x = pos.x;
+  mouse.y = pos.y;
+  mouse.down = true;
+  mouse.panStartX = mouse.x;
+  mouse.panStartY = mouse.y;
+  if (mouse.y > canvas.clientHeight - 100) {
+    const buttons = getShopButtons(canvas.clientWidth, canvas.clientHeight);
+    for (const b of buttons) {
+      if (
+        mouse.x >= b.x &&
+        mouse.x <= b.x + b.w &&
+        mouse.y >= b.y &&
+        mouse.y <= b.y + b.h
+      ) {
+        const spec = TOWER_TYPES[b.key];
+        if (state.money < spec.cost) {
+          pulse("Not enough money!", "#f66");
+        } else {
+          ui.selectedShopKey = ui.selectedShopKey === b.key ? null : b.key;
+          ui.selectedTower = null;
+        }
+        mouse.shopInteraction = true;
+        return;
+      }
+    }
+    return;
+  }
+  const worldX = mouse.x / state.zoom + state.camera.x;
+  const worldY = mouse.y / state.zoom + state.camera.y;
+  mouse.gx = Math.floor(worldX / TILE);
+  mouse.gy = Math.floor(worldY / TILE);
+  const t = findTowerAt(mouse.gx, mouse.gy);
+  if (t) {
+    mouse.holdTimer = setTimeout(() => {
+      mouse.isHolding = true;
+      ui.heldTower = t;
+      ui.selectedTower = null;
+    }, HOLD_DURATION);
+    return;
+  }
+  if (ui.selectedShopKey) {
+    mouse.draggingTower = true;
+    return;
+  }
+  mouse.isPanning = true;
+  mouse.camStart.x = state.camera.x;
+  mouse.camStart.y = state.camera.y;
+});
+
+canvas.addEventListener("mouseup", (e) => {
+  if (mouse.shopInteraction) {
+    mouse.down = false;
+    mouse.shopInteraction = false;
+    return;
+  }
+  clearTimeout(mouse.holdTimer);
+  const wasHolding = mouse.isHolding;
+  mouse.isHolding = false;
+  ui.heldTower = null;
+  const dragDistance = dist(
+    { x: mouse.panStartX, y: mouse.panStartY },
+    { x: mouse.x, y: mouse.y }
+  );
+  const wasJustAClick =
+    !mouse.draggingTower && (dragDistance < 10 || !mouse.isPanning);
+  if (wasJustAClick && handleInspectorClick({ x: mouse.x, y: mouse.y })) {
+    mouse.isPanning = false;
+    mouse.down = false;
+    mouse.draggingTower = false;
+    return;
+  }
+  if (wasHolding) {
+    mouse.isPanning = false;
+    mouse.down = false;
+    return;
+  }
+  if (mouse.draggingTower && ui.selectedShopKey) {
+    const spec = TOWER_TYPES[ui.selectedShopKey];
+    if (isPlacementValid(mouse.gx, mouse.gy, spec)) {
+      if (state.money >= spec.cost) {
+        towers.push(new spec.class(mouse.gx, mouse.gy, ui.selectedShopKey));
+        state.money -= spec.cost;
+        pulse(`-${spec.cost}`);
+        ui.selectedShopKey = null;
+        updateOccupiedCells();
+      } else {
+        pulse("Not enough $", "#f66");
+      }
+    }
+  } else if (wasJustAClick) {
+    const t = findTowerAt(mouse.gx, mouse.gy);
+    if (t) {
+      ui.selectedTower = ui.selectedTower === t ? null : t;
+      ui.selectedShopKey = null;
+    } else {
+      ui.selectedTower = null;
+      ui.selectedShopKey = null;
+    }
+  }
+  mouse.isPanning = false;
+  mouse.down = false;
+  mouse.draggingTower = false;
+});
+
+canvas.addEventListener("mouseleave", () => {
+  clearTimeout(mouse.holdTimer);
+  ui.hoveredTile = null;
+  mouse.down = false;
+  mouse.draggingTower = false;
+  mouse.isHolding = false;
+  ui.heldTower = null;
+});
+
+window.addEventListener("keydown", (e) => {
+  if (e.key === "Escape") {
+    ui.selectedTower = null;
+    ui.selectedShopKey = null;
+    ui.heldTower = null;
+  }
+});
+
 canvas.addEventListener(
   "touchstart",
   (e) => {
@@ -548,165 +685,4 @@ canvas.addEventListener("touchcancel", (e) => {
   ui.heldTower = null;
   touch.isHolding = false;
   touch.potentialSelection = null;
-});
-canvas.addEventListener("wheel", (e) => {
-  e.preventDefault();
-  const pos = getCanvasPos(e.clientX, e.clientY);
-  if (pos.y > canvas.clientHeight - 100) {
-    ui.shopScrollOffset =
-      (ui.shopScrollOffset || 0) + (e.deltaY > 0 ? 150 : -150);
-    ui.shopScrollOffset = Math.max(
-      0,
-      Math.min(ui.maxShopScroll || 0, ui.shopScrollOffset)
-    );
-  } else {
-    const zoomAmount = e.deltaY * -0.005;
-    applyZoom(zoomAmount, pos);
-  }
-});
-canvas.addEventListener("mousemove", (e) => {
-  const pos = getCanvasPos(e.clientX, e.clientY);
-  mouse.x = pos.x;
-  mouse.y = pos.y;
-  if (mouse.isPanning) {
-    const dx = mouse.x - mouse.panStartX;
-    const dy = mouse.y - mouse.panStartY;
-    state.camera.x = mouse.camStart.x - dx;
-    state.camera.y = mouse.camStart.y - dy;
-    const maxCamX = Math.max(
-      0,
-      MAP_GRID_W * TILE - canvas.clientWidth / state.zoom
-    );
-    const maxCamY = Math.max(
-      0,
-      MAP_GRID_H * TILE - canvas.clientHeight / state.zoom
-    );
-    state.camera.x = clamp(state.camera.x, 0, maxCamX);
-    state.camera.y = clamp(state.camera.y, 0, maxCamY);
-  }
-  const worldX = mouse.x / state.zoom + state.camera.x;
-  const worldY = mouse.y / state.zoom + state.camera.y;
-  mouse.gx = Math.floor(worldX / TILE);
-  mouse.gy = Math.floor(worldY / TILE);
-  ui.hoveredTile = { gx: mouse.gx, gy: mouse.gy };
-});
-canvas.addEventListener("mousedown", (e) => {
-  mouse.shopInteraction = false;
-  const pos = getCanvasPos(e.clientX, e.clientY);
-  mouse.x = pos.x;
-  mouse.y = pos.y;
-  mouse.down = true;
-  mouse.panStartX = mouse.x;
-  mouse.panStartY = mouse.y;
-  const worldX = mouse.x / state.zoom + state.camera.x;
-  const worldY = mouse.y / state.zoom + state.camera.y;
-  mouse.gx = Math.floor(worldX / TILE);
-  mouse.gy = Math.floor(worldY / TILE);
-  if (mouse.y > canvas.clientHeight - 100) {
-    const buttons = getShopButtons(canvas.clientWidth, canvas.clientHeight);
-    for (const b of buttons) {
-      if (
-        mouse.x >= b.x &&
-        mouse.x <= b.x + b.w &&
-        mouse.y >= b.y &&
-        mouse.y <= b.y + b.h
-      ) {
-        const spec = TOWER_TYPES[b.key];
-        if (state.money < spec.cost) {
-          pulse("Not enough money!", "#f66");
-        } else {
-          ui.selectedShopKey = ui.selectedShopKey === b.key ? null : b.key;
-          ui.selectedTower = null;
-        }
-        mouse.shopInteraction = true;
-        return;
-      }
-    }
-  }
-  const t = findTowerAt(mouse.gx, mouse.gy);
-  if (t) {
-    mouse.holdTimer = setTimeout(() => {
-      mouse.isHolding = true;
-      ui.heldTower = t;
-      ui.selectedTower = null;
-    }, HOLD_DURATION);
-    return;
-  }
-  if (ui.selectedShopKey) {
-    mouse.draggingTower = true;
-    return;
-  }
-  mouse.isPanning = true;
-  mouse.camStart.x = state.camera.x;
-  mouse.camStart.y = state.camera.y;
-});
-canvas.addEventListener("mouseup", (e) => {
-  if (mouse.shopInteraction) {
-    mouse.down = false;
-    mouse.shopInteraction = false;
-    return;
-  }
-  clearTimeout(mouse.holdTimer);
-  const wasHolding = mouse.isHolding;
-  mouse.isHolding = false;
-  ui.heldTower = null;
-  const dragDistance = dist(
-    { x: mouse.panStartX, y: mouse.panStartY },
-    { x: mouse.x, y: mouse.y }
-  );
-  const wasJustAClick =
-    !mouse.draggingTower && (dragDistance < 10 || !mouse.isPanning);
-  if (wasJustAClick && handleInspectorClick({ x: mouse.x, y: mouse.y })) {
-    mouse.isPanning = false;
-    mouse.down = false;
-    mouse.draggingTower = false;
-    return;
-  }
-  if (wasHolding) {
-    mouse.isPanning = false;
-    mouse.down = false;
-    return;
-  }
-  if (mouse.draggingTower && ui.selectedShopKey) {
-    const spec = TOWER_TYPES[ui.selectedShopKey];
-    if (isPlacementValid(mouse.gx, mouse.gy, spec)) {
-      if (state.money >= spec.cost) {
-        towers.push(new spec.class(mouse.gx, mouse.gy, ui.selectedShopKey));
-        state.money -= spec.cost;
-        pulse(`-${spec.cost}`);
-        ui.selectedShopKey = null;
-        updateOccupiedCells();
-      } else {
-        pulse("Not enough $", "#f66");
-      }
-    }
-  } else if (wasJustAClick) {
-    const t = findTowerAt(mouse.gx, mouse.gy);
-    if (t) {
-      ui.selectedTower = ui.selectedTower === t ? null : t;
-      ui.selectedShopKey = null;
-    } else {
-      ui.selectedTower = null;
-      ui.selectedShopKey = null;
-    }
-  }
-  mouse.isPanning = false;
-  mouse.down = false;
-  mouse.draggingTower = false;
-});
-canvas.addEventListener("mouseleave", () => {
-  clearTimeout(mouse.holdTimer);
-  ui.hoveredTile = null;
-  mouse.down = false;
-  mouse.draggingTower = false;
-  mouse.isHolding = false;
-  ui.heldTower = null;
-});
-window.addEventListener("keydown", (e) => {
-  const key = e.key.toLowerCase();
-  if (key === "escape") {
-    ui.selectedTower = null;
-    ui.selectedShopKey = null;
-    ui.heldTower = null;
-  }
 });

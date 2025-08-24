@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#0b0f1a" />
     <style>
-      /* --- All your CSS styles remain unchanged --- */
       * {
         margin: 0;
         padding: 0;
@@ -79,7 +78,15 @@
       .level-button:hover {
         background-color: #3e528e;
       }
-      /* The canvas is created by core.js, this style targets it */
+      .level-button.locked {
+        background-color: #1c2541;
+        border-color: #3a506b;
+        color: #6b7b9e;
+        cursor: not-allowed;
+      }
+      .level-button.locked:hover {
+        background-color: #1c2541;
+      }
       canvas#game {
         display: none;
         width: 100%;
@@ -88,79 +95,61 @@
     </style>
   </head>
   <body>
-    <!-- The main menu, visible on page load -->
     <div id="mainMenu">
       <h1>Mini Tower Defense</h1>
       <button id="startButton" class="menu-button">Start</button>
       <button id="exitButton" class="menu-button">Exit</button>
     </div>
-
-    <!-- The level selection screen, hidden on page load -->
-    <div id="levelSelection">
-      <!-- Level buttons are created by script -->
-    </div>
-
-    <!-- The game script (index.mjs) will create and append the canvas here -->
+    <div id="levelSelection"></div>
   </body>
 
-  <!-- This is the menu logic script, now a module -->
   <script type="module">
-    // --- NEW: Import the startGame function from your main game file ---
     import { startGame } from "./index.mjs";
+    import { levels } from "./levels.js";
 
     const mainMenu = document.getElementById("mainMenu");
     const levelSelection = document.getElementById("levelSelection");
     const startButton = document.getElementById("startButton");
     const exitButton = document.getElementById("exitButton");
 
-    // This function shows the level selection screen
     const showLevelSelection = () => {
       mainMenu.style.display = "none";
       levelSelection.style.display = "grid";
 
-      levelSelection.innerHTML = ""; // Clear previous buttons
-      for (let i = 1; i <= 30; i++) {
+      const highestUnlockedLevel = parseInt(
+        localStorage.getItem("towerDefenseHighestLevel") || "1"
+      );
+      levelSelection.innerHTML = "";
+
+      for (const level of levels) {
         const levelButton = document.createElement("button");
-        levelButton.textContent = `${i}`;
+        levelButton.textContent = `${level.level}`;
         levelButton.className = "level-button";
-        levelButton.addEventListener("click", () => {
-          startLevel(i);
-        });
+
+        if (level.level > highestUnlockedLevel) {
+          levelButton.classList.add("locked");
+          levelButton.disabled = true;
+        } else {
+          levelButton.addEventListener("click", () => startLevel(level.level));
+        }
+
         levelSelection.appendChild(levelButton);
       }
     };
 
-    /**
-     * Hides the menu and tells the main game script to start a specific level.
-     * @param {number} levelNumber The level to play.
-     */
     const startLevel = (levelNumber) => {
-      // 1. Hide the level selection screen
       levelSelection.style.display = "none";
-
-      // 2. Find the game canvas (which core.js created)
       const gameCanvas = document.querySelector("#game");
-
-      // 3. Show the game canvas
       if (gameCanvas) {
         gameCanvas.style.display = "block";
       } else {
-        console.error(
-          "Game Canvas not found! Make sure core.js creates a <canvas> element."
-        );
-        return; // Stop if canvas is missing
+        console.error("Game Canvas not found!");
+        return;
       }
-
-      // 4. --- KEY CHANGE ---
-      // Call the imported function from index.mjs to initialize and run the game
       startGame(levelNumber);
     };
 
-    // Attach event listeners to the main menu buttons
     startButton.addEventListener("click", showLevelSelection);
-
-    exitButton.addEventListener("click", () => {
-      alert("Thanks for playing! You can now close the browser tab.");
-    });
+    exitButton.addEventListener("click", () => alert("Thanks for playing!"));
   </script>
 </html>

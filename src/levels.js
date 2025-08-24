@@ -6,30 +6,37 @@ export const levels = [
   {
     level: 1,
     map: { width: 40, height: 25 },
-    // The path is a function that receives dimensions to create a responsive path.
+    startMoney: 1000,
+    startLives: 30,
+    maxWaves: 10,
     path: (TILE, T_HALF, MAP_W, MAP_H) => [
-      { x: 0, y: TILE * 4 + T_HALF },
-      { x: MAP_W * 0.75, y: TILE * 4 + T_HALF },
-      { x: MAP_W * 0.75, y: MAP_H * 0.8 },
-      { x: MAP_W * 0.25, y: MAP_H * 0.8 },
-      { x: MAP_W * 0.25, y: TILE * 12 + T_HALF },
-      { x: MAP_W, y: TILE * 12 + T_HALF },
+      { x: 0, y: TILE * 5 + T_HALF },
+      { x: MAP_W * 0.25, y: TILE * 5 + T_HALF },
+      { x: MAP_W * 0.25, y: MAP_H * 0.75 },
+      { x: MAP_W, y: MAP_H * 0.75 },
     ],
   },
-  // Level 2: A smaller, more vertical map.
   {
     level: 2,
-    map: { width: 30, height: 20 },
+    map: { width: 30, height: 30 },
+    startMoney: 800,
+    startLives: 20,
+    maxWaves: 15,
     path: (TILE, T_HALF, MAP_W, MAP_H) => [
-      { x: TILE * 5 + T_HALF, y: 0 },
-      { x: TILE * 5 + T_HALF, y: MAP_H * 0.4 },
-      { x: MAP_W * 0.7, y: MAP_H * 0.4 },
-      { x: MAP_W * 0.7, y: MAP_H },
+      { x: 0, y: T_HALF },
+      { x: MAP_W * 0.8, y: T_HALF },
+      { x: MAP_W * 0.8, y: MAP_H - T_HALF },
+      { x: MAP_W * 0.2, y: MAP_H - T_HALF },
+      { x: MAP_W * 0.2, y: MAP_H * 0.25 },
+      { x: MAP_W, y: MAP_H * 0.25 },
     ],
   },
   // Level 3: A long, winding path on a large map.
   {
     level: 3,
+    startMoney: 800,
+    startLives: 20,
+    maxWaves: 15,
     map: { width: 50, height: 30 },
     path: (TILE, T_HALF, MAP_W, MAP_H) => [
       { x: 0, y: TILE * 3 + T_HALF },

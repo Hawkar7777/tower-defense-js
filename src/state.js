@@ -2,46 +2,45 @@
 
 // Central mutable state
 export const state = {
-  money: 10000, // Set to a reasonable starting value
-  lives: 20,
+  money: 0, // Initial value is now 0, will be set by level config
+  lives: 0, // Initial value is now 0, will be set by level config
   wave: 0,
   time: 0,
-  running: false, // Start in a non-running state
-  camera: {
-    x: 0,
-    y: 0,
-  },
+  running: false,
+  camera: { x: 0, y: 0 },
   zoom: 1,
 };
 
-// Dynamic game entities
+// ... (enemies, towers, etc. remain the same) ...
 export const enemies = [];
 export const towers = [];
 export const projectiles = [];
 export const pulses = [];
-// You can keep other arrays like particles if you use them elsewhere
 export const particles = [];
 export const beams = [];
 export const circles = [];
 
-// UI state
+// ... (ui state remains the same) ...
 export const ui = {
-  selectedShopKey: null, // Start with nothing selected
+  selectedShopKey: null,
   hoveredTile: null,
   selectedTower: null,
-  heldTower: null, // Add heldTower for consistency
+  heldTower: null,
+
   shopScrollOffset: 0,
   maxShopScroll: 0,
-  inspectorButtons: null, // To hold button coordinates for clicks
+  inspectorButtons: null,
 };
 
 /**
- * Resets the entire game state to its initial values.
- * This is called every time a new level is started.
+ * --- MODIFIED FUNCTION ---
+ * Resets the game state using parameters from a specific level's configuration.
+ * @param {object} levelConfig - The configuration object for the level being started.
  */
-export function resetState() {
-  state.money = 100000; // Initial money for a new level
-  state.lives = 20;
+export function resetState(levelConfig) {
+  // Use the level configuration to set starting money and lives
+  state.money = levelConfig.startMoney;
+  state.lives = levelConfig.startLives;
   state.wave = 0;
   state.time = 0;
   state.running = true; // Set to true to allow the game loop to run

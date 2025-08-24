@@ -16,7 +16,8 @@ export const levels = [
       { x: MAP_W, y: MAP_H * 0.75 },
     ],
     waves: [
-      { count: 10, types: { basic: 1.0 } }, // Wave 1
+      { count: 10, types: { sapper: 1.0 } },
+      // Wave 1
       { count: 12, types: { basic: 1.0 } }, // Wave 2
       { count: 15, types: { basic: 0.8, brute: 0.2 } }, // Wave 3
       { count: 18, types: { basic: 0.7, brute: 0.3 } }, // Wave 4

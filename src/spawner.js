@@ -1,7 +1,6 @@
-// ===== FILE: spawner.js =====
-
 import { enemies, state } from "./state.js";
-import { Enemy } from "./enemy.js";
+// --- CHANGE 1: Import the factory function instead of the old class ---
+import { createEnemy } from "./enemy.js";
 import { pulse } from "./utils.js";
 import { goliath } from "./boss/goliath.js";
 import { phantom } from "./boss/phantom.js";
@@ -47,11 +46,9 @@ export function startNextWave() {
       case "Phantom":
         bossInstance = new phantom();
         break;
-      // --- ADDITION 2: Add Warlock to the spawner ---
       case "Warlock":
         bossInstance = new warlock();
         break;
-      // --- END OF ADDITION ---
       default:
         console.error("Unknown boss type in levels.js:", waveConfig.boss);
     }
@@ -80,7 +77,8 @@ export function spawner(dt) {
   if (spawnTimer <= 0) {
     const nextEnemy = state.toSpawn.shift();
     if (nextEnemy) {
-      enemies.push(new Enemy(nextEnemy.type, nextEnemy.tier));
+      // --- CHANGE 2: Use the new factory function to create the enemy ---
+      enemies.push(createEnemy(nextEnemy.type, nextEnemy.tier));
     }
 
     spawnTimer = Math.max(0.25, 0.9 - state.wave * 0.03);

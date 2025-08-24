@@ -2,7 +2,7 @@ import { ctx } from "../core.js";
 import { clamp } from "../utils.js";
 import { spawnExplosion } from "../effects.js";
 import { state, enemies } from "../state.js";
-import { Enemy } from "../enemy.js";
+import { createEnemy } from "../enemy.js";
 import { BaseBoss } from "./BaseBoss.js";
 import { BOSS_TYPES } from "./boss-types.js";
 
@@ -30,7 +30,7 @@ export class goliath extends BaseBoss {
     const now = performance.now();
     if (now - this.lastMinionSpawnTime > this.minionSpawnCooldown) {
       this.lastMinionSpawnTime = now;
-      const minion = new Enemy("basic");
+      const minion = createEnemy("basic");
       minion.t = this.t;
       enemies.push(minion);
     }

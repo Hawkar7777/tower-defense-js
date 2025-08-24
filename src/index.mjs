@@ -146,6 +146,9 @@ function precomputePath() {
 /**
  * The main game loop.
  */
+/**
+ * The main game loop.
+ */
 function loop(ts) {
   if (!state.running) {
     if (animationFrameId) cancelAnimationFrame(animationFrameId);
@@ -160,7 +163,20 @@ function loop(ts) {
   // --- UPDATE LOGIC ---
   spawner(dt);
   for (const t of towers) t.update(dt, enemies);
-  for (const p of projectiles) p.update(dt);
+
+  // --- MODIFIED PROJECTILE UPDATE LOGIC ---
+  // This now handles both tower projectiles and enemy projectiles correctly.
+  for (const p of projectiles) {
+    if (p.isEnemyProjectile) {
+      // Enemy projectiles (from Sappers) only need delta time.
+      p.update(dt);
+    } else {
+      // Your original tower projectiles need the enemies list to track targets.
+      p.update(dt, enemies);
+    }
+  }
+  // --- END MODIFIED LOGIC ---
+
   for (const e of enemies) e.update(dt);
   updateEffects(dt);
 
@@ -224,36 +240,28 @@ function loop(ts) {
   for (const t of towers) {
     t.draw();
 
-    // --- NEW: DRAW HP BAR FOR EACH TOWER ---
-    // This checks if the tower has health properties before trying to draw the bar.
+    // --- DRAW HP BAR FOR EACH TOWER ---
     if (
       typeof t.hp === "number" &&
       typeof t.maxHp === "number" &&
       t.maxHp > 0
     ) {
       const spec = t.spec();
-      // Determine the dimensions and position based on the tower's grid footprint.
       const cells = getOccupiedCells(t.gx, t.gy, spec.size);
       const minGy = Math.min(...cells.map((c) => c.gy));
       const minGx = Math.min(...cells.map((c) => c.gx));
       const maxGx = Math.max(...cells.map((c) => c.gx));
 
-      // Make the bar slightly smaller than the tower's width.
       const barWidth = (maxGx - minGx + 1) * TILE * 0.8;
-      const barHeight = 4; // A thin bar looks best.
+      const barHeight = 4;
 
-      // Center the bar horizontally over the tower.
       const x = t.center.x - barWidth / 2;
-      // Place it just above the top edge of the tower.
       const y = minGy * TILE - barHeight - 3;
 
-      // 1. Draw the background (the empty part) of the health bar.
       ctx.fillStyle = "rgba(40, 40, 40, 0.7)";
       ctx.fillRect(x, y, barWidth, barHeight);
 
-      // 2. Draw the foreground (the filled part) of the health bar.
       const hpPercentage = Math.max(0, t.hp / t.maxHp);
-      // Change color based on HP percentage.
       if (hpPercentage > 0.6) {
         ctx.fillStyle = "#4CAF50"; // Green
       } else if (hpPercentage > 0.3) {

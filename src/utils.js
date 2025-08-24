@@ -37,3 +37,32 @@ export function removeFromArray(arr, item) {
 export function pulse(text, color = "#adf") {
   pulses.push({ text, x: 0, y: 0, life: 1.2, c: color });
 }
+
+/**
+ * Finds the best enemy for a tower to target.
+ * @param {object} towerCenter - The {x, y} coordinates of the tower.
+ * @param {number} range - The attack radius of the tower.
+ * @param {Array} enemies - The array of all active enemy objects.
+ * @returns {object|null} The best enemy to target, or null if no enemies are in range.
+ */
+export function findTarget(towerCenter, range, enemies) {
+  let bestTarget = null;
+  // We want the enemy that is furthest along the path, so we look for the highest 't' value.
+  let maxT = -1;
+
+  for (const enemy of enemies) {
+    // Calculate the distance between the tower and the enemy.
+    const d = dist(towerCenter, enemy.pos);
+
+    // Check if the enemy is within the tower's range.
+    if (d <= range) {
+      // If it is, check if it's further along the path than our current best target.
+      if (enemy.t > maxT) {
+        maxT = enemy.t;
+        bestTarget = enemy;
+      }
+    }
+  }
+
+  return bestTarget;
+}

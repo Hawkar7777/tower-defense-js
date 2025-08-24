@@ -38,6 +38,7 @@ import {
   updateOccupiedCells,
   isPlacementValid,
   findTowerAt,
+  getOccupiedCells,
 } from "./occupation.js";
 import { levels } from "./levels.js";
 
@@ -142,6 +143,9 @@ function precomputePath() {
 /**
  * The main game loop.
  */
+/**
+ * The main game loop.
+ */
 function loop(ts) {
   if (!state.running) {
     if (animationFrameId) cancelAnimationFrame(animationFrameId);
@@ -217,7 +221,51 @@ function loop(ts) {
   }
 
   // Draw game entities
-  for (const t of towers) t.draw();
+  for (const t of towers) {
+    t.draw();
+
+    // --- NEW: DRAW HP BAR FOR EACH TOWER ---
+    // This checks if the tower has health properties before trying to draw the bar.
+    if (
+      typeof t.hp === "number" &&
+      typeof t.maxHp === "number" &&
+      t.maxHp > 0
+    ) {
+      const spec = t.spec();
+      // Determine the dimensions and position based on the tower's grid footprint.
+      const cells = getOccupiedCells(t.gx, t.gy, spec.size);
+      const minGy = Math.min(...cells.map((c) => c.gy));
+      const minGx = Math.min(...cells.map((c) => c.gx));
+      const maxGx = Math.max(...cells.map((c) => c.gx));
+
+      // Make the bar slightly smaller than the tower's width.
+      const barWidth = (maxGx - minGx + 1) * TILE * 0.8;
+      const barHeight = 4; // A thin bar looks best.
+
+      // Center the bar horizontally over the tower.
+      const x = t.center.x - barWidth / 2;
+      // Place it just above the top edge of the tower.
+      const y = minGy * TILE - barHeight - 3;
+
+      // 1. Draw the background (the empty part) of the health bar.
+      ctx.fillStyle = "rgba(40, 40, 40, 0.7)";
+      ctx.fillRect(x, y, barWidth, barHeight);
+
+      // 2. Draw the foreground (the filled part) of the health bar.
+      const hpPercentage = Math.max(0, t.hp / t.maxHp);
+      // Change color based on HP percentage.
+      if (hpPercentage > 0.6) {
+        ctx.fillStyle = "#4CAF50"; // Green
+      } else if (hpPercentage > 0.3) {
+        ctx.fillStyle = "#FFC107"; // Yellow
+      } else {
+        ctx.fillStyle = "#F44336"; // Red
+      }
+      ctx.fillRect(x, y, barWidth * hpPercentage, barHeight);
+    }
+    // --- END NEW HP BAR LOGIC ---
+  }
+
   for (const e of enemies) e.draw();
   for (const p of projectiles) p.draw();
   drawEffects();
@@ -365,6 +413,7 @@ function handleInspectorClick(pos) {
   if (!ui.selectedTower || !ui.inspectorButtons) return false;
   const { upgrade, sell } = ui.inspectorButtons;
 
+  // --- UPGRADE BUTTON LOGIC ---
   if (
     upgrade &&
     pos.x >= upgrade.x &&
@@ -372,7 +421,6 @@ function handleInspectorClick(pos) {
     pos.y >= upgrade.y &&
     pos.y <= upgrade.y + upgrade.h
   ) {
-    // --- MODIFIED UPGRADE LOGIC ---
     const spec = ui.selectedTower.spec(); // Get tower's base stats
 
     // Check if the tower is already at max level
@@ -385,13 +433,24 @@ function handleInspectorClick(pos) {
     if (state.money >= cost) {
       state.money -= cost;
       ui.selectedTower.level++;
+
+      // --- NEW HP UPGRADE LOGIC ---
+      // Increase max HP by 25% and fully heal the tower upon upgrade.
+      // This requires .hp and .maxHp to be initialized in the tower's constructor.
+      if (typeof ui.selectedTower.maxHp === "number") {
+        ui.selectedTower.maxHp = Math.round(ui.selectedTower.maxHp * 1.25);
+        ui.selectedTower.hp = ui.selectedTower.maxHp; // Heal to the new max HP
+      }
+      // --- END NEW LOGIC ---
+
       pulse(`Upgrade -$${cost}`);
     } else {
       pulse("Need more $", "#f66");
     }
-    return true;
+    return true; // Indicate the click was handled
   }
 
+  // --- SELL BUTTON LOGIC ---
   if (
     sell &&
     pos.x >= sell.x &&
@@ -399,9 +458,24 @@ function handleInspectorClick(pos) {
     pos.y >= sell.y &&
     pos.y <= sell.y + sell.h
   ) {
-    // ... (sell logic remains the same)
+    const sellValue = Math.round(ui.selectedTower.sellValue());
+    state.money += sellValue;
+
+    // Find and remove the tower from the main array
+    const towerIndex = towers.findIndex((t) => t === ui.selectedTower);
+    if (towerIndex > -1) {
+      towers.splice(towerIndex, 1);
+    }
+
+    // Deselect the tower and update the grid occupation status
+    ui.selectedTower = null;
+    updateOccupiedCells();
+    pulse(`Sell +$${sellValue}`, "#afb");
+
+    return true; // Indicate the click was handled
   }
-  return false;
+
+  return false; // No inspector button was clicked
 }
 canvas.addEventListener("wheel", (e) => {
   e.preventDefault();

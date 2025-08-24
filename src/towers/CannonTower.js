@@ -4,16 +4,11 @@ import { BaseTower } from "./BaseTower.js";
 import { ctx } from "../core.js";
 
 export class CannonTower extends BaseTower {
-  static SPEC = {
-    name: "Cannon",
-    cost: 120,
-    range: 140,
-    fireRate: 1.2,
-    dmg: 55,
-    splash: 60,
-    bulletSpeed: 260,
-    color: "#f6c66a", // Classic gold/yellow color for explosions
-  };
+  constructor(gx, gy, key) {
+    // This is the most important line.
+    // It calls the BaseTower's constructor with the necessary information.
+    super(gx, gy, key);
+  }
 
   // --- COMPLETELY REDESIGNED DRAW METHOD ---
   draw() {

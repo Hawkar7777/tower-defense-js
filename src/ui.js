@@ -207,9 +207,6 @@ export function drawHeldTowerRange(tower) {
   ctx.globalAlpha = 1;
 }
 
-// ===== FILE: ui.js =====
-// REPLACE the old drawInspector function with this new one.
-
 export function drawInspector(selectedTower, camera, zoom) {
   if (!selectedTower) {
     ui.inspectorButtons = null; // Clear buttons when no tower is selected
@@ -231,8 +228,6 @@ export function drawInspector(selectedTower, camera, zoom) {
     h: 130,
   };
 
-  // Store panel and buttons info for click detection
-  // We will add the 'upgrade' button later, only if it's not max level
   ui.inspectorButtons = { panel };
 
   roundRect(
@@ -246,7 +241,6 @@ export function drawInspector(selectedTower, camera, zoom) {
     "#2c527f"
   );
 
-  // --- NEW: Check if tower is at max level to display "Lv.MAX" ---
   const isMaxLevel = t.level >= s.maxLevel;
   const levelText = isMaxLevel ? "Lv.MAX" : `Lv.${t.level}`;
 
@@ -257,6 +251,15 @@ export function drawInspector(selectedTower, camera, zoom) {
   ctx.font = "500 13px Inter";
   ctx.fillStyle = "#aaccff";
   ctx.fillText(`Dmg ${Math.round(s.dmg)}`, panel.x + 14, panel.y + 52);
+
+  // --- THIS IS THE NEW LINE TO SHOW HP ---
+  ctx.fillText(
+    `HP ${Math.round(t.hp)} / ${Math.round(t.maxHp)}`,
+    panel.x + 88,
+    panel.y + 52
+  );
+  // --- END NEW LINE ---
+
   ctx.fillText(`Rng ${Math.round(s.range)}`, panel.x + 14, panel.y + 70);
   ctx.fillText(`Rate ${s.fireRate.toFixed(1)}/s`, panel.x + 88, panel.y + 70);
 
@@ -264,9 +267,7 @@ export function drawInspector(selectedTower, camera, zoom) {
   const buttonH = 32;
   const buttonW = (panel.w - 30) / 2;
 
-  // --- NEW LOGIC: Show either the Upgrade Button OR "MAX" text ---
   if (!isMaxLevel) {
-    // --- A. Draw the clickable Upgrade Button ---
     if (typeof t.upgradeCost === "function") {
       const upgradeCost = t.upgradeCost();
       const canAfford = state.money >= upgradeCost;
@@ -277,7 +278,6 @@ export function drawInspector(selectedTower, camera, zoom) {
         h: buttonH,
       };
 
-      // Make the button clickable by adding it to the inspectorButtons object
       ui.inspectorButtons.upgrade = upgradeButton;
 
       roundRect(
@@ -294,7 +294,6 @@ export function drawInspector(selectedTower, camera, zoom) {
       ctx.fillStyle = canAfford ? "#bfe7ff" : "#888899";
       ctx.textAlign = "center";
 
-      // Draw UP icon
       ctx.beginPath();
       ctx.moveTo(upgradeButton.x + upgradeButton.w / 2, upgradeButton.y + 8);
       ctx.lineTo(
@@ -317,7 +316,6 @@ export function drawInspector(selectedTower, camera, zoom) {
       ctx.textAlign = "start";
     }
   } else {
-    // --- B. Draw a non-clickable "MAX" display ---
     const upgradeButtonArea = {
       x: panel.x + 10,
       y: buttonY,
@@ -343,10 +341,8 @@ export function drawInspector(selectedTower, camera, zoom) {
       upgradeButtonArea.y + 22
     );
     ctx.textAlign = "start";
-    // We do NOT add `ui.inspectorButtons.upgrade` here, so it can't be clicked.
   }
 
-  // --- Sell Button (This part is unchanged) ---
   if (typeof t.sellValue === "function") {
     const sellValue = Math.round(t.sellValue());
     const sellButton = {
@@ -371,7 +367,6 @@ export function drawInspector(selectedTower, camera, zoom) {
     ctx.fillStyle = "#ffdde5";
     ctx.textAlign = "center";
 
-    // Draw DOLLAR icon
     ctx.font = "700 14px Inter";
     ctx.fillText(`$`, sellButton.x + sellButton.w / 2, sellButton.y + 15);
 

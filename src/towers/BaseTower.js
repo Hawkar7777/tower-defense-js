@@ -15,22 +15,35 @@ export class BaseTower {
     this.cool = 0;
     this.rot = 0;
 
-    // --- ADDITION 1: Properties for Warlock's Hex ability ---
+    // --- CHANGE 1: Initialize HP and MaxHP here ---
+    // We get the initial base HP from the config file.
+    const baseSpec = TOWER_TYPES[this.key];
+    this.hp = baseSpec.hp;
+    this.maxHp = baseSpec.hp;
+
     this.isHexed = false;
     this.hexTimer = 0;
   }
 
   spec() {
-    // This is the new, correct version of the function
     const baseSpec = TOWER_TYPES[this.key];
 
-    return {
-      ...baseSpec, // <-- This is the most important line! It copies everything first.
+    // Recalculate current max HP based on level
+    // This MUST be done before returning the spec object
+    // We'll use a 25% increase per level as a good baseline
+    this.maxHp = baseSpec.hp * (1 + (this.level - 1) * 0.25);
 
-      // Now, we override just the stats that change with level.
+    return {
+      ...baseSpec,
+
+      // Your existing level-scaling logic is great!
       range: baseSpec.range * (1 + (this.level - 1) * 0.08),
       fireRate: baseSpec.fireRate * (1 + (this.level - 1) * 0.05),
       dmg: baseSpec.dmg * (1 + (this.level - 1) * 0.35),
+
+      // --- CHANGE 2: Also scale HP in the spec ---
+      // This ensures that when we upgrade, the HP value is updated.
+      hp: this.maxHp,
     };
   }
 
@@ -38,8 +51,6 @@ export class BaseTower {
     return { x: this.gx * 40 + 20, y: this.gy * 40 + 20 };
   }
 
-  // --- ADDITION 2: Getters needed by the Warlock ---
-  // Simple coordinate access
   get x() {
     return this.gx * 40 + 20;
   }
@@ -47,10 +58,10 @@ export class BaseTower {
     return this.gy * 40 + 20;
   }
 
-  // Calculates the total money spent on this tower (base cost + all upgrades)
-  // The Warlock uses this to find the most valuable target.
+  // --- CHANGE 3: Fixed cost calculation methods ---
+  // These now use the reliable TOWER_TYPES from config.js, fixing the crash.
   get totalCost() {
-    const baseCost = this.constructor.SPEC.cost;
+    const baseCost = TOWER_TYPES[this.key].cost;
     let total = baseCost;
     for (let i = 1; i < this.level; i++) {
       total += Math.round(baseCost * (0.75 + i * 0.75));
@@ -59,24 +70,28 @@ export class BaseTower {
   }
 
   upgradeCost() {
-    return Math.round(this.spec().cost * (0.75 + this.level * 0.75));
+    const baseCost = TOWER_TYPES[this.key].cost;
+    return Math.round(baseCost * (0.75 + this.level * 0.75));
   }
 
   sellValue() {
-    // Correctly calculate sell value based on total cost
     return this.totalCost * 0.7;
   }
 
+  // When a tower is upgraded, this method should be called to heal it.
+  onUpgrade() {
+    this.spec(); // This recalculates maxHp
+    this.hp = this.maxHp; // Heal to full
+  }
+
   update(dt, enemiesList) {
-    // --- ADDITION 3: Check if the tower is Hexed (stunned) ---
     if (this.isHexed) {
       this.hexTimer -= dt;
       if (this.hexTimer <= 0) {
         this.isHexed = false;
       }
-      return; // Stop all other logic for this frame if hexed
+      return;
     }
-    // --- END OF HEX CHECK ---
 
     const s = this.spec();
     this.cool -= dt;
@@ -119,10 +134,11 @@ export class BaseTower {
   }
 
   fireBeam(start, end, color) {
-    // This will be implemented in the LaserTower class
+    // To be implemented in LaserTower
   }
 
   draw() {
+    // ... your entire draw logic remains unchanged ...
     const s = this.spec();
     const { x, y } = this.center;
 
@@ -133,11 +149,10 @@ export class BaseTower {
     ctx.rotate(this.rot);
     ctx.fillStyle = s.color;
 
-    // Default single barrel
     roundRect(-8, -8, 16, 16, 4, s.color, true);
 
     ctx.fillStyle = "#fff";
-    ctx.fillRect(0, -3, 14, 6); // muzzle indicator
+    ctx.fillRect(0, -3, 14, 6);
     ctx.restore();
 
     for (let i = 0; i < this.level; i++) {
@@ -145,25 +160,22 @@ export class BaseTower {
       ctx.fillRect(x - 10 + i * 6, y + 18, 4, 4);
     }
 
-    // --- ADDITION 4: Draw a visual effect when Hexed ---
     if (this.isHexed) {
-      ctx.fillStyle = "rgba(80, 200, 120, 0.4)"; // Sickly green aura
+      ctx.fillStyle = "rgba(80, 200, 120, 0.4)";
       ctx.beginPath();
       ctx.arc(x, y, 22, 0, Math.PI * 2);
       ctx.fill();
 
-      // Add a swirling particle effect for extra flair
       const time = performance.now() / 100;
       for (let i = 0; i < 3; i++) {
         const angle = time + i * ((Math.PI * 2) / 3);
         const pX = x + Math.cos(angle) * 18;
         const pY = y + Math.sin(angle) * 18;
-        ctx.fillStyle = "#50c878"; // Emerald Green particles
+        ctx.fillStyle = "#50c878";
         ctx.beginPath();
         ctx.arc(pX, pY, 3, 0, Math.PI * 2);
         ctx.fill();
       }
     }
-    // --- END OF HEX VISUAL ---
   }
 }

@@ -15,167 +15,138 @@ export class DoubleCannonTower extends BaseTower {
     dmg: 75,
     splash: 55,
     bulletSpeed: 240,
-    color: "#f00",
+    color: "#ff3333",
   };
 
+  // --- THIS IS THE CORRECTED FUNCTION ---
   fireProjectile(center, target, spec) {
-    const offset = 8; // Increased offset for wider barrels
+    const offset = 8; // Distance of each barrel from the center line
+    const barrelLength = 22; // The visual length of the barrel from the turret pivot
     const sin = Math.sin(this.rot);
     const cos = Math.cos(this.rot);
 
-    // left barrel
-    projectiles.push(
-      new Bullet(center.x - sin * offset, center.y + cos * offset, target, spec)
-    );
+    // Calculate the exact tip position of each barrel
+    const muzzle1X = center.x + cos * barrelLength - sin * offset;
+    const muzzle1Y = center.y + sin * barrelLength + cos * offset;
+    const muzzle2X = center.x + cos * barrelLength + sin * offset;
+    const muzzle2Y = center.y + sin * barrelLength - cos * offset;
 
-    // right barrel
-    projectiles.push(
-      new Bullet(center.x + sin * offset, center.y - cos * offset, target, spec)
-    );
+    // --- THE FIX ---
+    // Fire one projectile from the tip of each barrel
+    projectiles.push(new Bullet(muzzle1X, muzzle1Y, target, spec));
+    projectiles.push(new Bullet(muzzle2X, muzzle2Y, target, spec));
+    // --- END OF FIX ---
 
-    spawnMuzzle(
-      center.x - sin * offset,
-      center.y + cos * offset,
-      this.rot,
-      spec.color
-    );
-    spawnMuzzle(
-      center.x + sin * offset,
-      center.y - cos * offset,
-      this.rot,
-      spec.color
-    );
+    // Spawn muzzle flash at the same barrel tip positions
+    spawnMuzzle(muzzle1X, muzzle1Y, this.rot, spec.color);
+    spawnMuzzle(muzzle2X, muzzle2Y, this.rot, spec.color);
   }
 
   draw() {
     const s = this.spec();
     const { x, y } = this.center;
 
-    // Draw base platform
-    ctx.fillStyle = "#0e1626";
-    ctx.beginPath();
-    ctx.arc(x, y, 20, 0, Math.PI * 2);
-    ctx.fill();
-
-    // Draw platform border
-    ctx.strokeStyle = "#223c62";
+    // 1. Heavy Hexagonal Base
+    ctx.fillStyle = "#2c3e50";
+    ctx.strokeStyle = "#567a9e";
     ctx.lineWidth = 2;
     ctx.beginPath();
-    ctx.arc(x, y, 20, 0, Math.PI * 2);
+    for (let i = 0; i < 6; i++) {
+      const angle = (Math.PI / 3) * i;
+      const hx = x + 20 * Math.cos(angle);
+      const hy = y + 20 * Math.sin(angle);
+      if (i === 0) ctx.moveTo(hx, hy);
+      else ctx.lineTo(hx, hy);
+    }
+    ctx.closePath();
+    ctx.fill();
     ctx.stroke();
 
-    // Draw cannon mounting platform
+    // 2. Rotating Turret
     ctx.save();
     ctx.translate(x, y);
     ctx.rotate(this.rot);
 
-    // Mounting base
-    ctx.fillStyle = "#4a4a5a";
+    // Armored Turret Body
+    const turretGradient = ctx.createLinearGradient(0, -12, 0, 12);
+    turretGradient.addColorStop(0, "#95a5a6");
+    turretGradient.addColorStop(1, "#7f8c8d");
+    ctx.fillStyle = turretGradient;
+    ctx.strokeStyle = "#546363";
+    ctx.lineWidth = 1;
     ctx.beginPath();
-    ctx.roundRect(-14, -10, 28, 20, 6);
+    ctx.moveTo(-8, -14);
+    ctx.lineTo(10, -12);
+    ctx.lineTo(10, 12);
+    ctx.lineTo(-8, 14);
+    ctx.closePath();
     ctx.fill();
+    ctx.stroke();
 
-    // Draw two cannon barrels
-    const barrelOffset = 8;
+    // 3. Recoil Animation Logic
+    const recoilRatio = this.cool / (1 / s.fireRate);
+    const recoilDistance = Math.sin(recoilRatio * Math.PI) * 5;
 
-    // Left cannon
-    this.drawCannonBarrel(-barrelOffset, 0, s.color);
+    // 4. Draw Cannons with Recoil
+    this.drawCannonBarrel(-8, recoilDistance, s.color); // Left Barrel
+    this.drawCannonBarrel(8, recoilDistance, s.color); // Right Barrel
 
-    // Right cannon
-    this.drawCannonBarrel(barrelOffset, 0, s.color);
-
-    // Central mounting hardware
-    ctx.fillStyle = "#5a5a6a";
+    // Central turret pivot
+    ctx.fillStyle = "#546363";
     ctx.beginPath();
-    ctx.arc(0, 0, 6, 0, Math.PI * 2);
-    ctx.fill();
-
-    // Bolts on mounting platform
-    ctx.fillStyle = "#7a7a8a";
-    ctx.beginPath();
-    ctx.arc(-10, -6, 2, 0, Math.PI * 2);
-    ctx.arc(10, -6, 2, 0, Math.PI * 2);
-    ctx.arc(-10, 6, 2, 0, Math.PI * 2);
-    ctx.arc(10, 6, 2, 0, Math.PI * 2);
+    ctx.arc(0, 0, 5, 0, Math.PI * 2);
     ctx.fill();
 
     ctx.restore();
 
-    // Draw level indicators
+    // 5. Level Indicators on the Base
     for (let i = 0; i < this.level; i++) {
+      const angle = 2.5 + i * 0.4;
+      const lx = x + Math.cos(angle) * 16;
+      const ly = y + Math.sin(angle) * 16;
       ctx.fillStyle = s.color;
+      ctx.shadowColor = s.color;
+      ctx.shadowBlur = 6;
       ctx.beginPath();
-      ctx.arc(x - 12 + i * 6, y + 22, 3, 0, Math.PI * 2);
+      ctx.arc(lx, ly, 2.5, 0, Math.PI * 2);
       ctx.fill();
-
-      // Add glow effect for higher levels
-      if (this.level > 2 && i >= this.level - 2) {
-        ctx.fillStyle = "rgba(255, 100, 100, 0.4)";
-        ctx.beginPath();
-        ctx.arc(x - 12 + i * 6, y + 22, 5, 0, Math.PI * 2);
-        ctx.fill();
-      }
     }
+    ctx.shadowBlur = 0;
   }
 
-  drawCannonBarrel(xOffset, yOffset, color) {
-    // Cannon barrel - main body
-    const gradient = ctx.createLinearGradient(xOffset - 5, -8, xOffset - 5, 8);
-    gradient.addColorStop(0, "#9a8a7a");
-    gradient.addColorStop(0.5, "#c5b8a2");
-    gradient.addColorStop(1, "#9a8a7a");
-    ctx.fillStyle = gradient;
+  drawCannonBarrel(yOffset, recoil, color) {
+    ctx.save();
+    ctx.translate(-10 - recoil, yOffset);
 
-    // Draw barrel with rounded front
+    // Barrel Base
+    ctx.fillStyle = "#7f8c8d";
+    ctx.fillRect(0, -6, 8, 12);
+
+    // Main Barrel
+    const barrelGradient = ctx.createLinearGradient(0, -5, 0, 5);
+    barrelGradient.addColorStop(0, "#bababa");
+    barrelGradient.addColorStop(0.5, "#fdfdfd");
+    barrelGradient.addColorStop(1, "#bababa");
+    ctx.fillStyle = barrelGradient;
+    ctx.fillRect(8, -5, 24, 10);
+
+    // Muzzle Brake
+    ctx.fillStyle = "#7f8c8d";
+    ctx.fillRect(32, -6, 4, 12);
+    ctx.fillRect(28, -7, 4, 2);
+    ctx.fillRect(28, 5, 4, 2);
+
+    // Barrel opening
+    ctx.fillStyle = "#2c3e50";
     ctx.beginPath();
-    ctx.roundRect(xOffset - 8, -5, 26, 10, 5);
+    ctx.arc(36, 0, 3, 0, Math.PI * 2);
     ctx.fill();
 
-    // Barrel rings/bands
-    ctx.fillStyle = "#6a6a7a";
-    ctx.fillRect(xOffset - 5, -6, 3, 12);
-    ctx.fillRect(xOffset + 5, -6, 3, 12);
-    ctx.fillRect(xOffset + 15, -6, 3, 12);
-
-    // Cannon muzzle
-    ctx.fillStyle = "#5a5a6a";
-    ctx.beginPath();
-    ctx.arc(xOffset + 18, 0, 5, -Math.PI / 2, Math.PI / 2);
-    ctx.fill();
-
-    // Cannon interior (dark hole)
-    ctx.fillStyle = "#1a1a2a";
-    ctx.beginPath();
-    ctx.arc(xOffset + 20, 0, 2.5, 0, Math.PI * 2);
-    ctx.fill();
-
-    // Red accent on barrel (matching tower color)
+    // Red accent rings
     ctx.fillStyle = color;
-    ctx.beginPath();
-    ctx.arc(xOffset - 2, 0, 2, 0, Math.PI * 2);
-    ctx.fill();
+    ctx.fillRect(10, -6, 3, 12);
+    ctx.fillRect(20, -6, 3, 12);
+
+    ctx.restore();
   }
-}
-
-// Add roundRect method to CanvasRenderingContext2D if it doesn't exist
-if (!CanvasRenderingContext2D.prototype.roundRect) {
-  CanvasRenderingContext2D.prototype.roundRect = function (
-    x,
-    y,
-    width,
-    height,
-    radius
-  ) {
-    if (width < 2 * radius) radius = width / 2;
-    if (height < 2 * radius) radius = height / 2;
-
-    this.beginPath();
-    this.moveTo(x + radius, y);
-    this.arcTo(x + width, y, x + width, y + height, radius);
-    this.arcTo(x + width, y + height, x, y + height, radius);
-    this.arcTo(x, y + height, x, y, radius);
-    this.arcTo(x, y, x + width, y, radius);
-    this.closePath();
-    return this;
-  };
 }

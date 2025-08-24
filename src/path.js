@@ -1,7 +1,5 @@
-import { TILE } from "./core.js";
+import { TILE, MAP_GRID_W, MAP_GRID_H } from "./core.js";
 import { lerp } from "./utils.js";
-import { GRID_W, GRID_H, W as _W, H as _H } from "./core.js";
-import { syncLogicalSize } from "./core.js";
 
 // We'll compute path after canvas size sync. Export initPath to call from main.
 export let path = [];
@@ -9,31 +7,27 @@ export let segLens = [];
 export let totalLen = 0;
 export const blocked = new Set();
 
-export function initPath() {
-  // Ensure canvas sizes are current
-  // (main will call syncLogicalSize before this)
-  const W = Math.max(
-    1,
-    Math.floor((document.querySelector("#game").clientWidth || 1100) / TILE) *
-      TILE
-  );
-  const H = Math.max(
-    1,
-    Math.floor((document.querySelector("#game").clientHeight || 650) / TILE) *
-      TILE
-  );
+// --- REFACTORED FUNCTION ---
+// It now takes a function that generates the path array.
+export function initPath(levelPathGenerator) {
+  // If no path generator is provided, reset the path.
+  if (!levelPathGenerator) {
+    path = [];
+    segLens = [];
+    totalLen = 0;
+    blocked.clear();
+    return;
+  }
 
-  path = [
-    { x: 0, y: H * 0.65 },
-    { x: W * 0.18, y: H * 0.65 },
-    { x: W * 0.18, y: H * 0.2 },
-    { x: W * 0.45, y: H * 0.2 },
-    { x: W * 0.45, y: H * 0.8 },
-    { x: W * 0.72, y: H * 0.8 },
-    { x: W * 0.72, y: H * 0.35 },
-    { x: W * 0.98, y: H * 0.35 },
-  ];
+  // Calculate pixel dimensions based on current grid size
+  const MAP_W = MAP_GRID_W * TILE;
+  const MAP_H = MAP_GRID_H * TILE;
+  const T_HALF = TILE / 2;
 
+  // Call the provided function to get the path for the current level
+  path = levelPathGenerator(TILE, T_HALF, MAP_W, MAP_H);
+
+  // This part correctly calculates lengths and blocked tiles for the new path
   segLens.length = 0;
   totalLen = 0;
   for (let i = 0; i < path.length - 1; i++) {
@@ -53,6 +47,11 @@ export function initPath() {
   }
 }
 
+/**
+ * Calculates a point along the path.
+ * @param {number} t - A value from 0 (start) to 1 (end).
+ * @returns {{x: number, y: number}} The coordinates of the point.
+ */
 export function pointAt(t) {
   if (totalLen === 0) return { x: 0, y: 0 };
   let d = t * totalLen;
@@ -65,5 +64,6 @@ export function pointAt(t) {
     }
     d -= segLens[i];
   }
+  // If t is 1 or slightly more, return the last point
   return { ...path[path.length - 1] };
 }

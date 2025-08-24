@@ -2,14 +2,165 @@
 <html>
   <head>
     <title>Mini Tower Defense</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#0b0f1a" />
     <style>
-      canvas {
-        background: #222;
-        display: block;
-        margin: auto;
+      /* --- All your CSS styles remain unchanged --- */
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      html {
+        background-color: #0b0f1a;
+        color: white;
+        font-family: "Arial", sans-serif;
+      }
+      html,
+      body {
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+      }
+      #mainMenu {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        width: 100%;
+        height: 100%;
+        text-align: center;
+        padding: 20px;
+      }
+      #mainMenu h1 {
+        font-size: clamp(2.5em, 8vw, 4em);
+        margin-bottom: 20px;
+      }
+      .menu-button {
+        background-color: #2a3a63;
+        border: 2px solid #5c7bfa;
+        color: white;
+        padding: 15px 32px;
+        text-decoration: none;
+        font-size: 1.2em;
+        margin: 10px 2px;
+        width: 200px;
+        max-width: 90%;
+        cursor: pointer;
+        transition: background-color 0.3s;
+      }
+      .menu-button:hover {
+        background-color: #3e528e;
+      }
+      #levelSelection {
+        display: none;
+        width: 100%;
+        height: 100%;
+        padding: 20px;
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(90px, 1fr));
+        gap: 15px;
+        overflow-y: auto;
+      }
+      .level-button {
+        background-color: #2a3a63;
+        border: 2px solid #5c7bfa;
+        color: white;
+        text-decoration: none;
+        font-size: 1.2em;
+        font-weight: bold;
+        cursor: pointer;
+        transition: background-color 0.3s;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        aspect-ratio: 1 / 1;
+      }
+      .level-button:hover {
+        background-color: #3e528e;
+      }
+      /* The canvas is created by core.js, this style targets it */
+      canvas#game {
+        display: none;
+        width: 100%;
+        height: 100%;
       }
     </style>
   </head>
-  <body></body>
-  <script src="./index.mjs" type="module"></script>
+  <body>
+    <!-- The main menu, visible on page load -->
+    <div id="mainMenu">
+      <h1>Mini Tower Defense</h1>
+      <button id="startButton" class="menu-button">Start</button>
+      <button id="exitButton" class="menu-button">Exit</button>
+    </div>
+
+    <!-- The level selection screen, hidden on page load -->
+    <div id="levelSelection">
+      <!-- Level buttons are created by script -->
+    </div>
+
+    <!-- The game script (index.mjs) will create and append the canvas here -->
+  </body>
+
+  <!-- This is the menu logic script, now a module -->
+  <script type="module">
+    // --- NEW: Import the startGame function from your main game file ---
+    import { startGame } from "./index.mjs";
+
+    const mainMenu = document.getElementById("mainMenu");
+    const levelSelection = document.getElementById("levelSelection");
+    const startButton = document.getElementById("startButton");
+    const exitButton = document.getElementById("exitButton");
+
+    // This function shows the level selection screen
+    const showLevelSelection = () => {
+      mainMenu.style.display = "none";
+      levelSelection.style.display = "grid";
+
+      levelSelection.innerHTML = ""; // Clear previous buttons
+      for (let i = 1; i <= 30; i++) {
+        const levelButton = document.createElement("button");
+        levelButton.textContent = `${i}`;
+        levelButton.className = "level-button";
+        levelButton.addEventListener("click", () => {
+          startLevel(i);
+        });
+        levelSelection.appendChild(levelButton);
+      }
+    };
+
+    /**
+     * Hides the menu and tells the main game script to start a specific level.
+     * @param {number} levelNumber The level to play.
+     */
+    const startLevel = (levelNumber) => {
+      // 1. Hide the level selection screen
+      levelSelection.style.display = "none";
+
+      // 2. Find the game canvas (which core.js created)
+      const gameCanvas = document.querySelector("#game");
+
+      // 3. Show the game canvas
+      if (gameCanvas) {
+        gameCanvas.style.display = "block";
+      } else {
+        console.error(
+          "Game Canvas not found! Make sure core.js creates a <canvas> element."
+        );
+        return; // Stop if canvas is missing
+      }
+
+      // 4. --- KEY CHANGE ---
+      // Call the imported function from index.mjs to initialize and run the game
+      startGame(levelNumber);
+    };
+
+    // Attach event listeners to the main menu buttons
+    startButton.addEventListener("click", showLevelSelection);
+
+    exitButton.addEventListener("click", () => {
+      alert("Thanks for playing! You can now close the browser tab.");
+    });
+  </script>
 </html>

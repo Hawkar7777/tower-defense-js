@@ -21,6 +21,11 @@ import { CarM249Tower } from "./towers/CarM249Tower.js";
 import { SmallTank } from "./towers/SmallTank.js";
 import { MediumTank } from "./towers/MediumTank.js";
 import { BigTank } from "./towers/BigTank.js";
+import { BehemothTank } from "./towers/BehemothTank.js";
+import { HelicopterTower } from "./towers/HelicopterTower.js";
+import { BlackHawkTower } from "./towers/BlackHawkTower.js";
+import { JetTower } from "./towers/jet.js";
+import { B52SpiritTower } from "./towers/B52SpiritTower.js";
 
 export const TOWER_TYPES = {
   gun: {
@@ -67,7 +72,7 @@ export const TOWER_TYPES = {
   },
   ice: {
     // Add Ice Tower
-    name: "Ice Tower",
+    name: "Ice",
     cost: 180,
     range: 130,
     fireRate: 2.5,
@@ -80,7 +85,7 @@ export const TOWER_TYPES = {
     class: IceTower,
   },
   tesla: {
-    name: "Tesla Tower",
+    name: "Tesla",
     cost: 220,
     range: 140,
     fireRate: 1.8,
@@ -94,7 +99,7 @@ export const TOWER_TYPES = {
   },
   poison: {
     // Add Poison Tower
-    name: "Poison Tower",
+    name: "Poison",
     cost: 190,
     range: 110,
     fireRate: 1.5,
@@ -107,7 +112,7 @@ export const TOWER_TYPES = {
     class: PoisonTower,
   },
   missile: {
-    name: "Missile Tower",
+    name: "Missile",
     cost: 280,
     range: 160,
     fireRate: 0.8,
@@ -134,7 +139,7 @@ export const TOWER_TYPES = {
     class: FlamethrowerTower,
   },
   sniper: {
-    name: "Sniper Tower",
+    name: "Sniper",
     cost: 350,
     range: 400,
     fireRate: 0.3,
@@ -144,6 +149,7 @@ export const TOWER_TYPES = {
     critChance: 0.25,
     critMultiplier: 2.5,
     color: "#2b4ff2",
+    size: { align: "TBLR", occupy: 2 },
     class: SniperTower,
   },
   artillery: {
@@ -157,10 +163,11 @@ export const TOWER_TYPES = {
     arcHeight: 80,
     minRange: 60,
     color: "#8d6e63",
+    size: { align: "TBLR", occupy: 2 },
     class: ArtilleryTower,
   },
   archer: {
-    name: "Archer Tower",
+    name: "Archer",
     cost: 90,
     range: 130,
     fireRate: 5,
@@ -172,7 +179,7 @@ export const TOWER_TYPES = {
     class: ArcherTower,
   },
   lightning: {
-    name: "Lightning Tower",
+    name: "Lightning",
     cost: 300,
     range: 150,
     fireRate: 1.5,
@@ -182,10 +189,11 @@ export const TOWER_TYPES = {
     stunChance: 0.2,
     stunDuration: 1.2,
     color: "#00ffff",
+    size: { align: "T", occupy: 2 },
     class: LightningTower,
   },
   shadow: {
-    name: "Shadow Tower",
+    name: "Shadow",
     cost: 320,
     range: 140,
     fireRate: 1.2,
@@ -195,10 +203,11 @@ export const TOWER_TYPES = {
     chainCount: 3,
     chainRange: 90,
     color: "#800080",
+    size: { align: "T", occupy: 2 },
     class: ShadowTower,
   },
   wizard: {
-    name: "Wizard Tower",
+    name: "Wizard",
     cost: 330,
     range: 150,
     fireRate: 1.2,
@@ -206,10 +215,11 @@ export const TOWER_TYPES = {
     chainCount: 2,
     chainRange: 80,
     color: "#7f00ff",
+    size: { align: "T", occupy: 2 },
     class: WizardTower,
   },
   wind: {
-    name: "Wind Tower",
+    name: "Wind",
     cost: 200,
     range: 140,
     fireRate: 1.2, // attacks per second
@@ -217,20 +227,22 @@ export const TOWER_TYPES = {
     slowAmount: 0.5, // slows enemies by 50% for a short duration
     slowDuration: 1.5, // seconds
     color: "#00bfff",
+    size: { align: "T", occupy: 2 },
     class: WindTower,
   },
   volcano: {
-    name: "Volcano Tower",
+    name: "Volcano",
     cost: 600,
     range: 200,
     fireRate: 0.3, // slow but powerful
     dmg: 80, // direct damage
     splash: 60, // area of effect radius
     color: "#ff3300",
+    size: { align: "T", occupy: 2 },
     class: VolcanoTower,
   },
   carM249: {
-    name: "Car M249 Tower",
+    name: "Car M249",
     cost: 600,
     range: 180,
     fireRate: 5, // bullets per second
@@ -247,6 +259,7 @@ export const TOWER_TYPES = {
     splash: 40,
     bulletSpeed: 380,
     color: "#556b2f",
+    size: { align: "LR", occupy: 2 },
     class: SmallTank,
   },
   mediumTank: {
@@ -258,6 +271,7 @@ export const TOWER_TYPES = {
     splash: 60,
     bulletSpeed: 300,
     color: "#8b4513",
+    size: { align: "TBLR", occupy: 2 },
     class: MediumTank,
   },
   bigTank: {
@@ -269,10 +283,75 @@ export const TOWER_TYPES = {
     splash: 110,
     bulletSpeed: 220, // main shell speed
     color: "#4b2e1e",
-    // top gun params (optional, defaults used if omitted)
     topFireRate: 10, // bullets per second for top gun (continuous)
     topDmg: 30, // damage per top-gun bullet
     topBulletSpeed: 720, // speed of top-gun bullets
+    size: { align: "TBLR", occupy: 2 },
     class: BigTank,
+  },
+  behemothTank: {
+    name: "Behemoth Tank",
+    cost: 2200, // Very expensive
+    range: 280, // Superior range
+    fireRate: 0.5, // Slower, but fires two powerful shells
+    dmg: 950, // Devastating damage per shell
+    splash: 140, // Massive area of effect
+    bulletSpeed: 250,
+    color: "#a8e0ff", // A cool, high-tech blue for the shop icon
+    topFireRate: 15, // Upgraded rapid-fire top gun
+    topDmg: 40,
+    topBulletSpeed: 800,
+    // Your updated occupation.js file will handle this correctly.
+    size: { align: "TBLR", occupy: 3 },
+    class: BehemothTank,
+  },
+  helicopter: {
+    name: "Heli Pad",
+    cost: 1500,
+    range: 220, // The patrol and firing radius from the helipad
+    fireRate: 12, // High rate of fire
+    dmg: 35, // Moderate damage per bullet
+    bulletSpeed: 750,
+    color: "#ffdd99", // A sandy, military color for the shop
+    // The helipad itself is a standard 1x1 tower
+    size: { align: "TBLR", occupy: 1 },
+    class: HelicopterTower,
+  },
+  blackHawk: {
+    name: "Black Hawk",
+    cost: 2500,
+    range: 280,
+    fireRate: 15,
+    dmg: 45,
+    bulletSpeed: 800,
+    color: "#2c3e50",
+    size: { align: "TBLR", occupy: 1 },
+    class: BlackHawkTower,
+  },
+  jet: {
+    name: "Stealth Jet",
+    cost: 6000, // High cost for a global presence
+    range: Infinity, // Full map range
+    fireRate: 0.8, // Slower fire rate due to powerful missiles
+    dmg: 1000, // High damage with area-of-effect
+    bulletSpeed: 500, // Missile travel speed
+    color: "#34495e",
+    // The jet does not occupy a grid cell as it's an off-map support unit.
+    // How you handle placement is up to your UI logic.
+    // You might call it from a special support menu instead of placing it.
+    // For that reason, 'size' can be omitted or handled differently.
+    size: { align: "TBLR", occupy: 0 }, // Or handle as a special case
+    class: JetTower,
+  },
+  b52Spirit: {
+    name: "B-2 Spirit Bomber",
+    cost: 15000, // Very high cost for a game-changing ability
+    range: Infinity,
+    fireRate: 0.1, // Cooldown between bombing runs (e.g., once every 10 seconds)
+    dmg: 1000, // Damage per bomb in the carpet
+    bulletSpeed: 200, // The flight speed of the bomber itself
+    color: "#495057",
+    size: { align: "TBLR", occupy: 0 }, // Another off-map support call-in
+    class: B52SpiritTower,
   },
 };

@@ -2,7 +2,7 @@
 
 import { BaseTower } from "./BaseTower.js";
 import { ctx } from "../core.js";
-import { enemies, particles } from "../state.js";
+import { particles } from "../state.js"; // No longer need to import `enemies`
 import { dist } from "../utils.js";
 
 export class WindTower extends BaseTower {
@@ -10,10 +10,10 @@ export class WindTower extends BaseTower {
     name: "Wind Tower",
     cost: 200,
     range: 140,
-    fireRate: 1.2, // attacks per second
-    knockback: 40, // pixels
-    slowAmount: 0.5, // slows enemies by 50% for a short duration
-    slowDuration: 1.5, // seconds
+    fireRate: 1.2,
+    knockback: 40,
+    slowAmount: 0.5,
+    slowDuration: 1.5,
     color: "#00bfff",
   };
 
@@ -28,16 +28,42 @@ export class WindTower extends BaseTower {
     };
   }
 
+  // --- MODIFIED --- Moved up to match the new, taller design
   getAttackOrigin() {
-    return { x: this.center.x, y: this.center.y - 10 };
+    return { x: this.center.x, y: this.center.y - 40 };
   }
 
   update(dt, enemiesList) {
     const s = this.spec();
     this.cool -= dt;
 
+    // Check if any enemy has their slow expired
+    for (const e of enemiesList) {
+      if (e.slowedUntil && e.slowedUntil < performance.now()) {
+        e.speed = e.originalSpeed;
+        e.slowedUntil = null;
+      }
+    }
+
     if (this.cool <= 0) {
       let hitAny = false;
+      const attackOrigin = this.getAttackOrigin();
+
+      // Create a visual "gust" effect when firing
+      for (let i = 0; i < 15; i++) {
+        const angle = Math.random() * Math.PI * 2;
+        const speed = Math.random() * 80 + 20;
+        particles.push({
+          x: attackOrigin.x,
+          y: attackOrigin.y,
+          vx: Math.cos(angle) * speed,
+          vy: Math.sin(angle) * speed,
+          life: 0.6,
+          r: 1 + Math.random(),
+          c: "rgba(200, 240, 255, 0.7)",
+          fade: 0.92,
+        });
+      }
 
       for (const e of enemiesList) {
         if (e.dead) continue;
@@ -49,37 +75,14 @@ export class WindTower extends BaseTower {
           const dx = e.pos.x - this.center.x;
           const dy = e.pos.y - this.center.y;
           const len = Math.sqrt(dx * dx + dy * dy) || 1;
-          e.pos.x += (dx / len) * s.knockback;
-          e.pos.y += (dy / len) * s.knockback;
-
-          // Initialize original speed if not set
-          if (e.originalSpeed === undefined) e.originalSpeed = e.speed;
+          // Apply a gentle push instead of a teleport
+          e.vx += (dx / len) * s.knockback * 2;
+          e.vy += (dy / len) * s.knockback * 2;
 
           // Apply temporary slow
+          if (e.originalSpeed === undefined) e.originalSpeed = e.speed;
           e.slowedUntil = performance.now() + s.slowDuration * 1000;
           e.speed = e.originalSpeed * (1 - s.slowAmount);
-
-          // Particles for wind gust
-          for (let i = 0; i < 5; i++) {
-            const angle = Math.random() * Math.PI * 2;
-            const speed = Math.random() * 60 + 20;
-            particles.push({
-              x: e.pos.x,
-              y: e.pos.y,
-              vx: Math.cos(angle) * speed,
-              vy: Math.sin(angle) * speed,
-              life: 0.4,
-              r: 2 + Math.random() * 2,
-              c: "#a0e7ff",
-              fade: 0.9,
-            });
-          }
-        }
-
-        // Restore speed if slow duration expired
-        if (e.slowedUntil && e.slowedUntil < performance.now()) {
-          e.speed = e.originalSpeed;
-          e.slowedUntil = null;
         }
       }
 
@@ -89,46 +92,100 @@ export class WindTower extends BaseTower {
     }
   }
 
+  // --- COMPLETELY REDESIGNED DRAW METHOD ---
   draw() {
     const { x, y } = this.center;
-    const time = performance.now() / 500;
+    const time = performance.now();
+    const s = this.spec();
 
-    // Tower base
-    ctx.fillStyle = "#0080ff";
+    // 1. Crystalline Base
+    ctx.fillStyle = "#65c8ff";
+    ctx.strokeStyle = "#c2f2ff";
+    ctx.lineWidth = 1.5;
     ctx.beginPath();
-    ctx.arc(x, y + 6, 14, 0, Math.PI * 2);
+    ctx.moveTo(x - 18, y + 18);
+    ctx.lineTo(x - 12, y + 10);
+    ctx.lineTo(x + 12, y + 10);
+    ctx.lineTo(x + 18, y + 18);
+    ctx.closePath();
     ctx.fill();
+    ctx.stroke();
 
-    // Tower body
-    ctx.fillStyle = "#00bfff";
+    // 2. Tall, Sleek Pylon
+    const pylonGradient = ctx.createLinearGradient(x - 5, y, x + 5, y);
+    pylonGradient.addColorStop(0, "#82d8ff");
+    pylonGradient.addColorStop(0.5, "#e0f8ff");
+    pylonGradient.addColorStop(1, "#82d8ff");
+    ctx.fillStyle = pylonGradient;
     ctx.beginPath();
-    ctx.rect(x - 6, y - 16, 12, 22);
+    ctx.moveTo(x - 6, y + 10);
+    ctx.lineTo(x - 4, y - 35); // Made much taller
+    ctx.lineTo(x + 4, y - 35);
+    ctx.lineTo(x + 6, y + 10);
+    ctx.closePath();
     ctx.fill();
+    ctx.stroke();
 
-    // Wind blades on top
+    // 3. Glowing Core at the top
+    const coreY = y - 40; // New, higher position
+    const corePulse = 3 + Math.sin(time / 300) * 1.5;
+    const coreGlow = ctx.createRadialGradient(
+      x,
+      coreY,
+      1,
+      x,
+      coreY,
+      corePulse * 2
+    );
+    coreGlow.addColorStop(0, "rgba(255, 255, 255, 1)");
+    coreGlow.addColorStop(1, "rgba(180, 240, 255, 0)");
+
+    ctx.globalCompositeOperation = "lighter";
+    ctx.fillStyle = "#ffffff";
+    ctx.beginPath();
+    ctx.arc(x, coreY, corePulse, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = coreGlow;
+    ctx.beginPath();
+    ctx.arc(x, coreY, corePulse * 2, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalCompositeOperation = "source-over";
+
+    // 4. Animated Swirling Wind Gusts
     const bladeCount = 3;
     for (let i = 0; i < bladeCount; i++) {
-      const angle = time + (i * (2 * Math.PI)) / bladeCount;
-      const px = x + Math.cos(angle) * 10;
-      const py = y - 18 + Math.sin(angle) * 6;
-      ctx.strokeStyle = "#a0e7ff";
-      ctx.lineWidth = 2;
+      const angle = time / 800 + (i * Math.PI * 2) / bladeCount;
+      const startRadius = 5;
+      const endRadius = 18 + Math.sin(time / 400 + i) * 4;
+      const controlRadius = 25;
+
+      const startX = x + Math.cos(angle) * startRadius;
+      const startY = coreY + Math.sin(angle) * startRadius;
+
+      const endX = x + Math.cos(angle + 2) * endRadius;
+      const endY = coreY + Math.sin(angle + 2) * endRadius;
+
+      const controlX = x + Math.cos(angle + 1) * controlRadius;
+      const controlY = coreY + Math.sin(angle + 1) * controlRadius;
+
+      ctx.strokeStyle = `rgba(220, 250, 255, ${
+        0.3 + Math.sin(time / 300 + i) * 0.2
+      })`;
+      ctx.lineWidth = 2.5;
       ctx.beginPath();
-      ctx.moveTo(x, y - 18);
-      ctx.lineTo(px, py);
+      ctx.moveTo(startX, startY);
+      ctx.quadraticCurveTo(controlX, controlY, endX, endY);
       ctx.stroke();
     }
 
-    // Level indicators
+    // 5. Level indicators as glowing lines on the pylon
     for (let i = 0; i < this.level; i++) {
-      const ix = x - 10 + i * 5;
-      const iy = y + 20;
-      ctx.strokeStyle = "#a0e7ff";
-      ctx.lineWidth = 1.5;
-      ctx.beginPath();
-      ctx.moveTo(ix, iy);
-      ctx.lineTo(ix, iy + 4);
-      ctx.stroke();
+      const levelY = y + 5 - i * 6;
+      ctx.fillStyle = "#ffffff";
+      ctx.shadowColor = s.color;
+      ctx.shadowBlur = 4;
+      ctx.fillRect(x - 5, levelY, 10, 2);
     }
+    ctx.shadowBlur = 0;
   }
 }

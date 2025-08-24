@@ -1,8 +1,8 @@
 // ===== FILE: src/towers/LightningTower.js =====
 
 import { BaseTower } from "./BaseTower.js";
-import { ctx } from "../core.js";
-import { enemies, particles } from "../state.js";
+import { ctx, TILE } from "../core.js";
+import { particles } from "../state.js"; // We no longer need to import `enemies` here
 import { dist } from "../utils.js";
 import { spawnBeam } from "../effects.js";
 
@@ -18,6 +18,7 @@ export class LightningTower extends BaseTower {
     stunChance: 0.2,
     stunDuration: 1.2,
     color: "#00ffff",
+    size: { align: "T", occupy: 3 },
   };
 
   spec() {
@@ -34,14 +35,15 @@ export class LightningTower extends BaseTower {
       stunDuration: base.stunDuration,
       color: base.color,
       cost: base.cost,
+      size: base.size,
     };
   }
 
-  // New method to get the top of the tower as lightning origin
   getLightningOrigin() {
+    const drawCenterY = this.center.y - TILE / 2;
     return {
       x: this.center.x,
-      y: this.center.y - 40, // just above the coil/antenna
+      y: drawCenterY - 45,
     };
   }
 
@@ -49,7 +51,6 @@ export class LightningTower extends BaseTower {
     const s = this.spec();
     this.cool -= dt;
 
-    // Find closest enemy in range
     let target = null;
     let minDist = Infinity;
     for (const e of enemiesList) {
@@ -61,17 +62,18 @@ export class LightningTower extends BaseTower {
       }
     }
 
-    // Fire lightning if cooldown ready
     if (this.cool <= 0 && target) {
       this.cool = 1 / s.fireRate;
-      this.fireLightning(target, s);
+      // --- FIX: Pass the correct enemy list to the fire function ---
+      this.fireLightning(target, s, enemiesList);
     }
   }
 
-  fireLightning(startEnemy, spec) {
+  // --- FIX: The function now accepts the enemy list to search through ---
+  fireLightning(startEnemy, spec, enemiesList) {
     const hitEnemies = new Set();
     let current = startEnemy;
-    let prevPos = this.getLightningOrigin(); // <-- use top of tower
+    let prevPos = this.getLightningOrigin();
 
     for (let i = 0; i <= spec.chainCount; i++) {
       if (!current || current.dead || hitEnemies.has(current)) break;
@@ -84,10 +86,7 @@ export class LightningTower extends BaseTower {
         current.stun(spec.stunDuration);
       }
 
-      // Draw beam
       spawnBeam(prevPos, current.pos, spec.color, 2 + Math.random() * 1.5);
-
-      // Add sparks along the beam
       for (let s = 0; s < 5; s++) {
         particles.push({
           x: prevPos.x + (current.pos.x - prevPos.x) * Math.random(),
@@ -100,14 +99,13 @@ export class LightningTower extends BaseTower {
           fade: 0.85,
         });
       }
-
       hitEnemies.add(current);
       prevPos = current.pos;
 
-      // Find next target
       let nextEnemy = null;
       let minDist = Infinity;
-      for (const e of enemies) {
+      // --- FIX: Search for the next chain target in `enemiesList` ---
+      for (const e of enemiesList) {
         if (e.dead || hitEnemies.has(e)) continue;
         const d = dist(current.pos, e.pos);
         if (d <= spec.chainRange && d < minDist) {
@@ -115,22 +113,21 @@ export class LightningTower extends BaseTower {
           minDist = d;
         }
       }
-
       current = nextEnemy;
     }
   }
 
   draw() {
     const s = this.spec();
-    const { x, y } = this.center;
     const time = performance.now() / 500;
 
-    // Tower body - futuristic segmented hex design
-    ctx.fillStyle = "#0a3f3b"; // darker teal base
-    ctx.strokeStyle = "#00ffff"; // cyan outline
+    const x = this.center.x;
+    const y = this.center.y - TILE / 2;
+
+    ctx.fillStyle = "#0a3f3b";
+    ctx.strokeStyle = "#00ffff";
     ctx.lineWidth = 2;
 
-    // Draw three stacked hex segments
     const segmentHeight = 15;
     for (let i = 0; i < 3; i++) {
       const cy = y + 20 - i * segmentHeight;
@@ -147,7 +144,6 @@ export class LightningTower extends BaseTower {
       ctx.stroke();
     }
 
-    // Glowing top coil
     const coilRadius = 8 + Math.sin(time) * 2;
     ctx.strokeStyle = s.color;
     ctx.lineWidth = 3;
@@ -155,7 +151,6 @@ export class LightningTower extends BaseTower {
     ctx.arc(x, y - 25, coilRadius, 0, Math.PI * 2);
     ctx.stroke();
 
-    // Antenna on top
     ctx.strokeStyle = s.color;
     ctx.lineWidth = 2;
     ctx.beginPath();
@@ -163,7 +158,6 @@ export class LightningTower extends BaseTower {
     ctx.lineTo(x, y - 45);
     ctx.stroke();
 
-    // Sparks at top
     for (let i = 0; i < 5; i++) {
       particles.push({
         x: x + (Math.random() - 0.5) * 12,
@@ -177,7 +171,6 @@ export class LightningTower extends BaseTower {
       });
     }
 
-    // Level indicators - small glowing bars at base
     for (let i = 0; i < this.level; i++) {
       const ix = x - 12 + i * 6;
       const iy = y + 25;

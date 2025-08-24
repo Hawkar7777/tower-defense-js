@@ -1,5 +1,3 @@
-// ===== FILE: C:\Users\kurd7\Downloads\Tower\src\towers\BaseTower.js =====
-
 import { ctx } from "../core.js";
 import { dist } from "../utils.js";
 import { spawnMuzzle } from "../effects.js";
@@ -15,6 +13,10 @@ export class BaseTower {
     this.level = 1;
     this.cool = 0;
     this.rot = 0;
+
+    // --- ADDITION 1: Properties for Warlock's Hex ability ---
+    this.isHexed = false;
+    this.hexTimer = 0;
   }
 
   spec() {
@@ -37,15 +39,46 @@ export class BaseTower {
     return { x: this.gx * 40 + 20, y: this.gy * 40 + 20 };
   }
 
+  // --- ADDITION 2: Getters needed by the Warlock ---
+  // Simple coordinate access
+  get x() {
+    return this.gx * 40 + 20;
+  }
+  get y() {
+    return this.gy * 40 + 20;
+  }
+
+  // Calculates the total money spent on this tower (base cost + all upgrades)
+  // The Warlock uses this to find the most valuable target.
+  get totalCost() {
+    const baseCost = this.constructor.SPEC.cost;
+    let total = baseCost;
+    for (let i = 1; i < this.level; i++) {
+      total += Math.round(baseCost * (0.75 + i * 0.75));
+    }
+    return total;
+  }
+
   upgradeCost() {
     return Math.round(this.spec().cost * (0.75 + this.level * 0.75));
   }
 
   sellValue() {
-    return this.spec().cost * 0.7 + (this.level - 1) * this.spec().cost * 0.35;
+    // Correctly calculate sell value based on total cost
+    return this.totalCost * 0.7;
   }
 
   update(dt, enemiesList) {
+    // --- ADDITION 3: Check if the tower is Hexed (stunned) ---
+    if (this.isHexed) {
+      this.hexTimer -= dt;
+      if (this.hexTimer <= 0) {
+        this.isHexed = false;
+      }
+      return; // Stop all other logic for this frame if hexed
+    }
+    // --- END OF HEX CHECK ---
+
     const s = this.spec();
     this.cool -= dt;
     let best = null,
@@ -112,5 +145,26 @@ export class BaseTower {
       ctx.fillStyle = s.color;
       ctx.fillRect(x - 10 + i * 6, y + 18, 4, 4);
     }
+
+    // --- ADDITION 4: Draw a visual effect when Hexed ---
+    if (this.isHexed) {
+      ctx.fillStyle = "rgba(80, 200, 120, 0.4)"; // Sickly green aura
+      ctx.beginPath();
+      ctx.arc(x, y, 22, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Add a swirling particle effect for extra flair
+      const time = performance.now() / 100;
+      for (let i = 0; i < 3; i++) {
+        const angle = time + i * ((Math.PI * 2) / 3);
+        const pX = x + Math.cos(angle) * 18;
+        const pY = y + Math.sin(angle) * 18;
+        ctx.fillStyle = "#50c878"; // Emerald Green particles
+        ctx.beginPath();
+        ctx.arc(pX, pY, 3, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+    // --- END OF HEX VISUAL ---
   }
 }

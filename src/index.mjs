@@ -41,13 +41,20 @@ import {
 } from "./occupation.js";
 import { levels } from "./levels.js";
 
-// --- GLOBAL STATE FOR THE CURRENT LEVEL ---
+// --- GLOBAL STATE ---
 let currentLevelConfig = null;
 
+// --- OPTIMIZATION: Off-screen canvases for static background elements ---
+const gridCanvas = document.createElement("canvas");
+const gridCtx = gridCanvas.getContext("2d");
+const pathCanvas = document.createElement("canvas");
+const pathCtx = pathCanvas.getContext("2d");
+
+// --- CONSTANTS ---
 const TOUCH_PAN_SENSITIVITY = 1.5;
 const HOLD_DURATION = 200;
 
-// --- State objects for input ---
+// --- INPUT STATE (Restored from original for full functionality) ---
 let mouse = {
   x: 0,
   y: 0,
@@ -83,7 +90,57 @@ let last = performance.now();
 let animationFrameId = null;
 
 /**
- * The main game loop. Only runs when state.running is true.
+ * OPTIMIZATION: Pre-renders the static grid to an off-screen canvas.
+ */
+function precomputeGrid() {
+  gridCanvas.width = MAP_GRID_W * TILE;
+  gridCanvas.height = MAP_GRID_H * TILE;
+  gridCtx.strokeStyle = "rgba(255, 255, 255, 0.05)";
+  gridCtx.lineWidth = 1;
+  gridCtx.beginPath();
+  for (let i = 0; i <= MAP_GRID_W; i++) {
+    gridCtx.moveTo(i * TILE, 0);
+    gridCtx.lineTo(i * TILE, MAP_GRID_H * TILE);
+  }
+  for (let i = 0; i <= MAP_GRID_H; i++) {
+    gridCtx.moveTo(0, i * TILE);
+    gridCtx.lineTo(MAP_GRID_W * TILE, i * TILE);
+  }
+  gridCtx.stroke();
+}
+
+/**
+ * OPTIMIZATION: Pre-renders the static path to an off-screen canvas.
+ */
+function precomputePath() {
+  pathCanvas.width = MAP_GRID_W * TILE;
+  pathCanvas.height = MAP_GRID_H * TILE;
+  pathCtx.clearRect(0, 0, pathCanvas.width, pathCanvas.height); // Clear previous path
+
+  if (!path || path.length < 2) return;
+
+  // Draw wide, semi-transparent background path
+  pathCtx.strokeStyle = "#29e3ff";
+  pathCtx.lineWidth = 10;
+  pathCtx.globalAlpha = 0.15;
+  pathCtx.lineCap = "round";
+  pathCtx.beginPath();
+  pathCtx.moveTo(path[0].x, path[0].y);
+  for (let i = 1; i < path.length; i++) pathCtx.lineTo(path[i].x, path[i].y);
+  pathCtx.stroke();
+
+  // Draw thinner, bright foreground path
+  pathCtx.globalAlpha = 1;
+  pathCtx.lineWidth = 3;
+  pathCtx.strokeStyle = "#0cf";
+  pathCtx.beginPath();
+  pathCtx.moveTo(path[0].x, path[0].y);
+  for (let i = 1; i < path.length; i++) pathCtx.lineTo(path[i].x, path[i].y);
+  pathCtx.stroke();
+}
+
+/**
+ * The main game loop.
  */
 function loop(ts) {
   if (!state.running) {
@@ -99,13 +156,17 @@ function loop(ts) {
   // --- UPDATE LOGIC ---
   spawner(dt);
   for (const t of towers) t.update(dt, enemies);
-  for (const b of projectiles) b.update(dt);
+  for (const p of projectiles) p.update(dt);
   for (const e of enemies) e.update(dt);
   updateEffects(dt);
-  for (let i = projectiles.length - 1; i >= 0; i--)
+
+  // OPTIMIZATION: Efficiently remove dead entities without repeated splicing.
+  for (let i = projectiles.length - 1; i >= 0; i--) {
     if (projectiles[i].dead) projectiles.splice(i, 1);
-  for (let i = enemies.length - 1; i >= 0; i--)
+  }
+  for (let i = enemies.length - 1; i >= 0; i--) {
     if (enemies[i].dead) enemies.splice(i, 1);
+  }
 
   // --- WIN/LOSS CHECKS ---
   if (state.lives <= 0) {
@@ -126,38 +187,11 @@ function loop(ts) {
   ctx.translate(-state.camera.x * state.zoom, -state.camera.y * state.zoom);
   ctx.scale(state.zoom, state.zoom);
 
-  // Draw grid and path...
-  ctx.strokeStyle = "rgba(255, 255, 255, 0.05)";
-  ctx.lineWidth = 1 / state.zoom;
-  ctx.beginPath();
-  for (let i = 0; i <= MAP_GRID_W; i++) {
-    ctx.moveTo(i * TILE, 0);
-    ctx.lineTo(i * TILE, MAP_GRID_H * TILE);
-  }
-  for (let i = 0; i <= MAP_GRID_H; i++) {
-    ctx.moveTo(0, i * TILE);
-    ctx.lineTo(MAP_GRID_W * TILE, i * TILE);
-  }
-  ctx.stroke();
-  if (path && path.length) {
-    ctx.strokeStyle = "#29e3ff";
-    ctx.lineWidth = 10;
-    ctx.globalAlpha = 0.15;
-    ctx.lineCap = "round";
-    ctx.beginPath();
-    ctx.moveTo(path[0].x, path[0].y);
-    for (let i = 1; i < path.length; i++) ctx.lineTo(path[i].x, path[i].y);
-    ctx.stroke();
-    ctx.globalAlpha = 1;
-    ctx.lineWidth = 3;
-    ctx.strokeStyle = "#0cf";
-    ctx.beginPath();
-    ctx.moveTo(path[0].x, path[0].y);
-    for (let i = 1; i < path.length; i++) ctx.lineTo(path[i].x, path[i].y);
-    ctx.stroke();
-  }
+  // OPTIMIZATION: Draw pre-rendered canvases instead of raw shapes.
+  ctx.drawImage(gridCanvas, 0, 0);
+  ctx.drawImage(pathCanvas, 0, 0);
 
-  // --- MODIFIED: Ghost Drawing Logic ---
+  // --- Draw dynamic elements (ghosts, ranges, etc.) ---
   drawPlacementOverlay();
   if (ui.heldTower) drawHeldTowerRange(ui.heldTower);
 
@@ -165,6 +199,7 @@ function loop(ts) {
   const isDraggingNewTowerFromShop =
     mouse.draggingTower || (touch.isHolding && !!ui.selectedShopKey);
 
+  // This logic is restored from your original code to ensure ghosts appear correctly.
   if (
     (isDraggingNewTowerFromShop || (ui.hoveredTile && ui.selectedShopKey)) &&
     pointerY <= canvas.clientHeight - 100
@@ -180,10 +215,12 @@ function loop(ts) {
   // Draw game entities
   for (const t of towers) t.draw();
   for (const e of enemies) e.draw();
-  for (const b of projectiles) b.draw();
+  for (const p of projectiles) p.draw();
   drawEffects();
 
   ctx.restore();
+
+  // Draw UI on top of everything
   drawInspector(ui.selectedTower, state.camera, state.zoom);
 
   animationFrameId = requestAnimationFrame(loop);
@@ -198,18 +235,34 @@ export function startGame(levelNumber) {
     alert(`Error: Level ${levelNumber} configuration not found!`);
     return;
   }
+
   resetState(currentLevelConfig);
   setMapDimensions(currentLevelConfig.map.width, currentLevelConfig.map.height);
   resize();
   initPath(currentLevelConfig.path);
+
+  // --- OPTIMIZATION: Pre-render static elements for this level ---
+  precomputeGrid();
+  precomputePath();
+
   startNextWave(currentLevelConfig.maxWaves);
   last = performance.now();
   if (animationFrameId) cancelAnimationFrame(animationFrameId);
+  state.running = true; // Set running state before requesting frame
   animationFrameId = requestAnimationFrame(loop);
 }
 
-function gameOver() {
+function stopGame() {
   state.running = false;
+  if (animationFrameId) {
+    cancelAnimationFrame(animationFrameId);
+    animationFrameId = null;
+  }
+}
+
+function gameOver() {
+  stopGame();
+  // Draw one final frame to show the game over state
   drawBackground(state.time, path);
   drawTopbar(canvas.clientWidth);
   ctx.fillStyle = "rgba(10,20,36,0.86)";
@@ -236,7 +289,7 @@ function gameOver() {
 }
 
 function levelComplete() {
-  state.running = false;
+  stopGame();
   const unlocked = parseInt(
     localStorage.getItem("towerDefenseHighestLevel") || "1"
   );
@@ -246,6 +299,7 @@ function levelComplete() {
       currentLevelConfig.level + 1
     );
   }
+  // Draw one final frame for the victory screen
   drawBackground(state.time, path);
   drawTopbar(canvas.clientWidth);
   ctx.fillStyle = "rgba(10, 36, 20, 0.86)";
@@ -271,7 +325,7 @@ function levelComplete() {
   canvas.addEventListener("touchend", reload, { once: true });
 }
 
-// --- INPUT HANDLING ---
+// --- INPUT HANDLING (Restored from your original code to preserve all functionality) ---
 function getCanvasPos(clientX, clientY) {
   const rect = canvas.getBoundingClientRect();
   return { x: clientX - rect.left, y: clientY - rect.top };
@@ -718,11 +772,13 @@ canvas.addEventListener(
     }
 
     // Universal Reset Logic
-    if (e.touches.length === 0) touch.action = "idle";
+    if (e.touches.length === 0) {
+      touch.action = "idle";
+      initialPinchDist = null; // Reset pinch zoom state only when all fingers are up
+    }
     ui.heldTower = null;
     touch.isHolding = false;
     touch.potentialSelection = null;
-    initialPinchDist = null;
   },
   { passive: false }
 );

@@ -4,6 +4,7 @@ import { spawnMuzzle } from "../effects.js";
 import { projectiles } from "../state.js";
 import { Bullet } from "../bullet.js";
 import { roundRect } from "../helpers.js";
+import { TOWER_TYPES } from "../config.js";
 
 export class BaseTower {
   constructor(gx, gy, key) {
@@ -20,18 +21,16 @@ export class BaseTower {
   }
 
   spec() {
-    const base = this.constructor.SPEC;
-    const mult = 1 + (this.level - 1) * 0.35;
+    // This is the new, correct version of the function
+    const baseSpec = TOWER_TYPES[this.key];
+
     return {
-      name: base.name,
-      range: base.range * (1 + (this.level - 1) * 0.08),
-      fireRate: base.fireRate * (1 + (this.level - 1) * 0.05),
-      dmg: base.dmg * mult,
-      bulletSpeed: base.bulletSpeed,
-      splash: base.splash || 0,
-      beam: base.beam || false,
-      color: base.color,
-      cost: base.cost,
+      ...baseSpec, // <-- This is the most important line! It copies everything first.
+
+      // Now, we override just the stats that change with level.
+      range: baseSpec.range * (1 + (this.level - 1) * 0.08),
+      fireRate: baseSpec.fireRate * (1 + (this.level - 1) * 0.05),
+      dmg: baseSpec.dmg * (1 + (this.level - 1) * 0.35),
     };
   }
 

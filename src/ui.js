@@ -207,13 +207,16 @@ export function drawHeldTowerRange(tower) {
   ctx.globalAlpha = 1;
 }
 
+// ===== FILE: ui.js =====
+// REPLACE the old drawInspector function with this new one.
+
 export function drawInspector(selectedTower, camera, zoom) {
   if (!selectedTower) {
     ui.inspectorButtons = null; // Clear buttons when no tower is selected
     return;
   }
   const t = selectedTower;
-  const s = t.spec();
+  const s = t.spec(); // This gets the tower's configuration from config.js
 
   const screenX = (t.center.x - camera.x) * zoom;
   const screenY = (t.center.y - camera.y) * zoom;
@@ -225,10 +228,11 @@ export function drawInspector(selectedTower, camera, zoom) {
     x: clamp(screenX - 90, 12, W - 192),
     y: clamp(screenY - 120, 12, H - 220),
     w: 180,
-    h: 130, // Increased height for buttons
+    h: 130,
   };
 
   // Store panel and buttons info for click detection
+  // We will add the 'upgrade' button later, only if it's not max level
   ui.inspectorButtons = { panel };
 
   roundRect(
@@ -242,9 +246,13 @@ export function drawInspector(selectedTower, camera, zoom) {
     "#2c527f"
   );
 
-  ctx.fillStyle = "#bfe7ff";
+  // --- NEW: Check if tower is at max level to display "Lv.MAX" ---
+  const isMaxLevel = t.level >= s.maxLevel;
+  const levelText = isMaxLevel ? "Lv.MAX" : `Lv.${t.level}`;
+
+  ctx.fillStyle = isMaxLevel ? "#ffd700" : "#bfe7ff"; // Gold color for MAX level text
   ctx.font = "700 16px Inter";
-  ctx.fillText(`${s.name} Lv.${t.level}`, panel.x + 14, panel.y + 28);
+  ctx.fillText(`${s.name} ${levelText}`, panel.x + 14, panel.y + 28);
 
   ctx.font = "500 13px Inter";
   ctx.fillStyle = "#aaccff";
@@ -256,51 +264,89 @@ export function drawInspector(selectedTower, camera, zoom) {
   const buttonH = 32;
   const buttonW = (panel.w - 30) / 2;
 
-  // --- Upgrade Button ---
-  if (typeof t.upgradeCost === "function") {
-    const upgradeCost = t.upgradeCost();
-    const canAfford = state.money >= upgradeCost;
+  // --- NEW LOGIC: Show either the Upgrade Button OR "MAX" text ---
+  if (!isMaxLevel) {
+    // --- A. Draw the clickable Upgrade Button ---
+    if (typeof t.upgradeCost === "function") {
+      const upgradeCost = t.upgradeCost();
+      const canAfford = state.money >= upgradeCost;
+      const upgradeButton = {
+        x: panel.x + 10,
+        y: buttonY,
+        w: buttonW,
+        h: buttonH,
+      };
 
-    const upgradeButton = {
+      // Make the button clickable by adding it to the inspectorButtons object
+      ui.inspectorButtons.upgrade = upgradeButton;
+
+      roundRect(
+        upgradeButton.x,
+        upgradeButton.y,
+        upgradeButton.w,
+        upgradeButton.h,
+        6,
+        canAfford ? "rgba(40, 80, 130, 0.8)" : "rgba(50, 50, 60, 0.7)",
+        true,
+        canAfford ? "#3d6fb6" : "#555566"
+      );
+
+      ctx.fillStyle = canAfford ? "#bfe7ff" : "#888899";
+      ctx.textAlign = "center";
+
+      // Draw UP icon
+      ctx.beginPath();
+      ctx.moveTo(upgradeButton.x + upgradeButton.w / 2, upgradeButton.y + 8);
+      ctx.lineTo(
+        upgradeButton.x + upgradeButton.w / 2 - 5,
+        upgradeButton.y + 14
+      );
+      ctx.lineTo(
+        upgradeButton.x + upgradeButton.w / 2 + 5,
+        upgradeButton.y + 14
+      );
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.font = "600 12px Inter";
+      ctx.fillText(
+        `$${formatMoney(upgradeCost)}`,
+        upgradeButton.x + upgradeButton.w / 2,
+        upgradeButton.y + 26
+      );
+      ctx.textAlign = "start";
+    }
+  } else {
+    // --- B. Draw a non-clickable "MAX" display ---
+    const upgradeButtonArea = {
       x: panel.x + 10,
       y: buttonY,
       w: buttonW,
       h: buttonH,
     };
-    ui.inspectorButtons.upgrade = upgradeButton;
-
     roundRect(
-      upgradeButton.x,
-      upgradeButton.y,
-      upgradeButton.w,
-      upgradeButton.h,
+      upgradeButtonArea.x,
+      upgradeButtonArea.y,
+      upgradeButtonArea.w,
+      upgradeButtonArea.h,
       6,
-      canAfford ? "rgba(40, 80, 130, 0.8)" : "rgba(50, 50, 60, 0.7)",
+      "rgba(20, 30, 50, 0.7)",
       true,
-      canAfford ? "#3d6fb6" : "#555566"
+      "#1c2541"
     );
-
-    ctx.fillStyle = canAfford ? "#bfe7ff" : "#888899";
+    ctx.fillStyle = "#5c7bfa";
+    ctx.font = "700 13px Inter";
     ctx.textAlign = "center";
-
-    // Draw UP icon
-    ctx.beginPath();
-    ctx.moveTo(upgradeButton.x + upgradeButton.w / 2, upgradeButton.y + 8);
-    ctx.lineTo(upgradeButton.x + upgradeButton.w / 2 - 5, upgradeButton.y + 14);
-    ctx.lineTo(upgradeButton.x + upgradeButton.w / 2 + 5, upgradeButton.y + 14);
-    ctx.closePath();
-    ctx.fill();
-
-    ctx.font = "600 12px Inter";
     ctx.fillText(
-      `$${formatMoney(upgradeCost)}`,
-      upgradeButton.x + upgradeButton.w / 2,
-      upgradeButton.y + 26
+      "MAX",
+      upgradeButtonArea.x + upgradeButtonArea.w / 2,
+      upgradeButtonArea.y + 22
     );
-    ctx.textAlign = "start"; // Reset alignment
+    ctx.textAlign = "start";
+    // We do NOT add `ui.inspectorButtons.upgrade` here, so it can't be clicked.
   }
 
-  // --- Sell Button ---
+  // --- Sell Button (This part is unchanged) ---
   if (typeof t.sellValue === "function") {
     const sellValue = Math.round(t.sellValue());
     const sellButton = {
@@ -335,7 +381,7 @@ export function drawInspector(selectedTower, camera, zoom) {
       sellButton.x + sellButton.w / 2,
       sellButton.y + 28
     );
-    ctx.textAlign = "start"; // Reset alignment
+    ctx.textAlign = "start";
   }
 }
 

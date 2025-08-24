@@ -36,6 +36,7 @@ export const TOWER_TYPES = {
     dmg: 12,
     bulletSpeed: 340,
     color: "#6cf",
+    maxLevel: 10,
     class: GunTower,
   },
   cannon: {
@@ -47,6 +48,7 @@ export const TOWER_TYPES = {
     splash: 60,
     bulletSpeed: 260,
     color: "#f6c66a",
+    maxLevel: 10,
     class: CannonTower,
   },
   doubleCanon: {
@@ -58,6 +60,7 @@ export const TOWER_TYPES = {
     splash: 55,
     bulletSpeed: 240,
     color: "#f00",
+    maxLevel: 3,
     class: DoubleCannonTower,
   },
   laser: {
@@ -68,6 +71,7 @@ export const TOWER_TYPES = {
     dmg: 5,
     beam: true,
     color: "#ff69e0",
+    maxLevel: 3,
     class: LaserTower,
   },
   ice: {
@@ -82,6 +86,7 @@ export const TOWER_TYPES = {
     freezeChance: 0.2,
     bulletSpeed: 300,
     color: "#6cfaff",
+    maxLevel: 3,
     class: IceTower,
   },
   tesla: {
@@ -95,6 +100,7 @@ export const TOWER_TYPES = {
     stunChance: 0.1, // 30% chance to stun
     stunDuration: 1, // seconds
     color: "#9d4edd",
+    maxLevel: 3,
     class: TeslaTower,
   },
   poison: {
@@ -109,6 +115,7 @@ export const TOWER_TYPES = {
     spreadRange: 60, // Range for poison spread
     cloudDuration: 3, // Lingering cloud duration
     color: "#4CAF50",
+    maxLevel: 3,
     class: PoisonTower,
   },
   missile: {
@@ -122,6 +129,7 @@ export const TOWER_TYPES = {
     homingStrength: 0.1, // How strongly missiles home in
     retarget: true, // Can retarget if original target dies
     color: "#FF5722",
+    maxLevel: 3,
     class: MissileTower,
   },
   flamethrower: {
@@ -136,6 +144,7 @@ export const TOWER_TYPES = {
     spreadChance: 0.4,
     spreadRange: 40,
     color: "#FF6B35",
+    maxLevel: 3,
     class: FlamethrowerTower,
   },
   sniper: {
@@ -149,6 +158,7 @@ export const TOWER_TYPES = {
     critChance: 0.25,
     critMultiplier: 2.5,
     color: "#2b4ff2",
+    maxLevel: 3,
     size: { align: "TBLR", occupy: 2 },
     class: SniperTower,
   },
@@ -163,6 +173,7 @@ export const TOWER_TYPES = {
     arcHeight: 80,
     minRange: 60,
     color: "#8d6e63",
+    maxLevel: 3,
     size: { align: "TBLR", occupy: 2 },
     class: ArtilleryTower,
   },
@@ -176,6 +187,7 @@ export const TOWER_TYPES = {
     critChance: 0.1,
     critMultiplier: 1.5,
     color: "#8bc34a",
+    maxLevel: 3,
     class: ArcherTower,
   },
   lightning: {
@@ -189,6 +201,7 @@ export const TOWER_TYPES = {
     stunChance: 0.2,
     stunDuration: 1.2,
     color: "#00ffff",
+    maxLevel: 3,
     size: { align: "T", occupy: 2 },
     class: LightningTower,
   },
@@ -203,6 +216,7 @@ export const TOWER_TYPES = {
     chainCount: 3,
     chainRange: 90,
     color: "#800080",
+    maxLevel: 3,
     size: { align: "T", occupy: 2 },
     class: ShadowTower,
   },
@@ -215,6 +229,7 @@ export const TOWER_TYPES = {
     chainCount: 2,
     chainRange: 80,
     color: "#7f00ff",
+    maxLevel: 3,
     size: { align: "T", occupy: 2 },
     class: WizardTower,
   },
@@ -227,6 +242,7 @@ export const TOWER_TYPES = {
     slowAmount: 0.5, // slows enemies by 50% for a short duration
     slowDuration: 1.5, // seconds
     color: "#00bfff",
+    maxLevel: 3,
     size: { align: "T", occupy: 2 },
     class: WindTower,
   },
@@ -238,6 +254,7 @@ export const TOWER_TYPES = {
     dmg: 80, // direct damage
     splash: 60, // area of effect radius
     color: "#ff3300",
+    maxLevel: 3,
     size: { align: "T", occupy: 2 },
     class: VolcanoTower,
   },
@@ -248,6 +265,7 @@ export const TOWER_TYPES = {
     fireRate: 5, // bullets per second
     dmg: 15, // per bullet
     color: "#2288ff",
+    maxLevel: 3,
     class: CarM249Tower, // reference your tower class
   },
   smallTank: {
@@ -259,6 +277,7 @@ export const TOWER_TYPES = {
     splash: 40,
     bulletSpeed: 380,
     color: "#556b2f",
+    maxLevel: 3,
     size: { align: "LR", occupy: 2 },
     class: SmallTank,
   },
@@ -271,6 +290,7 @@ export const TOWER_TYPES = {
     splash: 60,
     bulletSpeed: 300,
     color: "#8b4513",
+    maxLevel: 3,
     size: { align: "TBLR", occupy: 2 },
     class: MediumTank,
   },
@@ -287,6 +307,7 @@ export const TOWER_TYPES = {
     topDmg: 30, // damage per top-gun bullet
     topBulletSpeed: 720, // speed of top-gun bullets
     size: { align: "TBLR", occupy: 2 },
+    maxLevel: 3,
     class: BigTank,
   },
   behemothTank: {
@@ -300,6 +321,7 @@ export const TOWER_TYPES = {
     color: "#a8e0ff", // A cool, high-tech blue for the shop icon
     topFireRate: 15, // Upgraded rapid-fire top gun
     topDmg: 40,
+    maxLevel: 3,
     topBulletSpeed: 800,
     // Your updated occupation.js file will handle this correctly.
     size: { align: "TBLR", occupy: 3 },
@@ -315,6 +337,7 @@ export const TOWER_TYPES = {
     color: "#ffdd99", // A sandy, military color for the shop
     // The helipad itself is a standard 1x1 tower
     size: { align: "TBLR", occupy: 1 },
+    maxLevel: 3,
     class: HelicopterTower,
   },
   blackHawk: {
@@ -326,6 +349,7 @@ export const TOWER_TYPES = {
     bulletSpeed: 800,
     color: "#2c3e50",
     size: { align: "TBLR", occupy: 1 },
+    maxLevel: 3,
     class: BlackHawkTower,
   },
   jet: {
@@ -336,6 +360,7 @@ export const TOWER_TYPES = {
     dmg: 1000, // High damage with area-of-effect
     bulletSpeed: 500, // Missile travel speed
     color: "#34495e",
+    maxLevel: 3,
     // The jet does not occupy a grid cell as it's an off-map support unit.
     // How you handle placement is up to your UI logic.
     // You might call it from a special support menu instead of placing it.
@@ -351,6 +376,7 @@ export const TOWER_TYPES = {
     dmg: 1000, // Damage per bomb in the carpet
     bulletSpeed: 200, // The flight speed of the bomber itself
     color: "#495057",
+    maxLevel: 3,
     size: { align: "TBLR", occupy: 0 }, // Another off-map support call-in
     class: B52SpiritTower,
   },

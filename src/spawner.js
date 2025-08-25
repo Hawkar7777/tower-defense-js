@@ -23,6 +23,7 @@ import { warlock } from "./boss/warlock.js";
 import { Juggernaut } from "./boss/Juggernaut.js";
 import { Basilisk } from "./boss/Basilisk.js";
 import { Marauder } from "./boss/Marauder.js";
+import { Scorcher } from "./boss/Scorcher.js";
 
 let spawnTimer = 0;
 
@@ -95,6 +96,9 @@ export function startNextWave() {
         break;
       case "Juggernaut":
         bossInstance = new Juggernaut();
+        break;
+      case "Scorcher":
+        bossInstance = new Scorcher();
         break;
       case "Basilisk": {
         const difficultyMult = 1 + (state.wave - 1) * 0.15;

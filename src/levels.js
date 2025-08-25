@@ -16,7 +16,7 @@ export const levels = [
       { x: MAP_W, y: MAP_H * 0.75 },
     ],
     waves: [
-      { boss: "Marauder" }, // Wave 10
+      { boss: "Scorcher" }, // Wave 10
       { count: 10, types: { disruptor: 0.5, hive: 0.5 } },
 
       { count: 10, types: { basic: 1.0 } }, // Wave 1: Only basic enemies

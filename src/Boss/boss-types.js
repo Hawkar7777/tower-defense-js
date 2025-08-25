@@ -79,5 +79,21 @@ export const BOSS_TYPES = {
     attackDamage: 15, // Low damage per bullet...
     attackRate: 5, // ...but a very high rate of fire
   },
+  Scorcher: {
+    name: "Scorcher",
+    baseHp: 10000, // Heavier armor
+    baseSpeed: 22, // Very slow and deliberate
+    baseReward: 800,
+    radius: 30, // It's a large, heavy chassis
+    color: "#4b5320", // Olive drab green
+    glowColor: "#ff6600", // Missile engine glow
+    detailColor: "#2e3518", // Darker military green
+    livesPenalty: 25,
+    // --- Scorcher's Unique Stats ---
+    attackRange: 350, // Long range missiles
+    attackDamage: 120, // High explosive damage
+    attackRate: 0.3, // Fires one missile every ~3 seconds
+    aoeRadius: 80, // 80px explosion radius
+  },
   // To add a new boss, just define its properties here.
 };

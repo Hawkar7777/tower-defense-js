@@ -7,7 +7,7 @@ export const levels = [
   {
     level: 1,
     map: { width: 50, height: 25 },
-    startMoney: 1000,
+    startMoney: 4000,
     startLives: 50, // Increased lives to be more forgiving
     path: (TILE, T_HALF, MAP_W, MAP_H) => [
       { x: 0, y: TILE * 5 + T_HALF },
@@ -16,9 +16,9 @@ export const levels = [
       { x: MAP_W, y: MAP_H * 0.75 },
     ],
     waves: [
-      { count: 10, types: { sapper: 0.5, hive: 0.5 } },
+      { boss: "Marauder" }, // Wave 10
+      { count: 10, types: { disruptor: 0.5, hive: 0.5 } },
 
-      { boss: "Goliath" }, // Wave 10
       { count: 10, types: { basic: 1.0 } }, // Wave 1: Only basic enemies
       { count: 12, types: { basic: 1.0 } }, // Wave 2: A few more basics
       { count: 15, types: { basic: 1.0 } }, // Wave 3

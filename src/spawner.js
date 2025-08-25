@@ -22,6 +22,7 @@ import { phantom } from "./boss/phantom.js";
 import { warlock } from "./boss/warlock.js";
 import { Juggernaut } from "./boss/Juggernaut.js";
 import { Basilisk } from "./boss/Basilisk.js";
+import { Marauder } from "./boss/Marauder.js";
 
 let spawnTimer = 0;
 
@@ -53,6 +54,7 @@ function createEnemy(type, tier) {
   if (spec.isDisruptor) {
     return new Disruptor(tier);
   }
+
   return new BaseEnemy(type, tier);
 }
 
@@ -97,6 +99,11 @@ export function startNextWave() {
       case "Basilisk": {
         const difficultyMult = 1 + (state.wave - 1) * 0.15;
         bossInstance = new Basilisk(difficultyMult);
+        break;
+      }
+
+      case "Marauder": {
+        bossInstance = new Marauder(); // Constructor handles its own difficulty scaling
         break;
       }
       default:

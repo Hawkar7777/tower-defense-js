@@ -64,5 +64,20 @@ export const BOSS_TYPES = {
     auraRange: 180, // The radius of its slowing aura
     slowFactor: 1,
   },
+  Marauder: {
+    name: "Marauder",
+    baseHp: 8500, // Tough, but not a full tank
+    baseSpeed: 50, // Very fast to feel like a vehicle
+    baseReward: 680,
+    radius: 26, // A bit wider than it is tall
+    color: "#7d5c3c", // Dusty, desert-camo brown
+    glowColor: "#ff8c00", // Headlight/engine orange glow
+    detailColor: "#333333", // Dark metal for gun and tires
+    livesPenalty: 20,
+    // --- Marauder's Unique Stats (like Juggernaut) ---
+    attackRange: 250, // Range of its machine gun
+    attackDamage: 15, // Low damage per bullet...
+    attackRate: 5, // ...but a very high rate of fire
+  },
   // To add a new boss, just define its properties here.
 };

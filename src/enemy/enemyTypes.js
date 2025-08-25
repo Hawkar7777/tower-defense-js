@@ -55,4 +55,18 @@ export const ENEMY_TYPES = {
     attackRate: 0.8,
     isAttacker: true,
   },
+  wraith: {
+    name: "Wraith",
+    baseHp: 150, // Moderately tanky so it can support for a while
+    baseSpeed: 38, // Slow, as its role is to support, not rush
+    baseReward: 22, // High reward for a high-priority target
+    radius: 14,
+    color: "#a0e0e0", // Ghostly teal
+    glowColor: "#40ffff", // Bright cyan glow
+    detailColor: "#ffffff", // White details
+    isSupport: true, // A flag to identify its role
+    shieldRange: 120, // How far it can project its shield
+    shieldHp: 100, // The health of the shield it provides
+    shieldCooldown: 5, // Time in seconds between shield casts
+  },
 };

@@ -1,17 +1,41 @@
 import { enemies, state } from "./state.js";
-import { createEnemy } from "./enemy.js";
 import { pulse } from "./utils.js";
+import { ENEMY_TYPES } from "./enemy/enemyTypes.js";
 
-// --- Imports for existing, working bosses (UNCHANGED) ---
+// --- Enemy Imports ---
+import { BaseEnemy } from "./enemy/BaseEnemy.js";
+import { Sapper } from "./enemy/Sapper.js"; // Assuming Sapper.js exists
+import { Wraith } from "./enemy/Wraith.js"; // The new enemy class
+
+// --- Boss Imports ---
 import { goliath } from "./boss/goliath.js";
 import { phantom } from "./boss/phantom.js";
 import { warlock } from "./boss/warlock.js";
 import { Juggernaut } from "./boss/Juggernaut.js";
-
-// --- CHANGE 1: Add the import for the new Basilisk class ---
 import { Basilisk } from "./boss/Basilisk.js";
 
 let spawnTimer = 0;
+
+// --- NEW: Factory function to create the correct enemy object ---
+// This function reads the enemy config and decides which class to use.
+function createEnemy(type, tier) {
+  const spec = ENEMY_TYPES[type];
+  if (!spec) {
+    console.error(`Unknown enemy type: ${type}. Spawning a basic enemy.`);
+    return new BaseEnemy("basic", tier);
+  }
+
+  // Check for special flags in the config
+  if (spec.isSupport) {
+    return new Wraith(tier);
+  }
+  if (spec.isAttacker) {
+    return new Sapper(tier);
+  }
+
+  // If no special flags, create a standard BaseEnemy
+  return new BaseEnemy(type, tier);
+}
 
 export function startNextWave() {
   const levelConfig = state.currentLevelConfig;
@@ -23,6 +47,7 @@ export function startNextWave() {
   state.wave++;
   const waveConfig = levelConfig.waves[state.wave - 1];
 
+  // Logic for spawning regular enemies (unchanged)
   if (waveConfig.types && waveConfig.count) {
     const enemyTypes = Object.keys(waveConfig.types);
     for (let i = 0; i < waveConfig.count; i++) {
@@ -42,10 +67,10 @@ export function startNextWave() {
     }
   }
 
+  // Logic for spawning bosses (unchanged)
   if (waveConfig.boss) {
     let bossInstance;
     switch (waveConfig.boss) {
-      // --- These cases are your original, working code (UNCHANGED) ---
       case "Goliath":
         bossInstance = new goliath();
         break;
@@ -58,20 +83,14 @@ export function startNextWave() {
       case "Juggernaut":
         bossInstance = new Juggernaut();
         break;
-
-      // --- CHANGE 2: Add the new case specifically for the Basilisk ---
       case "Basilisk": {
-        // The Basilisk class needs the difficulty calculated and passed to it.
-        // We do this only for the Basilisk.
         const difficultyMult = 1 + (state.wave - 1) * 0.15;
         bossInstance = new Basilisk(difficultyMult);
         break;
       }
-
       default:
         console.error("Unknown boss type in levels.js:", waveConfig.boss);
     }
-
     if (bossInstance) {
       enemies.push(bossInstance);
     }
@@ -82,23 +101,22 @@ export function startNextWave() {
 }
 
 export function spawner(dt) {
-  if (state.toSpawn.length === 0) {
-    if (
-      enemies.length === 0 &&
-      state.wave < state.currentLevelConfig.waves.length
-    ) {
-      startNextWave();
-    }
+  if (
+    state.toSpawn.length === 0 &&
+    enemies.length === 0 &&
+    state.wave < state.currentLevelConfig.waves.length
+  ) {
+    startNextWave();
     return;
   }
 
   spawnTimer -= dt;
-  if (spawnTimer <= 0) {
+  if (spawnTimer <= 0 && state.toSpawn.length > 0) {
     const nextEnemy = state.toSpawn.shift();
     if (nextEnemy) {
+      // Use the factory function to create the enemy
       enemies.push(createEnemy(nextEnemy.type, nextEnemy.tier));
     }
-
     spawnTimer = Math.max(0.25, 0.9 - state.wave * 0.03);
   }
 }

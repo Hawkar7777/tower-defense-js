@@ -14,6 +14,7 @@ import { Shifter } from "./enemy/Shifter.js";
 import { Specter } from "./enemy/Specter.js";
 import { Hive } from "./enemy/Hive.js";
 import { Collector } from "./enemy/Collector.js";
+import { Disruptor } from "./enemy/Disruptor.js";
 
 // --- Boss Imports ---
 import { goliath } from "./boss/goliath.js";
@@ -48,6 +49,9 @@ function createEnemy(type, tier) {
   }
   if (spec.isCollector) {
     return new Collector(tier);
+  }
+  if (spec.isDisruptor) {
+    return new Disruptor(tier);
   }
   return new BaseEnemy(type, tier);
 }

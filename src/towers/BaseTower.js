@@ -19,9 +19,12 @@ export class BaseTower {
     this.hp = baseSpec.hp;
     this.maxHp = baseSpec.hp;
 
-    // --- FIX 1: Initialize the slowMultiplier property ---
-    // Every tower will now have this property, defaulting to normal speed (1).
+    // Property for Basilisk's slowing aura
     this.slowMultiplier = 1;
+
+    // --- NEW: Property for Disruptor's miss aura ---
+    // This will be modified by the Disruptor enemy.
+    this.missChance = 0;
 
     this.isHexed = false;
     this.hexTimer = 0;
@@ -112,15 +115,28 @@ export class BaseTower {
     }
 
     if (this.cool <= 0) {
-      // --- FIX 2: Use the slowMultiplier to adjust the fire rate ---
-      // The cooldown is now divided by the multiplier. If the multiplier is 0.5 (a 50% slow),
-      // the cooldown time will double, effectively halving the tower's attack speed.
       this.cool = 1 / (s.fireRate * this.slowMultiplier);
       this.fireProjectile(c, best, s);
     }
   }
 
+  /**
+   * Fires a projectile at a target, now with a chance to miss.
+   * @param {{x: number, y: number}} center - The starting position of the projectile.
+   * @param {BaseEnemy} target - The enemy to fire at.
+   * @param {object} spec - The tower's current stats.
+   */
   fireProjectile(center, target, spec) {
+    // --- NEW: Check for the miss chance from the Disruptor's aura ---
+    if (this.missChance > 0 && Math.random() < this.missChance) {
+      // The shot misses!
+      // Spawn a red "fizzle" effect to give the player visual feedback.
+      spawnMuzzle(center.x, center.y, this.rot, "#ff5555");
+      // Exit the function early. No projectile is created.
+      return;
+    }
+
+    // If the check passes, fire the projectile normally.
     projectiles.push(new Bullet(center.x, center.y, target, spec));
     spawnMuzzle(center.x, center.y, this.rot, spec.color);
   }
@@ -139,9 +155,7 @@ export class BaseTower {
     ctx.translate(x, y);
     ctx.rotate(this.rot);
     ctx.fillStyle = s.color;
-
     roundRect(-8, -8, 16, 16, 4, s.color, true);
-
     ctx.fillStyle = "#fff";
     ctx.fillRect(0, -3, 14, 6);
     ctx.restore();

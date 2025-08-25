@@ -169,4 +169,18 @@ export const ENEMY_TYPES = {
     // For every 10 points of damage taken, it collects 1 coin.
     moneyPerDamage: 0.1,
   },
+  disruptor: {
+    name: "Disruptor",
+    baseHp: 250, // Healthy enough to project its field for a while
+    baseSpeed: 40, // Slow, deliberate speed
+    baseReward: 35, // Very high reward for a high-priority support unit
+    radius: 16, // For collision
+    color: "#4a4e69", // Dark, muted industrial blue/grey
+    glowColor: "#fca311", // Bright, energetic orange for contrast
+    detailColor: "#9a8c98", // Lighter grey for pylons
+    isDisruptor: true, // Special flag for the spawner
+    // --- Unique Disruptor Properties ---
+    disruptionAuraRange: 150, // A large area of effect
+    missChance: 0.75, // Towers in the aura have a 75% chance to miss
+  },
 };

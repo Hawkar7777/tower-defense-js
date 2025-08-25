@@ -1,5 +1,3 @@
-// src/enemy/BaseEnemy.js
-
 import { ctx } from "../core.js";
 import { clamp, rand } from "../utils.js";
 import { pointAt, totalLen } from "../path.js";
@@ -29,7 +27,7 @@ export class BaseEnemy {
     this.dead = false;
     this.animationOffset = rand(Math.PI * 2);
     this.tier = tier;
-    this.shield = null; // Property to hold shield data
+    this.shield = null;
 
     // Status effects
     this.slowEffect = null;
@@ -54,11 +52,9 @@ export class BaseEnemy {
     return pointAt(this.t);
   }
 
-  // --- CORRECTED: Simple, independent movement for each enemy ---
   update(dt) {
     if (this.dead) return;
 
-    // Each enemy moves based on its own speed. No more leader-follower.
     this.t += (this.speed * dt) / totalLen;
     this.animationOffset += dt * 3;
 
@@ -66,13 +62,21 @@ export class BaseEnemy {
       this.dead = true;
       state.lives = Math.max(0, state.lives - 1);
       spawnExplosion(this.pos.x, this.pos.y, 20, "#f44");
+      // Call cleanup to remove any lingering effects (like auras) if the enemy leaks.
+      this.cleanup();
     }
 
-    // Status effect logic... (unchanged)
+    // You can add your status effect timer logic back in here if needed
   }
 
+  /**
+   * Applies damage to the enemy and handles death, including calling cleanup and getReward.
+   * @param {number} d - The amount of damage to apply.
+   */
   damage(d) {
     if (this.dead) return;
+
+    // Damage shield first if it exists
     if (this.shield) {
       this.shield.hp -= d;
       if (this.shield.hp <= 0) {
@@ -83,12 +87,36 @@ export class BaseEnemy {
       }
       return;
     }
+
+    // Apply damage to health
     this.hp -= d;
+
+    // Check for death
     if (this.hp <= 0) {
       this.dead = true;
-      state.money += this.reward;
+      // CRITICAL FIX 1: Call getReward() to get the correct money amount.
+      state.money += this.getReward();
       spawnDeath(this.pos);
+      // CRITICAL FIX 2: Call cleanup() immediately on death.
+      this.cleanup();
     }
+  }
+
+  /**
+   * Returns the amount of money this enemy gives on death.
+   * This method is designed to be overridden by special enemies (e.g., Collector).
+   * @returns {number} The reward amount.
+   */
+  getReward() {
+    return this.reward;
+  }
+
+  /**
+   * Cleans up any lingering effects when the enemy is removed.
+   * This is designed to be overridden by special enemies (e.g., Disruptor).
+   */
+  cleanup() {
+    // Base enemies have nothing to clean up, but the method must exist.
   }
 
   draw() {
@@ -132,7 +160,9 @@ export class BaseEnemy {
     ctx.stroke();
   }
 
-  drawStatusEffects() {}
+  drawStatusEffects() {
+    // Placeholder for your status effect drawing logic
+  }
 
   drawShield() {
     if (!this.shield) return;

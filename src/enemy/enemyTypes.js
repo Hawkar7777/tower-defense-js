@@ -99,4 +99,19 @@ export const ENEMY_TYPES = {
     drainDps: 15, // Drains 15 HP per second from the tower
     healMultiplier: 1.5, // Heals itself for 150% of the damage it deals
   },
+  shifter: {
+    name: "Shifter",
+    baseHp: 130, // Fragile, encouraging players to focus-fire it
+    baseSpeed: 55, // Average speed when not shifting
+    baseReward: 28,
+    radius: 13, // For collision, not shape
+    color: "#d04ff0", // Energetic magenta
+    glowColor: "#40f0ff", // Unstable cyan glow
+    detailColor: "#ffffff", // Crystalline white
+    isShifter: true, // Special flag for the spawner
+    // --- Unique Shifter Properties ---
+    shiftCooldown: 6.0, // Time in seconds between shifts
+    shiftChargeTime: 1.5, // Time it stands still before shifting
+    shiftDistance: 0.15, // Teleports 15% of the total path length forward
+  },
 };

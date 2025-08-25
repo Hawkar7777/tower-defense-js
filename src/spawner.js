@@ -10,6 +10,7 @@ import { Sapper } from "./enemy/Sapper.js";
 import { Wraith } from "./enemy/Wraith.js";
 import { Mimic } from "./enemy/Mimic.js";
 import { Leech } from "./enemy/Leech.js";
+import { Shifter } from "./enemy/Shifter.js";
 
 // --- Boss Imports ---
 import { goliath } from "./boss/goliath.js";
@@ -31,6 +32,9 @@ function createEnemy(type, tier) {
   if (spec.isAttacker) return new Sapper(tier);
   if (spec.isLeech) {
     return new Leech(tier);
+  }
+  if (spec.isShifter) {
+    return new Shifter(tier);
   }
   return new BaseEnemy(type, tier);
 }

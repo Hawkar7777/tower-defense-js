@@ -9,6 +9,7 @@ import { BaseEnemy } from "./enemy/BaseEnemy.js";
 import { Sapper } from "./enemy/Sapper.js";
 import { Wraith } from "./enemy/Wraith.js";
 import { Mimic } from "./enemy/Mimic.js";
+import { Leech } from "./enemy/Leech.js";
 
 // --- Boss Imports ---
 import { goliath } from "./boss/goliath.js";
@@ -28,6 +29,9 @@ function createEnemy(type, tier) {
   if (spec.isMimic) return new Mimic(tier);
   if (spec.isSupport) return new Wraith(tier);
   if (spec.isAttacker) return new Sapper(tier);
+  if (spec.isLeech) {
+    return new Leech(tier);
+  }
   return new BaseEnemy(type, tier);
 }
 

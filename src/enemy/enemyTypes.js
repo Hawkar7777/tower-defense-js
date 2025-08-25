@@ -84,4 +84,19 @@ export const ENEMY_TYPES = {
     damageReduction: 0.75, // In disguised form, it ignores 75% of incoming damage
     damageThreshold: 100, // How much post-reduction damage it must take to transform
   },
+  leech: {
+    name: "Leech",
+    baseHp: 180, // Medium health
+    baseSpeed: 42, // Medium-slow speed
+    baseReward: 25, // High reward because it's a high-priority threat
+    radius: 10, // Used for collision, not shape
+    color: "#5c8a5a", // Sickly green body
+    glowColor: "#8e44ad", // Pulsating purple core/glow
+    detailColor: "#3b593a", // Darker green for segments
+    isLeech: true, // Special flag for the spawner
+    // --- Unique Leech Properties ---
+    drainRange: 80, // How close it needs to be to a tower to latch on
+    drainDps: 15, // Drains 15 HP per second from the tower
+    healMultiplier: 1.5, // Heals itself for 150% of the damage it deals
+  },
 };

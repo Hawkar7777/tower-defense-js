@@ -18,6 +18,7 @@ import { phantom } from "./boss/phantom.js";
 import { warlock } from "./boss/warlock.js";
 import { Juggernaut } from "./boss/Juggernaut.js";
 import { Basilisk } from "./boss/Basilisk.js";
+import { Hive } from "./enemy/Hive.js";
 
 let spawnTimer = 0;
 
@@ -35,6 +36,9 @@ function createEnemy(type, tier) {
   }
   if (spec.isShifter) {
     return new Shifter(tier);
+  }
+  if (spec.isHive) {
+    return new Hive(tier);
   }
   return new BaseEnemy(type, tier);
 }

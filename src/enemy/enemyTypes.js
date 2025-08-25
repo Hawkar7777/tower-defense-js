@@ -114,4 +114,31 @@ export const ENEMY_TYPES = {
     shiftChargeTime: 1.5, // Time it stands still before shifting
     shiftDistance: 0.15, // Teleports 15% of the total path length forward
   },
+  hive: {
+    name: "Hive",
+    baseHp: 400, // Very high health, acts like a mini-tank
+    baseSpeed: 30, // Very slow
+    baseReward: 20, // The reward is for killing the main body
+    radius: 18, // A large enemy
+    color: "#8a5d3b", // Chitinous brown
+    glowColor: "#f4a261", // Volatile orange glow from within
+    detailColor: "#573a24", // Darker brown for details
+    isHive: true, // Special flag for the spawner
+    // --- Unique Hive Properties ---
+    burstCount: 8, // Spawns 8 swarmers on death
+    swarmerType: "swarmer", // The key for the enemy type it spawns
+  },
+
+  // --- NEW ENEMY DEFINITION (SPAWNED UNIT) ---
+  swarmer: {
+    name: "Swarmer",
+    baseHp: 10, // Extremely fragile, dies in one hit
+    baseSpeed: 85, // Very fast to create a sudden rush
+    baseReward: 0, // Gives no money to prevent farming
+    radius: 6, // Very small
+    color: "#e76f51", // Orange-red color
+    glowColor: "#f4a261", // Faint orange glow
+    detailColor: "#a04d36",
+    // No special flags needed, it's a basic enemy type
+  },
 };

@@ -29,9 +29,7 @@ export class BaseEnemy {
     this.dead = false;
     this.animationOffset = rand(Math.PI * 2);
     this.tier = tier;
-
-    // --- ADDITION: Add a property to hold shield data ---
-    this.shield = null; // e.g., { hp, maxHp, source }
+    this.shield = null; // Property to hold shield data
 
     // Status effects
     this.slowEffect = null;
@@ -56,9 +54,11 @@ export class BaseEnemy {
     return pointAt(this.t);
   }
 
+  // --- CORRECTED: Simple, independent movement for each enemy ---
   update(dt) {
     if (this.dead) return;
 
+    // Each enemy moves based on its own speed. No more leader-follower.
     this.t += (this.speed * dt) / totalLen;
     this.animationOffset += dt * 3;
 
@@ -68,27 +68,21 @@ export class BaseEnemy {
       spawnExplosion(this.pos.x, this.pos.y, 20, "#f44");
     }
 
-    // Status effect timers... (code remains unchanged)
+    // Status effect logic... (unchanged)
   }
 
-  // --- MODIFICATION: The damage method now accounts for shields ---
   damage(d) {
     if (this.dead) return;
-
-    // If the enemy has a shield, damage the shield first.
     if (this.shield) {
       this.shield.hp -= d;
       if (this.shield.hp <= 0) {
-        // If the shield breaks, notify the caster (the Wraith) that its target is gone.
         if (this.shield.source) {
           this.shield.source.shieldTarget = null;
         }
-        this.shield = null; // Remove the shield
+        this.shield = null;
       }
-      return; // Stop here; no damage is passed to the enemy's HP
+      return;
     }
-
-    // Original damage logic if there is no shield
     this.hp -= d;
     if (this.hp <= 0) {
       this.dead = true;
@@ -97,10 +91,8 @@ export class BaseEnemy {
     }
   }
 
-  // --- REFACTOR: The main draw method now calls smaller, overridable parts ---
   draw() {
     if (this.dead) return;
-
     this.drawStatusEffects();
     this.drawBody();
     this.drawCore();
@@ -108,13 +100,10 @@ export class BaseEnemy {
     this.drawHealthBar();
   }
 
-  // --- NEW: Method for drawing the enemy's main body ---
   drawBody() {
     const { x, y } = this.pos;
     const TAU = Math.PI * 2;
     const { r } = this;
-
-    // Glow effect
     const grd = ctx.createRadialGradient(x, y, 4, x, y, r + 10);
     grd.addColorStop(0, this.glowColor);
     grd.addColorStop(1, "rgba(0,255,255,0.0)");
@@ -122,14 +111,10 @@ export class BaseEnemy {
     ctx.beginPath();
     ctx.arc(x, y, r + 8, 0, TAU);
     ctx.fill();
-
-    // Main body
     ctx.fillStyle = this.color;
     ctx.beginPath();
     ctx.arc(x, y, r, 0, TAU);
     ctx.fill();
-
-    // Spikes
     ctx.strokeStyle = this.detailColor;
     ctx.lineWidth = 2;
     ctx.beginPath();
@@ -147,17 +132,11 @@ export class BaseEnemy {
     ctx.stroke();
   }
 
-  // --- NEW: Method for drawing status effects ---
-  drawStatusEffects() {
-    // Placeholder for your status effect drawing logic (fire, ice, etc.)
-  }
+  drawStatusEffects() {}
 
-  // --- NEW: Method for drawing the shield visual ---
   drawShield() {
     if (!this.shield) return;
     const { x, y } = this.pos;
-
-    // Draw the shield bubble
     const shieldAlpha = 0.3 + (this.shield.hp / this.shield.maxHp) * 0.4;
     ctx.fillStyle = `rgba(64, 255, 255, ${shieldAlpha})`;
     ctx.strokeStyle = "rgba(180, 255, 255, 0.8)";
@@ -166,18 +145,15 @@ export class BaseEnemy {
     ctx.arc(x, y, this.r + 5, 0, Math.PI * 2);
     ctx.fill();
     ctx.stroke();
-
-    // Draw the shield's health bar (below the enemy)
     const barWidth = this.r * 2;
     const barY = y + this.r + 8;
     ctx.fillStyle = "rgba(0, 0, 0, 0.5)";
     ctx.fillRect(x - barWidth / 2, barY, barWidth, 4);
     const shieldPercent = Math.max(0, this.shield.hp / this.shield.maxHp);
-    ctx.fillStyle = "#40ffff"; // Bright cyan for the shield bar
+    ctx.fillStyle = "#40ffff";
     ctx.fillRect(x - barWidth / 2, barY, barWidth * shieldPercent, 4);
   }
 
-  // --- NEW: Method for drawing the health bar ---
   drawHealthBar() {
     const { x, y } = this.pos;
     const { r, maxHp, hp, tier } = this;
@@ -185,7 +161,6 @@ export class BaseEnemy {
       h = 5;
     const p = clamp(hp / maxHp, 0, 1);
     const yOffset = tier > 0 ? -r - 20 : -r - 14;
-
     ctx.fillStyle = "#132";
     ctx.fillRect(x - w / 2, y + yOffset, w, h);
     ctx.fillStyle = p > 0.5 ? "#6f6" : p > 0.25 ? "#fd6" : "#f66";

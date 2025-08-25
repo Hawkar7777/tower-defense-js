@@ -69,4 +69,19 @@ export const ENEMY_TYPES = {
     shieldHp: 100, // The health of the shield it provides
     shieldCooldown: 5, // Time in seconds between shield casts
   },
+  mimic: {
+    name: "Mimic",
+    baseHp: 350, // Very high health to make it a durable threat
+    baseSpeed: 80, // The high speed it has AFTER transforming
+    baseReward: 30,
+    radius: 16, // Used for collision, not shape
+    color: "#ae5a41", // Woody brown for the chest
+    glowColor: "#ff40ff", // The menacing magenta glow of its true form
+    detailColor: "#f0c04f", // Gold trim
+    isMimic: true, // Special flag for the spawner
+    // --- Unique Mimic Properties ---
+    disguisedSpeed: 30, // The very slow speed of its disguise
+    damageReduction: 0.75, // In disguised form, it ignores 75% of incoming damage
+    damageThreshold: 100, // How much post-reduction damage it must take to transform
+  },
 };

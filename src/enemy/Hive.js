@@ -4,6 +4,8 @@ import { BaseEnemy } from "./BaseEnemy.js";
 import { ENEMY_TYPES } from "./enemyTypes.js";
 import { state, enemies } from "../state.js";
 import { ctx } from "../core.js";
+// --- MODIFICATION 1: Import totalLen ---
+import { totalLen } from "../path.js";
 
 export class Hive extends BaseEnemy {
   constructor(tier = 0) {
@@ -14,50 +16,50 @@ export class Hive extends BaseEnemy {
     this.swarmerType = spec.swarmerType;
   }
 
-  // Override the damage method to add the on-death burst effect
   damage(d) {
-    if (this.dead) return;
-
-    // Apply damage directly to HP without calling the parent method yet
-    this.hp -= d;
-
-    // Check if this damage instance is the one that kills the Hive
-    if (this.hp <= 0) {
-      // Trigger the burst BEFORE handling the death of the Hive itself
+    const wasAlive = this.hp > 0;
+    super.damage(d);
+    if (wasAlive && this.dead) {
       this.burst();
-
-      // Now, call the parent's damage method with 0 damage. This will correctly
-      // handle setting this.dead = true, giving money, and spawning death effects
-      // without re-applying damage.
-      super.damage(0);
     }
   }
 
   /**
-   * Spawns a wave of Swarmers at the Hive's current position.
+   * Spawns a wave of Swarmers at the Hive's current position, now with proper spacing.
    */
   burst() {
+    // Get the swarmer's spec to know its radius
+    const swarmerSpec = ENEMY_TYPES[this.swarmerType];
+    if (!swarmerSpec) {
+      console.error(`Swarmer type "${this.swarmerType}" not found in config.`);
+      return;
+    }
+    const swarmerRadius = swarmerSpec.radius;
+    const desiredGap = 8; // A few pixels of space between each swarmer
+
     for (let i = 0; i < this.burstCount; i++) {
-      // We create a new enemy instance directly.
       const swarmer = new BaseEnemy(this.swarmerType, this.tier);
 
-      // --- CRITICAL ---
-      // We set the swarmer's starting position ('t') to the Hive's current position.
-      swarmer.t = this.t;
+      // --- MODIFICATION 2: Calculate a unique position for each swarmer ---
 
-      // Add the new swarmer to the main game's enemy array.
+      // Calculate an offset in pixels behind the Hive's death position.
+      // The first swarmer (i=0) has no offset. The second is one diameter behind, etc.
+      const pixelOffset = i * (swarmerRadius * 2 + desiredGap);
+
+      // Convert this pixel offset into a path percentage ('t' value).
+      const tOffset = pixelOffset / totalLen;
+
+      // Set the swarmer's position. Use Math.max to prevent 't' from going below 0.
+      swarmer.t = Math.max(0, this.t - tOffset);
+
       enemies.push(swarmer);
     }
-    // You could spawn a bursting particle effect here as well.
   }
 
   // A custom draw method for the Hive's unique appearance
   draw() {
     if (this.dead) return;
-
-    this.drawBody(); // Use our custom body
-
-    // Use parent methods for common UI elements
+    this.drawBody();
     this.drawStatusEffects();
     this.drawShield();
     this.drawHealthBar();
@@ -88,13 +90,10 @@ export class Hive extends BaseEnemy {
     }
 
     // --- Draw Body ---
-    // Underbelly
     ctx.fillStyle = this.detailColor;
     ctx.beginPath();
     ctx.ellipse(0, 0, size, size * 0.8, 0, 0, Math.PI * 2);
     ctx.fill();
-
-    // Main Carapace (top shell)
     ctx.fillStyle = this.color;
     ctx.beginPath();
     ctx.ellipse(0, 0, size * 0.9, size * 0.7, 0, 0, Math.PI * 2);
@@ -105,7 +104,6 @@ export class Hive extends BaseEnemy {
     const grd = ctx.createRadialGradient(0, 0, 2, 0, 0, size * 0.6 + pulse);
     grd.addColorStop(0, this.glowColor + "ff");
     grd.addColorStop(1, this.glowColor + "00");
-
     ctx.fillStyle = grd;
     ctx.beginPath();
     ctx.arc(0, 0, size * 0.6 + pulse, 0, Math.PI * 2);

@@ -49,33 +49,36 @@ export class Disruptor extends BaseEnemy {
 
   draw() {
     if (this.dead) return;
-    this.drawAura();
+    // this.drawAura(); // <-- MODIFICATION: This call is removed.
     this.drawBody();
     this.drawStatusEffects();
     this.drawShield();
     this.drawHealthBar();
   }
 
-  // --- SIMPLIFIED: Less complex aura drawing ---
-  drawAura() {
+  // --- MODIFICATION START ---
+  /**
+   * NEW METHOD: Draws a fully opaque aura to a specified canvas context (our buffer).
+   * This allows us to merge all auras before applying transparency.
+   * @param {CanvasRenderingContext2D} bufferCtx The context of the off-screen aura canvas.
+   */
+  drawAuraToBuffer(bufferCtx) {
     const { x, y } = this.pos;
 
-    // Instead of a gradient, we use a single, semi-transparent circle.
-    // This is much faster to render.
-    ctx.globalAlpha = 0.25;
-    ctx.fillStyle = this.glowColor;
-    ctx.beginPath();
-    ctx.arc(x, y, this.disruptionAuraRange, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.globalAlpha = 1.0; // Reset alpha immediately
+    // Draw a solid circle. Transparency will be handled globally later.
+    bufferCtx.fillStyle = this.glowColor;
+    bufferCtx.beginPath();
+    bufferCtx.arc(x, y, this.disruptionAuraRange, 0, Math.PI * 2);
+    bufferCtx.fill();
 
-    // We can add a simple, pulsing ring to show the edge without much performance cost.
-    ctx.strokeStyle = this.glowColor + "88"; // Semi-transparent
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.arc(x, y, this.disruptionAuraRange, 0, Math.PI * 2);
-    ctx.stroke();
+    // We can also add the border here for a nice effect
+    bufferCtx.strokeStyle = this.glowColor;
+    bufferCtx.lineWidth = 2;
+    bufferCtx.stroke();
   }
+
+  // The old drawAura() method is completely removed.
+  // --- MODIFICATION END ---
 
   // --- SIMPLIFIED: Less complex body drawing ---
   drawBody() {
@@ -86,7 +89,6 @@ export class Disruptor extends BaseEnemy {
     ctx.translate(x, y);
 
     // --- Draw floating, rotating Pylons (Simplified) ---
-    // The pylons are still here, but they are simpler shapes.
     const numPylons = 3;
     for (let i = 0; i < numPylons; i++) {
       const angle = this.animationOffset + (i * (Math.PI * 2)) / numPylons;
@@ -94,14 +96,11 @@ export class Disruptor extends BaseEnemy {
       const pylonX = Math.cos(angle) * orbitDist;
       const pylonY = Math.sin(angle) * orbitDist;
 
-      // Draw each pylon as a single, solid rectangle.
-      // This avoids the save/restore/rotate operations which can be slow.
       ctx.fillStyle = this.detailColor;
       ctx.fillRect(pylonX - 4, pylonY - 4, 8, 8);
     }
 
     // --- Draw Central Core ---
-    // The core is now a solid circle with a simple stroke.
     ctx.fillStyle = this.color;
     ctx.beginPath();
     ctx.arc(0, 0, size, 0, Math.PI * 2);
@@ -111,7 +110,6 @@ export class Disruptor extends BaseEnemy {
     ctx.stroke();
 
     // --- Pulsing Center ---
-    // A simple, fast way to show the "active" state.
     const pulse = Math.abs(Math.sin(this.animationOffset * 2)) * (size * 0.4);
     ctx.fillStyle = this.glowColor;
     ctx.beginPath();

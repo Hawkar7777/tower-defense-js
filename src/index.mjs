@@ -51,6 +51,12 @@ const gridCtx = gridCanvas.getContext("2d");
 const pathCanvas = document.createElement("canvas");
 const pathCtx = pathCanvas.getContext("2d");
 
+// --- MODIFICATION START ---
+// Added a new off-screen canvas specifically for disruptor auras
+const auraCanvas = document.createElement("canvas");
+const auraCtx = auraCanvas.getContext("2d");
+// --- MODIFICATION END ---
+
 // --- CONSTANTS ---
 const TOUCH_PAN_SENSITIVITY = 1.5;
 const HOLD_DURATION = 200;
@@ -143,12 +149,6 @@ function precomputePath() {
 /**
  * The main game loop.
  */
-/**
- * The main game loop.
- */
-/**
- * The main game loop.
- */
 function loop(ts) {
   if (!state.running) {
     if (animationFrameId) cancelAnimationFrame(animationFrameId);
@@ -165,10 +165,8 @@ function loop(ts) {
   for (const t of towers) t.update(dt, enemies);
 
   // --- MODIFIED PROJECTILE UPDATE LOGIC ---
-  // This now handles both tower projectiles and enemy projectiles correctly.
   for (const p of projectiles) {
     if (p.isEnemyProjectile || p.isBossProjectile) {
-      // <-- Add check here
       p.update(dt);
     } else {
       p.update(dt, enemies);
@@ -214,6 +212,23 @@ function loop(ts) {
   ctx.drawImage(gridCanvas, 0, 0);
   ctx.drawImage(pathCanvas, 0, 0);
 
+  // --- MODIFICATION START: NEW AURA RENDERING LOGIC ---
+  // 1. Clear the aura buffer for this frame.
+  auraCtx.clearRect(0, 0, auraCanvas.width, auraCanvas.height);
+
+  // 2. Populate the buffer by drawing each Disruptor's opaque aura onto it.
+  for (const e of enemies) {
+    if (e.type === "disruptor" && !e.dead) {
+      e.drawAuraToBuffer(auraCtx);
+    }
+  }
+
+  // 3. Draw the complete, merged aura buffer to the main canvas with a single alpha setting.
+  ctx.globalAlpha = 0.25; // Apply transparency to the entire layer at once
+  ctx.drawImage(auraCanvas, 0, 0);
+  ctx.globalAlpha = 1.0; // Reset alpha for other drawing operations
+  // --- MODIFICATION END ---
+
   // --- Draw dynamic elements (ghosts, ranges, etc.) ---
   drawPlacementOverlay();
   if (ui.heldTower) drawHeldTowerRange(ui.heldTower);
@@ -222,7 +237,6 @@ function loop(ts) {
   const isDraggingNewTowerFromShop =
     mouse.draggingTower || (touch.isHolding && !!ui.selectedShopKey);
 
-  // This logic is restored from your original code to ensure ghosts appear correctly.
   if (
     (isDraggingNewTowerFromShop || (ui.hoveredTile && ui.selectedShopKey)) &&
     pointerY <= canvas.clientHeight - 100
@@ -303,12 +317,15 @@ export function startGame(levelNumber) {
   resize();
   initPath(currentLevelConfig.path);
 
+  // --- MODIFICATION START ---
+  // Resize the new aura canvas to match the full map dimensions
+  auraCanvas.width = MAP_GRID_W * TILE;
+  auraCanvas.height = MAP_GRID_H * TILE;
+  // --- MODIFICATION END ---
+
   // --- OPTIMIZATION: Pre-render static elements for this level ---
   precomputeGrid();
   precomputePath();
-
-  // The spawner will now automatically start the first wave
-  // so we can remove the startNextWave() call from here.
 
   last = performance.now();
   if (animationFrameId) cancelAnimationFrame(animationFrameId);
@@ -389,7 +406,7 @@ function levelComplete() {
   canvas.addEventListener("touchend", reload, { once: true });
 }
 
-// --- INPUT HANDLING (Restored from your original code to preserve all functionality) ---
+// --- INPUT HANDLING (No changes below this line) ---
 function getCanvasPos(clientX, clientY) {
   const rect = canvas.getBoundingClientRect();
   return { x: clientX - rect.left, y: clientY - rect.top };
@@ -420,7 +437,6 @@ function handleInspectorClick(pos) {
   if (!ui.selectedTower || !ui.inspectorButtons) return false;
   const { upgrade, sell } = ui.inspectorButtons;
 
-  // --- UPGRADE BUTTON LOGIC ---
   if (
     upgrade &&
     pos.x >= upgrade.x &&
@@ -428,36 +444,26 @@ function handleInspectorClick(pos) {
     pos.y >= upgrade.y &&
     pos.y <= upgrade.y + upgrade.h
   ) {
-    const spec = ui.selectedTower.spec(); // Get tower's base stats
-
-    // Check if the tower is already at max level
+    const spec = ui.selectedTower.spec();
     if (ui.selectedTower.level >= spec.maxLevel) {
-      pulse("Max Level!", "#f66"); // Give feedback
-      return true; // Stop the function
+      pulse("Max Level!", "#f66");
+      return true;
     }
-
     const cost = ui.selectedTower.upgradeCost();
     if (state.money >= cost) {
       state.money -= cost;
       ui.selectedTower.level++;
-
-      // --- NEW HP UPGRADE LOGIC ---
-      // Increase max HP by 25% and fully heal the tower upon upgrade.
-      // This requires .hp and .maxHp to be initialized in the tower's constructor.
       if (typeof ui.selectedTower.maxHp === "number") {
         ui.selectedTower.maxHp = Math.round(ui.selectedTower.maxHp * 1.25);
-        ui.selectedTower.hp = ui.selectedTower.maxHp; // Heal to the new max HP
+        ui.selectedTower.hp = ui.selectedTower.maxHp;
       }
-      // --- END NEW LOGIC ---
-
       pulse(`Upgrade -$${cost}`);
     } else {
       pulse("Need more $", "#f66");
     }
-    return true; // Indicate the click was handled
+    return true;
   }
 
-  // --- SELL BUTTON LOGIC ---
   if (
     sell &&
     pos.x >= sell.x &&
@@ -467,22 +473,16 @@ function handleInspectorClick(pos) {
   ) {
     const sellValue = Math.round(ui.selectedTower.sellValue());
     state.money += sellValue;
-
-    // Find and remove the tower from the main array
     const towerIndex = towers.findIndex((t) => t === ui.selectedTower);
     if (towerIndex > -1) {
       towers.splice(towerIndex, 1);
     }
-
-    // Deselect the tower and update the grid occupation status
     ui.selectedTower = null;
     updateOccupiedCells();
     pulse(`Sell +$${sellValue}`, "#afb");
-
-    return true; // Indicate the click was handled
+    return true;
   }
-
-  return false; // No inspector button was clicked
+  return false;
 }
 canvas.addEventListener("wheel", (e) => {
   e.preventDefault();
@@ -674,7 +674,6 @@ canvas.addEventListener(
     touch.currentY = pos.y;
 
     if (pos.y > canvas.clientHeight - 100) {
-      // Interaction is in the SHOP area
       touch.action = "scrollingShop";
       const button = getShopButtons(
         canvas.clientWidth,
@@ -701,7 +700,6 @@ canvas.addEventListener(
         }
       }
     } else {
-      // Interaction is on the MAP area
       touch.action = "panning";
       mouse.camStart.x = state.camera.x;
       mouse.camStart.y = state.camera.y;
@@ -808,7 +806,6 @@ canvas.addEventListener(
       ) < 10;
 
     if (wasHolding && ui.selectedShopKey) {
-      // A drag-and-drop from the SHOP ended
       const gx = ui.hoveredTile ? ui.hoveredTile.gx : -1;
       const gy = ui.hoveredTile ? ui.hoveredTile.gy : -1;
       if (touch.currentY < canvas.clientHeight - 100) {
@@ -820,20 +817,16 @@ canvas.addEventListener(
           updateOccupiedCells();
         }
       }
-      ui.selectedShopKey = null; // Deselect from shop after drop
+      ui.selectedShopKey = null;
     } else if (!wasHolding && wasJustATap) {
-      // It was a TAP, not a drag
       if (handleInspectorClick({ x: touch.startX, y: touch.startY })) {
-        // Action was handled by inspector, do nothing else
       } else if (touch.action === "scrollingShop" && touch.potentialSelection) {
-        // Tap in the shop
         ui.selectedShopKey =
           ui.selectedShopKey === touch.potentialSelection
             ? null
             : touch.potentialSelection;
         ui.selectedTower = null;
       } else if (touch.action === "panning") {
-        // Tap on the map
         const worldX = touch.startX / state.zoom + state.camera.x;
         const worldY = touch.startY / state.zoom + state.camera.y;
         const gx = Math.floor(worldX / TILE);
@@ -841,7 +834,6 @@ canvas.addEventListener(
         const clickedTower = findTowerAt(gx, gy);
 
         if (ui.selectedShopKey) {
-          // Place a tower
           const spec = TOWER_TYPES[ui.selectedShopKey];
           if (isPlacementValid(gx, gy, spec)) {
             if (state.money >= spec.cost) {
@@ -855,20 +847,17 @@ canvas.addEventListener(
             }
           }
         } else if (clickedTower) {
-          // Select an existing tower
           ui.selectedTower =
             ui.selectedTower === clickedTower ? null : clickedTower;
         } else {
-          // Deselect everything
           ui.selectedTower = null;
         }
       }
     }
 
-    // Universal Reset Logic
     if (e.touches.length === 0) {
       touch.action = "idle";
-      initialPinchDist = null; // Reset pinch zoom state only when all fingers are up
+      initialPinchDist = null;
     }
     ui.heldTower = null;
     touch.isHolding = false;

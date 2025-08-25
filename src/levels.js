@@ -16,6 +16,8 @@ export const levels = [
       { x: MAP_W, y: MAP_H * 0.75 },
     ],
     waves: [
+      { count: 10, types: { sapper: 0.5, hive: 0.5 } },
+
       { boss: "Goliath" }, // Wave 10
       { count: 10, types: { basic: 1.0 } }, // Wave 1: Only basic enemies
       { count: 12, types: { basic: 1.0 } }, // Wave 2: A few more basics
@@ -176,7 +178,6 @@ export const levels = [
       { x: MAP_W, y: MAP_H * 0.5 },
     ],
     waves: [
-      { count: 10, types: { disruptor: 0.5, collector: 0.5 } },
       { count: 60, types: { mimic: 5.0, elite: 0.5 } },
 
       { count: 60, types: { wraith: 5.0, elite: 0.5 } },

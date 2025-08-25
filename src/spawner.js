@@ -12,6 +12,8 @@ import { Mimic } from "./enemy/Mimic.js";
 import { Leech } from "./enemy/Leech.js";
 import { Shifter } from "./enemy/Shifter.js";
 import { Specter } from "./enemy/Specter.js";
+import { Hive } from "./enemy/Hive.js";
+import { Collector } from "./enemy/Collector.js";
 
 // --- Boss Imports ---
 import { goliath } from "./boss/goliath.js";
@@ -19,7 +21,6 @@ import { phantom } from "./boss/phantom.js";
 import { warlock } from "./boss/warlock.js";
 import { Juggernaut } from "./boss/Juggernaut.js";
 import { Basilisk } from "./boss/Basilisk.js";
-import { Hive } from "./enemy/Hive.js";
 
 let spawnTimer = 0;
 
@@ -44,6 +45,9 @@ function createEnemy(type, tier) {
 
   if (spec.isSpecter) {
     return new Specter(tier);
+  }
+  if (spec.isCollector) {
+    return new Collector(tier);
   }
   return new BaseEnemy(type, tier);
 }

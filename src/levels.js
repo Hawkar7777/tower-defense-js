@@ -165,7 +165,7 @@ export const levels = [
   {
     level: 7,
     map: { width: 40, height: 40 },
-    startMoney: 2800,
+    startMoney: 800,
     startLives: 20,
     path: (TILE, T_HALF, MAP_W, MAP_H) => [
       { x: 0, y: MAP_H * 0.5 },
@@ -176,7 +176,7 @@ export const levels = [
       { x: MAP_W, y: MAP_H * 0.5 },
     ],
     waves: [
-      { count: 1, types: { specter: 1 } },
+      { count: 2, types: { elite: 0.5, collector: 0.5 } },
       { count: 60, types: { mimic: 5.0, elite: 0.5 } },
 
       { count: 60, types: { wraith: 5.0, elite: 0.5 } },

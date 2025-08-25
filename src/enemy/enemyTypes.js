@@ -155,4 +155,18 @@ export const ENEMY_TYPES = {
     corporealDuration: 3.0, // Stays solid (vulnerable) for 3 seconds
     etherealDuration: 2.5, // Stays phased (invulnerable) for 2.5 seconds
   },
+  collector: {
+    name: "Collector",
+    baseHp: 190, // Moderately durable
+    baseSpeed: 48, // A steady, deliberate pace
+    baseReward: 5, // The base reward is very low
+    radius: 15, // For collision
+    color: "#a1887f", // Industrial bronze/brown
+    glowColor: "#ffd700", // The gold/yellow of collected money
+    detailColor: "#5d4037", // Darker metal for legs and details
+    isCollector: true, // Special flag for the spawner
+    // --- Unique Collector Property ---
+    // For every 10 points of damage taken, it collects 1 coin.
+    moneyPerDamage: 0.1,
+  },
 };

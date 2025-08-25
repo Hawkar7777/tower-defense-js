@@ -95,5 +95,47 @@ export const BOSS_TYPES = {
     attackRate: 0.3, // Fires one missile every ~3 seconds
     aoeRadius: 80, // 80px explosion radius
   },
+  Devastator: {
+    name: "Devastator",
+    baseHp: 9500, // Heavily armored Humvee chassis
+    baseSpeed: 35, // Faster than a tank, but not a scout car
+    baseReward: 850,
+    radius: 28, // Hummers are wide
+    color: "#c2b280", // Sandy tan color
+    glowColor: "#ffae42", // Muzzle flash / heat glow
+    detailColor: "#4d4d4d", // Dark grey for trim and weapon
+    livesPenalty: 25,
+    // --- Devastator's Unique Stats ---
+    attackRange: 280,
+    attackDamage: 12, // Low damage per bullet...
+    attackRate: 15, // ...but an insane rate of fire
+    burstDuration: 2, // Fires in a continuous 2-second burst
+    spinUpTime: 0.75, // Takes 0.75s to spin up before firing
+    cooldown: 3.5, // Time between bursts
+  },
+  Reaper: {
+    name: "Reaper",
+    baseHp: 14000, // Very high health, as it's a constant threat
+    baseSpeed: 70, // Patrol speed in pixels per second
+    baseReward: 1000,
+    radius: 45, // It's a large helicopter
+    color: "#4a4e69", // Dark gunmetal grey
+    glowColor: "#ff4d4d", // Cockpit/engine glow
+    detailColor: "#22252e", // Near-black for details
+    livesPenalty: 50, // A huge penalty if it escapes
+    // --- Reaper's Unique Stats ---
+    patrolAltitude: 250, // The Y-coordinate it flies at
+    machineGun: {
+      damage: 10,
+      rate: 8, // Fires 8 bullets per second
+      burstTargets: 2, // Can shoot at 2 towers at once
+      range: 300,
+    },
+    rocketSalvo: {
+      damage: 250,
+      aoeRadius: 90,
+      cooldown: 8, // Fires a rocket every 8 seconds
+    },
+  },
   // To add a new boss, just define its properties here.
 };

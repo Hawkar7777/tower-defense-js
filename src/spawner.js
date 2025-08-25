@@ -24,6 +24,8 @@ import { Juggernaut } from "./boss/Juggernaut.js";
 import { Basilisk } from "./boss/Basilisk.js";
 import { Marauder } from "./boss/Marauder.js";
 import { Scorcher } from "./boss/Scorcher.js";
+import { Devastator } from "./boss/Devastator.js";
+import { Reaper } from "./boss/Reaper.js";
 
 let spawnTimer = 0;
 
@@ -99,6 +101,12 @@ export function startNextWave() {
         break;
       case "Scorcher":
         bossInstance = new Scorcher();
+        break;
+      case "Devastator":
+        bossInstance = new Devastator();
+        break;
+      case "Reaper":
+        bossInstance = new Reaper();
         break;
       case "Basilisk": {
         const difficultyMult = 1 + (state.wave - 1) * 0.15;

@@ -1,10 +1,15 @@
 import { enemies, state } from "./state.js";
-// --- CHANGE 1: Import the factory function instead of the old class ---
 import { createEnemy } from "./enemy.js";
 import { pulse } from "./utils.js";
+
+// --- Imports for existing, working bosses (UNCHANGED) ---
 import { goliath } from "./boss/goliath.js";
 import { phantom } from "./boss/phantom.js";
 import { warlock } from "./boss/warlock.js";
+import { Juggernaut } from "./boss/Juggernaut.js";
+
+// --- CHANGE 1: Add the import for the new Basilisk class ---
+import { Basilisk } from "./boss/Basilisk.js";
 
 let spawnTimer = 0;
 
@@ -40,6 +45,7 @@ export function startNextWave() {
   if (waveConfig.boss) {
     let bossInstance;
     switch (waveConfig.boss) {
+      // --- These cases are your original, working code (UNCHANGED) ---
       case "Goliath":
         bossInstance = new goliath();
         break;
@@ -49,6 +55,19 @@ export function startNextWave() {
       case "Warlock":
         bossInstance = new warlock();
         break;
+      case "Juggernaut":
+        bossInstance = new Juggernaut();
+        break;
+
+      // --- CHANGE 2: Add the new case specifically for the Basilisk ---
+      case "Basilisk": {
+        // The Basilisk class needs the difficulty calculated and passed to it.
+        // We do this only for the Basilisk.
+        const difficultyMult = 1 + (state.wave - 1) * 0.15;
+        bossInstance = new Basilisk(difficultyMult);
+        break;
+      }
+
       default:
         console.error("Unknown boss type in levels.js:", waveConfig.boss);
     }
@@ -77,7 +96,6 @@ export function spawner(dt) {
   if (spawnTimer <= 0) {
     const nextEnemy = state.toSpawn.shift();
     if (nextEnemy) {
-      // --- CHANGE 2: Use the new factory function to create the enemy ---
       enemies.push(createEnemy(nextEnemy.type, nextEnemy.tier));
     }
 

@@ -15,11 +15,13 @@ export class BaseTower {
     this.cool = 0;
     this.rot = 0;
 
-    // --- CHANGE 1: Initialize HP and MaxHP here ---
-    // We get the initial base HP from the config file.
     const baseSpec = TOWER_TYPES[this.key];
     this.hp = baseSpec.hp;
     this.maxHp = baseSpec.hp;
+
+    // --- FIX 1: Initialize the slowMultiplier property ---
+    // Every tower will now have this property, defaulting to normal speed (1).
+    this.slowMultiplier = 1;
 
     this.isHexed = false;
     this.hexTimer = 0;
@@ -27,22 +29,12 @@ export class BaseTower {
 
   spec() {
     const baseSpec = TOWER_TYPES[this.key];
-
-    // Recalculate current max HP based on level
-    // This MUST be done before returning the spec object
-    // We'll use a 25% increase per level as a good baseline
     this.maxHp = baseSpec.hp * (1 + (this.level - 1) * 0.25);
-
     return {
       ...baseSpec,
-
-      // Your existing level-scaling logic is great!
       range: baseSpec.range * (1 + (this.level - 1) * 0.08),
       fireRate: baseSpec.fireRate * (1 + (this.level - 1) * 0.05),
       dmg: baseSpec.dmg * (1 + (this.level - 1) * 0.35),
-
-      // --- CHANGE 2: Also scale HP in the spec ---
-      // This ensures that when we upgrade, the HP value is updated.
       hp: this.maxHp,
     };
   }
@@ -58,8 +50,6 @@ export class BaseTower {
     return this.gy * 40 + 20;
   }
 
-  // --- CHANGE 3: Fixed cost calculation methods ---
-  // These now use the reliable TOWER_TYPES from config.js, fixing the crash.
   get totalCost() {
     const baseCost = TOWER_TYPES[this.key].cost;
     let total = baseCost;
@@ -78,10 +68,9 @@ export class BaseTower {
     return this.totalCost * 0.7;
   }
 
-  // When a tower is upgraded, this method should be called to heal it.
   onUpgrade() {
-    this.spec(); // This recalculates maxHp
-    this.hp = this.maxHp; // Heal to full
+    this.spec();
+    this.hp = this.maxHp;
   }
 
   update(dt, enemiesList) {
@@ -123,7 +112,10 @@ export class BaseTower {
     }
 
     if (this.cool <= 0) {
-      this.cool = 1 / s.fireRate;
+      // --- FIX 2: Use the slowMultiplier to adjust the fire rate ---
+      // The cooldown is now divided by the multiplier. If the multiplier is 0.5 (a 50% slow),
+      // the cooldown time will double, effectively halving the tower's attack speed.
+      this.cool = 1 / (s.fireRate * this.slowMultiplier);
       this.fireProjectile(c, best, s);
     }
   }
@@ -138,7 +130,6 @@ export class BaseTower {
   }
 
   draw() {
-    // ... your entire draw logic remains unchanged ...
     const s = this.spec();
     const { x, y } = this.center;
 

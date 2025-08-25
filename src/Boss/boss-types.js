@@ -35,5 +35,34 @@ export const BOSS_TYPES = {
     detailColor: "#50c878", // Emerald Green for corrupting energy
     livesPenalty: 20,
   },
+  Juggernaut: {
+    name: "Juggernaut",
+    baseHp: 9000, // Very high health
+    baseSpeed: 28, // Slow and steady
+    baseReward: 700,
+    radius: 32, // It's a big one
+    color: "#4a4e69", // Gunmetal grey
+    glowColor: "#fca311", // Fiery orange
+    detailColor: "#9a8c98", // Lighter grey for details
+    livesPenalty: 25,
+    // --- Juggernaut's Unique Stats ---
+    attackRange: 250, // Range of its turret
+    attackDamage: 100, // Damage per shell
+    attackRate: 0.7, // Shells per second
+  },
+  Basilisk: {
+    name: "Basilisk",
+    baseHp: 8000,
+    baseSpeed: 45, // It's quite fast
+    baseReward: 650,
+    radius: 24,
+    color: "#234F1E", // Dark forest green
+    glowColor: "#ADFF2F", // Green-yellow glow
+    detailColor: "#DAA520", // Golden scales/details
+    livesPenalty: 20,
+    // --- Basilisk's Unique Stats ---
+    auraRange: 180, // The radius of its slowing aura
+    slowFactor: 1,
+  },
   // To add a new boss, just define its properties here.
 };

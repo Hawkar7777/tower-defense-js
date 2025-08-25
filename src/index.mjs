@@ -167,11 +167,10 @@ function loop(ts) {
   // --- MODIFIED PROJECTILE UPDATE LOGIC ---
   // This now handles both tower projectiles and enemy projectiles correctly.
   for (const p of projectiles) {
-    if (p.isEnemyProjectile) {
-      // Enemy projectiles (from Sappers) only need delta time.
+    if (p.isEnemyProjectile || p.isBossProjectile) {
+      // <-- Add check here
       p.update(dt);
     } else {
-      // Your original tower projectiles need the enemies list to track targets.
       p.update(dt, enemies);
     }
   }

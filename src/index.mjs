@@ -1,5 +1,3 @@
-// index.mjs
-
 import {
   canvas,
   ctx,
@@ -609,7 +607,12 @@ canvas.addEventListener("mouseup", (e) => {
     const spec = TOWER_TYPES[ui.selectedShopKey];
     if (isPlacementValid(mouse.gx, mouse.gy, spec)) {
       if (state.money >= spec.cost) {
-        towers.push(new spec.class(mouse.gx, mouse.gy, ui.selectedShopKey));
+        // --- MODIFIED TOWER CREATION ---
+        const newTower = new spec.class(mouse.gx, mouse.gy, ui.selectedShopKey);
+        // Set initial level from persistent data
+        newTower.level = window.playerData.towerLevels[ui.selectedShopKey] || 1;
+        towers.push(newTower);
+
         state.money -= spec.cost;
         pulse(`-${spec.cost}`);
         ui.selectedShopKey = null;
@@ -811,7 +814,12 @@ canvas.addEventListener(
       if (touch.currentY < canvas.clientHeight - 100) {
         const spec = TOWER_TYPES[ui.selectedShopKey];
         if (isPlacementValid(gx, gy, spec)) {
-          towers.push(new spec.class(gx, gy, ui.selectedShopKey));
+          // --- MODIFIED TOWER CREATION ---
+          const newTower = new spec.class(gx, gy, ui.selectedShopKey);
+          newTower.level =
+            window.playerData.towerLevels[ui.selectedShopKey] || 1;
+          towers.push(newTower);
+
           state.money -= spec.cost;
           pulse(`-${spec.cost}`);
           updateOccupiedCells();
@@ -820,6 +828,7 @@ canvas.addEventListener(
       ui.selectedShopKey = null;
     } else if (!wasHolding && wasJustATap) {
       if (handleInspectorClick({ x: touch.startX, y: touch.startY })) {
+        // Click was handled by inspector, do nothing else
       } else if (touch.action === "scrollingShop" && touch.potentialSelection) {
         ui.selectedShopKey =
           ui.selectedShopKey === touch.potentialSelection
@@ -837,7 +846,12 @@ canvas.addEventListener(
           const spec = TOWER_TYPES[ui.selectedShopKey];
           if (isPlacementValid(gx, gy, spec)) {
             if (state.money >= spec.cost) {
-              towers.push(new spec.class(gx, gy, ui.selectedShopKey));
+              // --- MODIFIED TOWER CREATION ---
+              const newTower = new spec.class(gx, gy, ui.selectedShopKey);
+              newTower.level =
+                window.playerData.towerLevels[ui.selectedShopKey] || 1;
+              towers.push(newTower);
+
               state.money -= spec.cost;
               pulse(`-${spec.cost}`);
               ui.selectedShopKey = null;

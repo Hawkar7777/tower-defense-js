@@ -92,36 +92,242 @@
         width: 100%;
         height: 100%;
       }
+
+      /* --- MODIFIED SHOP STYLES --- */
+      #shopScreen {
+        display: none;
+        flex-direction: column;
+        width: 100%;
+        height: 100%;
+        padding: 20px;
+
+        /* --- FIX STARTS HERE --- */
+        position: absolute; /* Take it out of the normal document flow */
+        top: 0;
+        left: 0;
+        background-color: #0b0f1a; /* Give it a solid background */
+        z-index: 100; /* Ensure it's on top of other elements like the canvas */
+        /* --- FIX ENDS HERE --- */
+      }
+      #shopHeader {
+        text-align: center;
+        padding-bottom: 20px;
+        border-bottom: 2px solid #2a3a63;
+      }
+      #shopHeader h2 {
+        font-size: 2em;
+        margin-bottom: 10px;
+      }
+      #shopMoneyBalance {
+        font-weight: bold;
+        color: #ffd700;
+      }
+      #towerList {
+        flex-grow: 1;
+        overflow-y: auto;
+        padding: 20px 5px;
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 15px;
+      }
+      .shop-item {
+        background-color: #1c2541;
+        border: 1px solid #3a506b;
+        border-radius: 8px;
+        padding: 15px;
+        text-align: center;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+      }
+      .shop-item h3 {
+        color: #5c7bfa;
+        margin-bottom: 10px;
+      }
+      .shop-item p {
+        margin-bottom: 15px;
+      }
+      .shop-item button {
+        background-color: #4caf50;
+        border: none;
+        color: white;
+        padding: 10px 15px;
+        border-radius: 5px;
+        cursor: pointer;
+        transition: background-color 0.3s;
+      }
+      .shop-item button:hover:not(:disabled) {
+        background-color: #66bb6a;
+      }
+      .shop-item button:disabled {
+        background-color: #444;
+        cursor: not-allowed;
+      }
     </style>
   </head>
   <body>
     <div id="mainMenu">
       <h1>Mini Tower Defense</h1>
       <button id="startButton" class="menu-button">Start</button>
+      <button id="shopButton" class="menu-button">Shop</button>
       <button id="exitButton" class="menu-button">Exit</button>
     </div>
+
     <div id="levelSelection"></div>
+
+    <div id="shopScreen">
+      <div id="shopHeader">
+        <h2>Persistent Upgrades</h2>
+        <p>Shop Money: <span id="shopMoneyBalance">0</span></p>
+      </div>
+      <div id="towerList"></div>
+      <button
+        id="backToMenuButton"
+        class="menu-button"
+        style="margin: 20px auto 0"
+      >
+        Back
+      </button>
+    </div>
+
+    <canvas id="game"></canvas>
   </body>
 
   <script type="module">
     import { startGame } from "./index.mjs";
     import { levels } from "./levels.js";
+    import { TOWER_TYPES } from "./config.js";
 
-    // --- NEW: Global Touch Debugger ---
-    // This will log ANY touch event on the page, telling us what was touched first.
-    window.addEventListener("touchstart", function (event) {}, true); // 'true' makes it fire early, which is good for debugging
+    const playerData = {};
+
+    function loadPlayerData() {
+      const savedData = localStorage.getItem("towerDefensePlayerData");
+      const defaultData = {
+        shopMoney: 500,
+        unlockedTowers: ["gun"],
+        towerLevels: { gun: 1 },
+      };
+
+      Object.assign(
+        playerData,
+        defaultData,
+        savedData ? JSON.parse(savedData) : {}
+      );
+
+      if (TOWER_TYPES) {
+        Object.keys(TOWER_TYPES).forEach((key) => {
+          if (!playerData.towerLevels[key]) {
+            playerData.towerLevels[key] = 0; // 0 means locked
+          }
+        });
+      }
+    }
+
+    function savePlayerData() {
+      localStorage.setItem(
+        "towerDefensePlayerData",
+        JSON.stringify(playerData)
+      );
+    }
+
+    window.playerData = playerData;
 
     const mainMenu = document.getElementById("mainMenu");
     const levelSelection = document.getElementById("levelSelection");
     const startButton = document.getElementById("startButton");
+    const shopButton = document.getElementById("shopButton");
     const exitButton = document.getElementById("exitButton");
+    const shopScreen = document.getElementById("shopScreen");
+    const backToMenuButton = document.getElementById("backToMenuButton");
+    const towerList = document.getElementById("towerList");
+    const shopMoneyBalance = document.getElementById("shopMoneyBalance");
 
-    // Check if the buttons were found
+    function showShopScreen() {
+      mainMenu.style.display = "none";
+      shopScreen.style.display = "flex";
+      renderShop();
+    }
+
+    function hideShopScreen() {
+      shopScreen.style.display = "none";
+      mainMenu.style.display = "flex";
+    }
+
+    function renderShop() {
+      shopMoneyBalance.textContent = playerData.shopMoney;
+      towerList.innerHTML = "";
+
+      for (const key in TOWER_TYPES) {
+        const towerConfig = TOWER_TYPES[key];
+        const isUnlocked = playerData.unlockedTowers.includes(key);
+        const currentLevel = playerData.towerLevels[key] || 0;
+        const maxLevel = towerConfig.persistentMaxLevel;
+
+        const towerDiv = document.createElement("div");
+        towerDiv.className = "shop-item";
+
+        let statusText = isUnlocked
+          ? `Level ${currentLevel} / ${maxLevel}`
+          : "Locked";
+        if (isUnlocked && currentLevel >= maxLevel) {
+          statusText = `Level ${maxLevel} / Max`;
+        }
+
+        let actionButtonHTML = "";
+        if (!isUnlocked) {
+          const canAfford = playerData.shopMoney >= towerConfig.unlockPrice;
+          actionButtonHTML = `<button class="unlock-btn" data-key="${key}" ${
+            !canAfford ? "disabled" : ""
+          }>Unlock ($${towerConfig.unlockPrice})</button>`;
+        } else if (currentLevel < maxLevel) {
+          const upgradeCost = towerConfig.upgradePriceBase * currentLevel;
+          const canAfford = playerData.shopMoney >= upgradeCost;
+          actionButtonHTML = `<button class="upgrade-btn" data-key="${key}" ${
+            !canAfford ? "disabled" : ""
+          }>Upgrade ($${upgradeCost})</button>`;
+        } else {
+          actionButtonHTML = `<button disabled>Max Level</button>`;
+        }
+
+        towerDiv.innerHTML = `
+                <h3>${towerConfig.name}</h3>
+                <p>Status: ${statusText}</p>
+                ${actionButtonHTML}
+            `;
+        towerList.appendChild(towerDiv);
+      }
+    }
+
+    towerList.addEventListener("click", (e) => {
+      const key = e.target.dataset.key;
+      if (!key) return;
+      const towerConfig = TOWER_TYPES[key];
+
+      if (e.target.classList.contains("unlock-btn")) {
+        if (playerData.shopMoney >= towerConfig.unlockPrice) {
+          playerData.shopMoney -= towerConfig.unlockPrice;
+          playerData.unlockedTowers.push(key);
+          playerData.towerLevels[key] = 1;
+          savePlayerData();
+          renderShop();
+        }
+      } else if (e.target.classList.contains("upgrade-btn")) {
+        const currentLevel = playerData.towerLevels[key];
+        const upgradeCost = towerConfig.upgradePriceBase * currentLevel;
+        if (
+          playerData.shopMoney >= upgradeCost &&
+          currentLevel < towerConfig.persistentMaxLevel
+        ) {
+          playerData.shopMoney -= upgradeCost;
+          playerData.towerLevels[key]++;
+          savePlayerData();
+          renderShop();
+        }
+      }
+    });
 
     const showLevelSelection = (e) => {
-      // Prevent other events from firing, like a "click" after a "touch"
       if (e) e.preventDefault();
-
       mainMenu.style.display = "none";
       levelSelection.style.display = "grid";
 
@@ -139,12 +345,7 @@
           levelButton.classList.add("locked");
           levelButton.disabled = true;
         } else {
-          const handleSelect = (event) => {
-            event.preventDefault();
-            startLevel(level.level);
-          };
-          levelButton.addEventListener("click", handleSelect);
-          levelButton.addEventListener("touchstart", handleSelect);
+          levelButton.addEventListener("click", () => startLevel(level.level));
         }
         levelSelection.appendChild(levelButton);
       }
@@ -152,33 +353,20 @@
 
     const startLevel = (levelNumber) => {
       levelSelection.style.display = "none";
-      const gameCanvas = document.querySelector("#game");
+      const gameCanvas = document.getElementById("game");
       if (gameCanvas) {
         gameCanvas.style.display = "block";
+        startGame(levelNumber);
       } else {
-        return;
+        console.error("The game canvas element could not be found!");
       }
-      startGame(levelNumber);
     };
 
-    // --- Event Listeners with Logging ---
-    if (startButton) {
-      startButton.addEventListener("click", (e) => {
-        showLevelSelection(e);
-      });
-      startButton.addEventListener("touchstart", (e) => {
-        showLevelSelection(e);
-      });
-    }
+    startButton.addEventListener("click", showLevelSelection);
+    shopButton.addEventListener("click", showShopScreen);
+    backToMenuButton.addEventListener("click", hideShopScreen);
+    exitButton.addEventListener("click", () => alert("Thanks for playing!"));
 
-    if (exitButton) {
-      const handleExit = (e) => {
-        e.preventDefault();
-
-        alert("Thanks for playing!");
-      };
-      exitButton.addEventListener("click", handleExit);
-      exitButton.addEventListener("touchstart", handleExit);
-    }
+    loadPlayerData();
   </script>
 </html>

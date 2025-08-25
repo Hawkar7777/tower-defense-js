@@ -1,3 +1,13 @@
+// --- MODIFIED ---
+// Find the canvas from the HTML instead of creating a new one.
+export const canvas = document.getElementById("game");
+if (!canvas) {
+  throw new Error(
+    "Fatal Error: Canvas element with id 'game' was not found in the HTML."
+  );
+}
+export const ctx = canvas.getContext("2d");
+
 export const DPR = Math.min(2, window.devicePixelRatio || 1);
 export const TILE = 40;
 export const MIN_ZOOM = 0.5;
@@ -12,22 +22,11 @@ export let GRID_H = 0;
 export let W = 0;
 export let H = 0;
 
-// --- NEW FUNCTION ---
 // This function allows us to set the map size from outside this module.
 export function setMapDimensions(width, height) {
   MAP_GRID_W = width;
   MAP_GRID_H = height;
 }
-
-export const canvas = document.createElement("canvas");
-canvas.id = "game";
-canvas.style.width = "100%";
-canvas.style.display = "none";
-canvas.style.background = "#0b0f1a";
-canvas.style.boxShadow =
-  "0 30px 60px rgba(0,0,0,0.35), inset 0 0 120px rgba(0,180,255,0.04)";
-document.body.appendChild(canvas);
-export const ctx = canvas.getContext("2d");
 
 function computeGrid() {
   GRID_W = Math.floor(canvas.clientWidth / TILE);

@@ -4,7 +4,6 @@ import { TOWER_TYPES } from "./config.js";
 import { state, pulses, towers } from "./state.js";
 import { ui } from "./state.js";
 import { blocked } from "./path.js";
-// --- NEW IMPORTS ---
 import { getOccupiedCells, isPlacementValid } from "./occupation.js";
 
 export function drawBackground(t, pathArr) {
@@ -62,7 +61,8 @@ export function getShopButtons(W, H) {
   const y = H - 78;
   const h = 60;
   const w = 140;
-  const keys = Object.keys(TOWER_TYPES);
+  // Only get the keys for towers the player has unlocked
+  const keys = window.playerData.unlockedTowers || ["gun"];
 
   ui.shopScrollOffset = ui.shopScrollOffset || 0;
 
@@ -77,9 +77,11 @@ export function getShopButtons(W, H) {
 
 export function drawShop(W, H) {
   const buttons = getShopButtons(W, H);
-  const keys = Object.keys(TOWER_TYPES);
+  if (!TOWER_TYPES || Object.keys(TOWER_TYPES).length === 0) return;
 
-  const totalWidth = keys.length * (140 + 12) - 12 + 18 * 2;
+  const unlockedKeys = window.playerData.unlockedTowers || ["gun"];
+  const totalWidth = unlockedKeys.length * (140 + 12) - 12 + 18 * 2;
+
   ui.maxShopScroll = Math.max(0, totalWidth - W);
   ui.shopScrollOffset = Math.max(
     0,
@@ -143,6 +145,8 @@ export function drawShop(W, H) {
   ctx.restore();
 }
 
+// ... the rest of your ui.js functions (drawGhost, drawInspector, etc.) remain unchanged
+// Just copy them below this line.
 export function drawGhost(
   hoveredTile,
   TILEparam,

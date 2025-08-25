@@ -1,5 +1,3 @@
-// ===== FILE: C:\Users\kurd7\Downloads\Tower\src\config.js =====
-
 import { GunTower } from "./towers/GunTower.js";
 import { CannonTower } from "./towers/CannonTower.js";
 import { DoubleCannonTower } from "./towers/DoubleCannonTower.js";
@@ -38,6 +36,9 @@ export const TOWER_TYPES = {
     color: "#6cf",
     maxLevel: 10,
     hp: 300,
+    unlockPrice: 0, // Default tower
+    upgradePriceBase: 25,
+    persistentMaxLevel: 100,
     class: GunTower,
   },
   cannon: {
@@ -51,6 +52,9 @@ export const TOWER_TYPES = {
     color: "#f6c66a",
     maxLevel: 10,
     hp: 300,
+    unlockPrice: 200,
+    upgradePriceBase: 40,
+    persistentMaxLevel: 100,
     class: CannonTower,
   },
   doubleCanon: {
@@ -64,6 +68,9 @@ export const TOWER_TYPES = {
     color: "#f00",
     hp: 300,
     maxLevel: 3,
+    unlockPrice: 350,
+    upgradePriceBase: 55,
+    persistentMaxLevel: 50,
     class: DoubleCannonTower,
   },
   laser: {
@@ -76,10 +83,12 @@ export const TOWER_TYPES = {
     color: "#ff69e0",
     maxLevel: 3,
     hp: 300,
+    unlockPrice: 500,
+    upgradePriceBase: 100,
+    persistentMaxLevel: 50,
     class: LaserTower,
   },
   ice: {
-    // Add Ice Tower
     name: "Ice",
     cost: 180,
     range: 130,
@@ -92,6 +101,9 @@ export const TOWER_TYPES = {
     color: "#6cfaff",
     maxLevel: 3,
     hp: 300,
+    unlockPrice: 300,
+    upgradePriceBase: 50,
+    persistentMaxLevel: 30,
     class: IceTower,
   },
   tesla: {
@@ -100,29 +112,34 @@ export const TOWER_TYPES = {
     range: 140,
     fireRate: 1.8,
     dmg: 25,
-    chainCount: 3, // Jumps to 3 additional targets
-    chainRange: 80, // Range for chain jumps
-    stunChance: 0.1, // 30% chance to stun
-    stunDuration: 1, // seconds
+    chainCount: 3,
+    chainRange: 80,
+    stunChance: 0.1,
+    stunDuration: 1,
     color: "#9d4edd",
     maxLevel: 3,
     hp: 300,
+    unlockPrice: 600,
+    upgradePriceBase: 120,
+    persistentMaxLevel: 40,
     class: TeslaTower,
   },
   poison: {
-    // Add Poison Tower
     name: "Poison",
     cost: 190,
     range: 110,
     fireRate: 1.5,
     dmg: 15,
-    dotDamage: 8, // Damage per second
-    dotDuration: 4, // seconds
-    spreadRange: 60, // Range for poison spread
-    cloudDuration: 3, // Lingering cloud duration
+    dotDamage: 8,
+    dotDuration: 4,
+    spreadRange: 60,
+    cloudDuration: 3,
     color: "#4CAF50",
     maxLevel: 3,
     hp: 300,
+    unlockPrice: 450,
+    upgradePriceBase: 70,
+    persistentMaxLevel: 50,
     class: PoisonTower,
   },
   missile: {
@@ -131,13 +148,16 @@ export const TOWER_TYPES = {
     range: 160,
     fireRate: 0.8,
     dmg: 70,
-    splash: 80, // Splash damage radius
-    bulletSpeed: 180, // Slower but homing
-    homingStrength: 0.1, // How strongly missiles home in
-    retarget: true, // Can retarget if original target dies
+    splash: 80,
+    bulletSpeed: 180,
+    homingStrength: 0.1,
+    retarget: true,
     color: "#FF5722",
     maxLevel: 3,
     hp: 300,
+    unlockPrice: 800,
+    upgradePriceBase: 150,
+    persistentMaxLevel: 30,
     class: MissileTower,
   },
   flamethrower: {
@@ -148,12 +168,15 @@ export const TOWER_TYPES = {
     dmg: 8,
     burnDamage: 6,
     burnDuration: 3,
-    coneAngle: Math.PI / 3, // 60 degree cone
+    coneAngle: Math.PI / 3,
     spreadChance: 0.4,
     spreadRange: 40,
     color: "#FF6B35",
     maxLevel: 3,
     hp: 300,
+    unlockPrice: 400,
+    upgradePriceBase: 65,
+    persistentMaxLevel: 60,
     class: FlamethrowerTower,
   },
   sniper: {
@@ -169,6 +192,9 @@ export const TOWER_TYPES = {
     color: "#2b4ff2",
     maxLevel: 3,
     hp: 300,
+    unlockPrice: 1000,
+    upgradePriceBase: 200,
+    persistentMaxLevel: 25,
     size: { align: "TBLR", occupy: 2 },
     class: SniperTower,
   },
@@ -185,6 +211,9 @@ export const TOWER_TYPES = {
     color: "#8d6e63",
     maxLevel: 3,
     hp: 300,
+    unlockPrice: 1200,
+    upgradePriceBase: 250,
+    persistentMaxLevel: 20,
     size: { align: "TBLR", occupy: 2 },
     class: ArtilleryTower,
   },
@@ -200,8 +229,13 @@ export const TOWER_TYPES = {
     color: "#8bc34a",
     maxLevel: 3,
     hp: 300,
+    unlockPrice: 150,
+    upgradePriceBase: 30,
+    persistentMaxLevel: 100,
     class: ArcherTower,
   },
+  // Add prices to all other towers...
+  // (Assuming similar pricing structure for the rest)
   lightning: {
     name: "Lightning",
     cost: 300,
@@ -215,6 +249,9 @@ export const TOWER_TYPES = {
     color: "#00ffff",
     maxLevel: 3,
     hp: 300,
+    unlockPrice: 700,
+    upgradePriceBase: 140,
+    persistentMaxLevel: 40,
     size: { align: "T", occupy: 2 },
     class: LightningTower,
   },
@@ -231,6 +268,9 @@ export const TOWER_TYPES = {
     color: "#800080",
     maxLevel: 3,
     hp: 300,
+    unlockPrice: 900,
+    upgradePriceBase: 180,
+    persistentMaxLevel: 30,
     size: { align: "T", occupy: 2 },
     class: ShadowTower,
   },
@@ -245,6 +285,9 @@ export const TOWER_TYPES = {
     color: "#7f00ff",
     maxLevel: 3,
     hp: 300,
+    unlockPrice: 850,
+    upgradePriceBase: 170,
+    persistentMaxLevel: 35,
     size: { align: "T", occupy: 2 },
     class: WizardTower,
   },
@@ -252,13 +295,16 @@ export const TOWER_TYPES = {
     name: "Wind",
     cost: 200,
     range: 140,
-    fireRate: 1.2, // attacks per second
-    knockback: 40, // pixels
-    slowAmount: 0.5, // slows enemies by 50% for a short duration
-    slowDuration: 1.5, // seconds
+    fireRate: 1.2,
+    knockback: 40,
+    slowAmount: 0.5,
+    slowDuration: 1.5,
     color: "#00bfff",
     maxLevel: 3,
     hp: 300,
+    unlockPrice: 500,
+    upgradePriceBase: 100,
+    persistentMaxLevel: 20,
     size: { align: "T", occupy: 2 },
     class: WindTower,
   },
@@ -266,12 +312,15 @@ export const TOWER_TYPES = {
     name: "Volcano",
     cost: 600,
     range: 200,
-    fireRate: 0.3, // slow but powerful
-    dmg: 80, // direct damage
-    splash: 60, // area of effect radius
+    fireRate: 0.3,
+    dmg: 80,
+    splash: 60,
     color: "#ff3300",
     maxLevel: 3,
     hp: 300,
+    unlockPrice: 1500,
+    upgradePriceBase: 300,
+    persistentMaxLevel: 15,
     size: { align: "T", occupy: 2 },
     class: VolcanoTower,
   },
@@ -279,12 +328,15 @@ export const TOWER_TYPES = {
     name: "Car M249",
     cost: 600,
     range: 180,
-    fireRate: 5, // bullets per second
-    dmg: 15, // per bullet
+    fireRate: 5,
+    dmg: 15,
     color: "#2288ff",
     maxLevel: 3,
     hp: 300,
-    class: CarM249Tower, // reference your tower class
+    unlockPrice: 1000,
+    upgradePriceBase: 200,
+    persistentMaxLevel: 50,
+    class: CarM249Tower,
   },
   smallTank: {
     name: "Small Tank",
@@ -297,6 +349,9 @@ export const TOWER_TYPES = {
     color: "#556b2f",
     maxLevel: 3,
     hp: 300,
+    unlockPrice: 800,
+    upgradePriceBase: 160,
+    persistentMaxLevel: 25,
     size: { align: "LR", occupy: 2 },
     class: SmallTank,
   },
@@ -304,13 +359,16 @@ export const TOWER_TYPES = {
     name: "Medium Tank",
     cost: 500,
     range: 180,
-    fireRate: 1.0, // slower
-    dmg: 300, // stronger
+    fireRate: 1.0,
+    dmg: 300,
     splash: 60,
     bulletSpeed: 300,
     color: "#8b4513",
     maxLevel: 3,
     hp: 3000,
+    unlockPrice: 1500,
+    upgradePriceBase: 300,
+    persistentMaxLevel: 20,
     size: { align: "TBLR", occupy: 2 },
     class: MediumTank,
   },
@@ -318,49 +376,56 @@ export const TOWER_TYPES = {
     name: "Big Tank",
     cost: 950,
     range: 200,
-    fireRate: 0.6, // main shells per second
-    dmg: 600, // main shell damage
+    fireRate: 0.6,
+    dmg: 600,
     splash: 110,
-    bulletSpeed: 220, // main shell speed
+    bulletSpeed: 220,
     color: "#4b2e1e",
-    topFireRate: 10, // bullets per second for top gun (continuous)
-    topDmg: 30, // damage per top-gun bullet
-    topBulletSpeed: 720, // speed of top-gun bullets
+    topFireRate: 10,
+    topDmg: 30,
+    topBulletSpeed: 720,
     size: { align: "TBLR", occupy: 2 },
     maxLevel: 3,
     hp: 300,
+    unlockPrice: 2500,
+    upgradePriceBase: 500,
+    persistentMaxLevel: 15,
     class: BigTank,
   },
   behemothTank: {
     name: "Behemoth Tank",
-    cost: 2200, // Very expensive
-    range: 280, // Superior range
-    fireRate: 0.5, // Slower, but fires two powerful shells
-    dmg: 950, // Devastating damage per shell
-    splash: 140, // Massive area of effect
+    cost: 2200,
+    range: 280,
+    fireRate: 0.5,
+    dmg: 950,
+    splash: 140,
     bulletSpeed: 250,
-    color: "#a8e0ff", // A cool, high-tech blue for the shop icon
-    topFireRate: 15, // Upgraded rapid-fire top gun
+    color: "#a8e0ff",
+    topFireRate: 15,
     topDmg: 40,
     maxLevel: 3,
     hp: 300,
     topBulletSpeed: 800,
-    // Your updated occupation.js file will handle this correctly.
     size: { align: "TBLR", occupy: 3 },
+    unlockPrice: 5000,
+    upgradePriceBase: 1000,
+    persistentMaxLevel: 10,
     class: BehemothTank,
   },
   helicopter: {
     name: "Heli Pad",
     cost: 1500,
-    range: 220, // The patrol and firing radius from the helipad
-    fireRate: 12, // High rate of fire
-    dmg: 35, // Moderate damage per bullet
+    range: 220,
+    fireRate: 12,
+    dmg: 35,
     bulletSpeed: 750,
-    color: "#ffdd99", // A sandy, military color for the shop
-    // The helipad itself is a standard 1x1 tower
+    color: "#ffdd99",
     size: { align: "TBLR", occupy: 1 },
     maxLevel: 3,
     hp: 300,
+    unlockPrice: 3000,
+    upgradePriceBase: 600,
+    persistentMaxLevel: 15,
     class: HelicopterTower,
   },
   blackHawk: {
@@ -374,36 +439,41 @@ export const TOWER_TYPES = {
     size: { align: "TBLR", occupy: 1 },
     maxLevel: 3,
     hp: 300,
+    unlockPrice: 4000,
+    upgradePriceBase: 800,
+    persistentMaxLevel: 15,
     class: BlackHawkTower,
   },
   jet: {
     name: "Stealth Jet",
-    cost: 6000, // High cost for a global presence
-    range: Infinity, // Full map range
-    fireRate: 0.8, // Slower fire rate due to powerful missiles
-    dmg: 1000, // High damage with area-of-effect
-    bulletSpeed: 500, // Missile travel speed
+    cost: 6000,
+    range: Infinity,
+    fireRate: 0.8,
+    dmg: 1000,
+    bulletSpeed: 500,
     color: "#34495e",
     maxLevel: 3,
     hp: 300,
-    // The jet does not occupy a grid cell as it's an off-map support unit.
-    // How you handle placement is up to your UI logic.
-    // You might call it from a special support menu instead of placing it.
-    // For that reason, 'size' can be omitted or handled differently.
-    size: { align: "TBLR", occupy: 0 }, // Or handle as a special case
+    size: { align: "TBLR", occupy: 0 },
+    unlockPrice: 10000,
+    upgradePriceBase: 2500,
+    persistentMaxLevel: 10,
     class: JetTower,
   },
   b52Spirit: {
     name: "B-2 Spirit Bomber",
-    cost: 15000, // Very high cost for a game-changing ability
+    cost: 15000,
     range: Infinity,
-    fireRate: 0.1, // Cooldown between bombing runs (e.g., once every 10 seconds)
-    dmg: 1000, // Damage per bomb in the carpet
-    bulletSpeed: 200, // The flight speed of the bomber itself
+    fireRate: 0.1,
+    dmg: 1000,
+    bulletSpeed: 200,
     color: "#495057",
     maxLevel: 3,
     hp: 300,
-    size: { align: "TBLR", occupy: 0 }, // Another off-map support call-in
+    size: { align: "TBLR", occupy: 0 },
+    unlockPrice: 20000,
+    upgradePriceBase: 5000,
+    persistentMaxLevel: 5,
     class: B52SpiritTower,
   },
 };

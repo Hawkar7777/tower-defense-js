@@ -16,8 +16,8 @@ export const levels = [
       { x: MAP_W, y: MAP_H * 0.75 },
     ],
     waves: [
+      { count: 10, types: { basic: 0.5, brute: 0.5 } },
       { boss: "Reaper" }, // Wave 10
-      { count: 10, types: { disruptor: 0.5, hive: 0.5 } },
 
       { count: 10, types: { basic: 1.0 } }, // Wave 1: Only basic enemies
       { count: 12, types: { basic: 1.0 } }, // Wave 2: A few more basics

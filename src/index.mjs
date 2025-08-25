@@ -117,31 +117,53 @@ function precomputeGrid() {
 /**
  * OPTIMIZATION: Pre-renders the static path to an off-screen canvas.
  */
+// --- In index.mjs, REPLACE your old precomputePath function with this one ---
+
+/**
+ * OPTIMIZATION: Pre-renders the static path to an off-screen canvas.
+ */
+
 function precomputePath() {
   pathCanvas.width = MAP_GRID_W * TILE;
   pathCanvas.height = MAP_GRID_H * TILE;
   pathCtx.clearRect(0, 0, pathCanvas.width, pathCanvas.height); // Clear previous path
 
+  // Make sure there is a path to draw
   if (!path || path.length < 2) return;
 
-  // Draw wide, semi-transparent background path
-  pathCtx.strokeStyle = "#29e3ff";
-  pathCtx.lineWidth = 10;
-  pathCtx.globalAlpha = 0.15;
+  // Set properties for smooth corners
   pathCtx.lineCap = "round";
+  pathCtx.lineJoin = "round";
+
+  // --- Start Drawing the New Path Style ---
+
+  // 1. Draw the wide, soft outer glow.
+  // This is a very wide, very transparent line that creates the glow effect.
+  pathCtx.strokeStyle = "#29e3ff"; // A nice glowing cyan color
+  pathCtx.lineWidth = 15;
+  pathCtx.globalAlpha = 0.2; // Set transparency to 20%
+
   pathCtx.beginPath();
   pathCtx.moveTo(path[0].x, path[0].y);
-  for (let i = 1; i < path.length; i++) pathCtx.lineTo(path[i].x, path[i].y);
+  for (let i = 1; i < path.length; i++) {
+    pathCtx.lineTo(path[i].x, path[i].y);
+  }
   pathCtx.stroke();
 
-  // Draw thinner, bright foreground path
-  pathCtx.globalAlpha = 1;
+  // 2. Draw a slightly brighter middle glow.
+  // We draw over the same path, but with a thinner line and less transparency.
+  pathCtx.lineWidth = 7;
+  pathCtx.globalAlpha = 0.4; // Set transparency to 40%
+  pathCtx.stroke(); // No need to beginPath again, just stroke the same path
+
+  // 3. Draw the bright, solid inner core.
+  // This is the final, thin, bright line that makes the path look like an energy beam.
+  pathCtx.strokeStyle = "#ffffff"; // A pure white core
   pathCtx.lineWidth = 3;
-  pathCtx.strokeStyle = "#0cf";
-  pathCtx.beginPath();
-  pathCtx.moveTo(path[0].x, path[0].y);
-  for (let i = 1; i < path.length; i++) pathCtx.lineTo(path[i].x, path[i].y);
+  pathCtx.globalAlpha = 1; // Fully opaque
   pathCtx.stroke();
+
+  // --- End of New Drawing Style ---
 }
 
 /**

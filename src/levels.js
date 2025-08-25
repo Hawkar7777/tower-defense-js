@@ -176,7 +176,7 @@ export const levels = [
       { x: MAP_W, y: MAP_H * 0.5 },
     ],
     waves: [
-      { count: 2, types: { swarmer: 0.5, hive: 0.5 } },
+      { count: 1, types: { specter: 1 } },
       { count: 60, types: { mimic: 5.0, elite: 0.5 } },
 
       { count: 60, types: { wraith: 5.0, elite: 0.5 } },

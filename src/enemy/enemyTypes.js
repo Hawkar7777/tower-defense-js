@@ -141,4 +141,18 @@ export const ENEMY_TYPES = {
     detailColor: "#a04d36",
     // No special flags needed, it's a basic enemy type
   },
+  specter: {
+    name: "Specter",
+    baseHp: 220, // Medium health, but feels tankier due to invulnerability
+    baseSpeed: 45, // Average speed
+    baseReward: 30, // High reward for a tricky target
+    radius: 14, // For collision
+    color: "#6a0dad", // Deep, solid purple
+    glowColor: "#00ffff", // Ethereal cyan glow
+    detailColor: "#c7a2e8", // Lighter purple highlights
+    isSpecter: true, // Special flag for the spawner
+    // --- Unique Specter Properties ---
+    corporealDuration: 3.0, // Stays solid (vulnerable) for 3 seconds
+    etherealDuration: 2.5, // Stays phased (invulnerable) for 2.5 seconds
+  },
 };

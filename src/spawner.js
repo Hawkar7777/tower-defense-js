@@ -11,6 +11,7 @@ import { Wraith } from "./enemy/Wraith.js";
 import { Mimic } from "./enemy/Mimic.js";
 import { Leech } from "./enemy/Leech.js";
 import { Shifter } from "./enemy/Shifter.js";
+import { Specter } from "./enemy/Specter.js";
 
 // --- Boss Imports ---
 import { goliath } from "./boss/goliath.js";
@@ -39,6 +40,10 @@ function createEnemy(type, tier) {
   }
   if (spec.isHive) {
     return new Hive(tier);
+  }
+
+  if (spec.isSpecter) {
+    return new Specter(tier);
   }
   return new BaseEnemy(type, tier);
 }

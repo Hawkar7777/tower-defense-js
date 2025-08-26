@@ -220,6 +220,19 @@ export class B52SpiritTower extends BaseTower {
   draw() {
     if (this.bomberState !== "idle") {
       drawB2Spirit(this.bomberPos.x, this.bomberPos.y);
+
+      // --- NEW CODE: Display Level as Text for B52SpiritTower ---
+      ctx.fillStyle = "#ffffff"; // White color for the text
+      ctx.font = "12px Arial"; // Font size and type
+      ctx.textAlign = "center"; // Center the text horizontally
+      ctx.textBaseline = "middle"; // Center the text vertically
+      // Position the text below the bomber's flight position
+      ctx.fillText(
+        `Lv. ${this.level}`,
+        this.bomberPos.x,
+        this.bomberPos.y + 40
+      );
+      // --- END NEW CODE ---
     }
   }
 }

@@ -340,21 +340,32 @@ export class CarM249Tower extends BaseTower {
     ctx.fill();
     ctx.restore();
 
-    // level markers (nice little chevrons)
-    for (let i = 0; i < Math.min(4, this.level); i++) {
-      const ix = x - 12 + i * 8;
-      const iy = y + 20;
-      ctx.fillStyle = "#ffd87a";
-      ctx.beginPath();
-      ctx.moveTo(ix, iy);
-      ctx.lineTo(ix + 4, iy + 6);
-      ctx.lineTo(ix - 4, iy + 6);
-      ctx.closePath();
-      ctx.fill();
-      ctx.strokeStyle = "#7b5a2a";
-      ctx.lineWidth = 0.7;
-      ctx.stroke();
-    }
+    // --- OLD CODE (REMOVE OR COMMENT OUT) ---
+    // // level markers (nice little chevrons)
+    // for (let i = 0; i < Math.min(4, this.level); i++) {
+    //   const ix = x - 12 + i * 8;
+    //   const iy = y + 20;
+    //   ctx.fillStyle = "#ffd87a";
+    //   ctx.beginPath();
+    //   ctx.moveTo(ix, iy);
+    //   ctx.lineTo(ix + 4, iy + 6);
+    //   ctx.lineTo(ix - 4, iy + 6);
+    //   ctx.closePath();
+    //   ctx.fill();
+    //   ctx.strokeStyle = "#7b5a2a";
+    //   ctx.lineWidth = 0.7;
+    //   ctx.stroke();
+    // }
+    // --- END OLD CODE ---
+
+    // --- NEW CODE: Display Level as Text for CarM249Tower ---
+    ctx.fillStyle = "#ffffff"; // White color for the text
+    ctx.font = "12px Arial"; // Font size and type
+    ctx.textAlign = "center"; // Center the text horizontally
+    ctx.textBaseline = "middle"; // Center the text vertically
+    // Position the text below the car. Adjust y + 25 as needed for spacing.
+    ctx.fillText(`Lv. ${this.level}`, x, y + 25);
+    // --- END NEW CODE ---
   }
 }
 

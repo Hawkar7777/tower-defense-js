@@ -62,7 +62,7 @@ export class IceTower extends BaseTower {
       const size = 2 + Math.random() * 3;
 
       // Add to particles array (you might need to import it)
-      const particles = window.particles || [];
+      const particles = window.particles || []; // Ensure particles is imported or defined
       particles.push({
         x,
         y,
@@ -146,29 +146,40 @@ export class IceTower extends BaseTower {
 
     ctx.restore();
 
-    // Draw level indicators as ice shards
-    for (let i = 0; i < this.level; i++) {
-      const indicatorX = x - 10 + i * 6;
-      const indicatorY = y + 22;
+    // --- OLD CODE (REMOVE OR COMMENT OUT) ---
+    // // Draw level indicators as ice shards
+    // for (let i = 0; i < this.level; i++) {
+    //   const indicatorX = x - 10 + i * 6;
+    //   const indicatorY = y + 22;
 
-      // Glow effect
-      ctx.fillStyle = "rgba(108, 250, 255, 0.3)";
-      ctx.beginPath();
-      ctx.arc(indicatorX, indicatorY, 4, 0, Math.PI * 2);
-      ctx.fill();
+    //   // Glow effect
+    //   ctx.fillStyle = "rgba(108, 250, 255, 0.3)";
+    //   ctx.beginPath();
+    //   ctx.arc(indicatorX, indicatorY, 4, 0, Math.PI * 2);
+    //   ctx.fill();
 
-      // Ice shard
-      ctx.fillStyle = s.color;
-      this.drawIceShard(indicatorX, indicatorY, 3);
+    //   // Ice shard
+    //   ctx.fillStyle = s.color;
+    //   this.drawIceShard(indicatorX, indicatorY, 3);
 
-      // Frost effect for higher levels
-      if (this.level > 2 && i >= this.level - 2) {
-        ctx.fillStyle = "rgba(255, 255, 255, 0.4)";
-        ctx.beginPath();
-        ctx.arc(indicatorX, indicatorY, 5, 0, Math.PI * 2);
-        ctx.fill();
-      }
-    }
+    //   // Frost effect for higher levels
+    //   if (this.level > 2 && i >= this.level - 2) {
+    //     ctx.fillStyle = "rgba(255, 255, 255, 0.4)";
+    //     ctx.beginPath();
+    //     ctx.arc(indicatorX, indicatorY, 5, 0, Math.PI * 2);
+    //     ctx.fill();
+    //   }
+    // }
+    // --- END OLD CODE ---
+
+    // --- NEW CODE: Display Level as Text for IceTower ---
+    ctx.fillStyle = "#ffffff"; // White color for the text
+    ctx.font = "12px Arial"; // Font size and type
+    ctx.textAlign = "center"; // Center the text horizontally
+    ctx.textBaseline = "middle"; // Center the text vertically
+    // Position the text below the tower. Adjust y + 25 as needed for spacing.
+    ctx.fillText(`Lv. ${this.level}`, x, y + 25);
+    // --- END NEW CODE ---
 
     // Occasional snowflake particles
     if (Math.random() < 0.05) {

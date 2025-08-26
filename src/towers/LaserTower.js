@@ -120,32 +120,43 @@ export class LaserTower extends BaseTower {
 
     ctx.restore();
 
-    // Draw level indicators with glow effect
-    for (let i = 0; i < this.level; i++) {
-      const indicatorX = x - 10 + i * 6;
-      const indicatorY = y + 22;
+    // --- OLD CODE (REMOVE OR COMMENT OUT) ---
+    // // Draw level indicators with glow effect
+    // for (let i = 0; i < this.level; i++) {
+    //   const indicatorX = x - 10 + i * 6;
+    //   const indicatorY = y + 22;
 
-      // Glow effect
-      ctx.fillStyle = "rgba(255, 105, 224, 0.3)";
-      ctx.beginPath();
-      ctx.arc(indicatorX, indicatorY, 5, 0, Math.PI * 2);
-      ctx.fill();
+    //   // Glow effect
+    //   ctx.fillStyle = "rgba(255, 105, 224, 0.3)";
+    //   ctx.beginPath();
+    //   ctx.arc(indicatorX, indicatorY, 5, 0, Math.PI * 2);
+    //   ctx.fill();
 
-      // Main indicator
-      ctx.fillStyle = s.color;
-      ctx.beginPath();
-      ctx.arc(indicatorX, indicatorY, 3, 0, Math.PI * 2);
-      ctx.fill();
+    //   // Main indicator
+    //   ctx.fillStyle = s.color;
+    //   ctx.beginPath();
+    //   ctx.arc(indicatorX, indicatorY, 3, 0, Math.PI * 2);
+    //   ctx.fill();
 
-      // Pulsing effect for higher levels
-      if (this.level > 3 && i >= this.level - 3) {
-        const pulse = Math.sin(time * 4) * 2;
-        ctx.fillStyle = "rgba(255, 255, 255, 0.6)";
-        ctx.beginPath();
-        ctx.arc(indicatorX, indicatorY, 3 + pulse, 0, Math.PI * 2);
-        ctx.fill();
-      }
-    }
+    //   // Pulsing effect for higher levels
+    //   if (this.level > 3 && i >= this.level - 3) {
+    //     const pulse = Math.sin(time * 4) * 2;
+    //     ctx.fillStyle = "rgba(255, 255, 255, 0.6)";
+    //     ctx.beginPath();
+    //     ctx.arc(indicatorX, indicatorY, 3 + pulse, 0, Math.PI * 2);
+    //     ctx.fill();
+    //   }
+    // }
+    // --- END OLD CODE ---
+
+    // --- NEW CODE: Display Level as Text for LaserTower ---
+    ctx.fillStyle = "#ffffff"; // White color for the text
+    ctx.font = "12px Arial"; // Font size and type
+    ctx.textAlign = "center"; // Center the text horizontally
+    ctx.textBaseline = "middle"; // Center the text vertically
+    // Position the text below the tower. Adjust y + 25 as needed for spacing.
+    ctx.fillText(`Lv. ${this.level}`, x, y + 25);
+    // --- END NEW CODE ---
 
     // Add some particle effects around the tower
     if (Math.random() < 0.1) {

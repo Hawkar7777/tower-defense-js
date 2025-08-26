@@ -171,15 +171,26 @@ export class LightningTower extends BaseTower {
       });
     }
 
-    for (let i = 0; i < this.level; i++) {
-      const ix = x - 12 + i * 6;
-      const iy = y + 25;
-      ctx.strokeStyle = s.color;
-      ctx.lineWidth = 1.5;
-      ctx.beginPath();
-      ctx.moveTo(ix, iy);
-      ctx.lineTo(ix, iy + 4);
-      ctx.stroke();
-    }
+    // --- OLD CODE (REMOVE OR COMMENT OUT) ---
+    // for (let i = 0; i < this.level; i++) {
+    //   const ix = x - 12 + i * 6;
+    //   const iy = y + 25;
+    //   ctx.strokeStyle = s.color;
+    //   ctx.lineWidth = 1.5;
+    //   ctx.beginPath();
+    //   ctx.moveTo(ix, iy);
+    //   ctx.lineTo(ix, iy + 4);
+    //   ctx.stroke();
+    // }
+    // --- END OLD CODE ---
+
+    // --- NEW CODE: Display Level as Text for LightningTower ---
+    ctx.fillStyle = "#ffffff"; // White color for the text
+    ctx.font = "12px Arial"; // Font size and type
+    ctx.textAlign = "center"; // Center the text horizontally
+    ctx.textBaseline = "middle"; // Center the text vertically
+    // Position the text below the tower. Adjust y + 25 as needed for spacing.
+    ctx.fillText(`Lv. ${this.level}`, x, y + 25);
+    // --- END NEW CODE ---
   }
 }

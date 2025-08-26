@@ -178,14 +178,25 @@ export class WindTower extends BaseTower {
       ctx.stroke();
     }
 
-    // 5. Level indicators as glowing lines on the pylon
-    for (let i = 0; i < this.level; i++) {
-      const levelY = y + 5 - i * 6;
-      ctx.fillStyle = "#ffffff";
-      ctx.shadowColor = s.color;
-      ctx.shadowBlur = 4;
-      ctx.fillRect(x - 5, levelY, 10, 2);
-    }
-    ctx.shadowBlur = 0;
+    // --- OLD CODE (REMOVE OR COMMENT OUT) ---
+    // // 5. Level indicators as glowing lines on the pylon
+    // for (let i = 0; i < this.level; i++) {
+    //   const levelY = y + 5 - i * 6;
+    //   ctx.fillStyle = "#ffffff";
+    //   ctx.shadowColor = s.color;
+    //   ctx.shadowBlur = 4;
+    //   ctx.fillRect(x - 5, levelY, 10, 2);
+    // }
+    // ctx.shadowBlur = 0;
+    // --- END OLD CODE ---
+
+    // --- NEW CODE: Display Level as Text for WindTower ---
+    ctx.fillStyle = "#ffffff"; // White color for the text
+    ctx.font = "12px Arial"; // Font size and type
+    ctx.textAlign = "center"; // Center the text horizontally
+    ctx.textBaseline = "middle"; // Center the text vertically
+    // Position the text below the tower. Adjust y + 25 as needed for spacing.
+    ctx.fillText(`Lv. ${this.level}`, x, y + 25);
+    // --- END NEW CODE ---
   }
 }

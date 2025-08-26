@@ -10,6 +10,7 @@ import { TOWER_TYPES } from "../config.js";
 class TankShell {
   constructor(start, target, dmg, splash) {
     this.pos = { ...start };
+    this.start = { ...start }; // Keep start for visual purposes
     this.target = target;
     this.speed = 380;
     this.dmg = dmg;
@@ -410,28 +411,39 @@ export class SmallTank extends BaseTower {
 
     ctx.restore();
 
-    // Level indicator
-    for (let i = 0; i < Math.min(4, this.level); i++) {
-      const markerX = x - 18 + i * 12;
-      const markerY = y - 20;
+    // --- OLD CODE (REMOVE OR COMMENT OUT) ---
+    // // Level indicator
+    // for (let i = 0; i < Math.min(4, this.level); i++) {
+    //   const markerX = x - 18 + i * 12;
+    //   const markerY = y - 20;
 
-      ctx.fillStyle = "#ffcc00";
-      ctx.beginPath();
-      ctx.moveTo(markerX, markerY);
-      ctx.lineTo(markerX - 4, markerY - 6);
-      ctx.lineTo(markerX + 4, markerY - 6);
-      ctx.closePath();
-      ctx.fill();
+    //   ctx.fillStyle = "#ffcc00";
+    //   ctx.beginPath();
+    //   ctx.moveTo(markerX, markerY);
+    //   ctx.lineTo(markerX - 4, markerY - 6);
+    //   ctx.lineTo(markerX + 4, markerY - 6);
+    //   ctx.closePath();
+    //   ctx.fill();
 
-      ctx.strokeStyle = "#aa7700";
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      ctx.moveTo(markerX, markerY);
-      ctx.lineTo(markerX - 4, markerY - 6);
-      ctx.lineTo(markerX + 4, markerY - 6);
-      ctx.closePath();
-      ctx.stroke();
-    }
+    //   ctx.strokeStyle = "#aa7700";
+    //   ctx.lineWidth = 1;
+    //   ctx.beginPath();
+    //   ctx.moveTo(markerX, markerY);
+    //   ctx.lineTo(markerX - 4, markerY - 6);
+    //   ctx.lineTo(markerX + 4, markerY - 6);
+    //   ctx.closePath();
+    //   ctx.stroke();
+    // }
+    // --- END OLD CODE ---
+
+    // --- NEW CODE: Display Level as Text for SmallTank ---
+    ctx.fillStyle = "#ffffff"; // White color for the text
+    ctx.font = "12px Arial"; // Font size and type
+    ctx.textAlign = "center"; // Center the text horizontally
+    ctx.textBaseline = "middle"; // Center the text vertically
+    // Position the text below the tower. Adjust y + 25 as needed for spacing.
+    ctx.fillText(`Lv. ${this.level}`, x, y + 25);
+    // --- END NEW CODE ---
   }
 }
 

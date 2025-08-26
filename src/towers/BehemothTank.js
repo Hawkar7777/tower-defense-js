@@ -472,6 +472,33 @@ export class BehemothTank extends BaseTower {
       ctx.fill();
     }
     ctx.restore();
+
+    // --- OLD CODE (REMOVE OR COMMENT OUT) ---
+    // // LEVEL CHEVRONS
+    // for (let i = 0; i < Math.min(4, this.level); i++) {
+    //   const mx = x - 22 + i * 12;
+    //   const my = y - 36;
+    //   ctx.fillStyle = "#ffd24b";
+    //   ctx.beginPath();
+    //   ctx.moveTo(mx, my);
+    //   ctx.lineTo(mx - 4, my - 6);
+    //   ctx.lineTo(mx + 4, my - 6);
+    //   ctx.closePath();
+    //   ctx.fill();
+    //   ctx.strokeStyle = "#b77b00";
+    //   ctx.lineWidth = 1;
+    //   ctx.stroke();
+    // }
+    // --- END OLD CODE ---
+
+    // --- NEW CODE: Display Level as Text for BehemothTank ---
+    ctx.fillStyle = "#ffffff"; // White color for the text
+    ctx.font = "12px Arial"; // Font size and type
+    ctx.textAlign = "center"; // Center the text horizontally
+    ctx.textBaseline = "middle"; // Center the text vertically
+    // Position the text below the tank. Adjusted y to avoid overlapping with treads.
+    ctx.fillText(`Lv. ${this.level}`, x, y + 55);
+    // --- END NEW CODE ---
   }
 }
 

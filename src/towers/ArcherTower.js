@@ -165,5 +165,36 @@ export class ArcherTower extends BaseTower {
     }
 
     ctx.restore();
+
+    // --- OLD CODE (REMOVE OR COMMENT OUT) ---
+    // // Draw level indicators as crosshair icons
+    // for (let i = 0; i < this.level; i++) {
+    //   const indicatorX = x - 12 + i * 6;
+    //   const indicatorY = y + 25;
+
+    //   // Crosshair icon
+    //   ctx.strokeStyle = s.color;
+    //   ctx.lineWidth = 1.5;
+    //   ctx.beginPath();
+    //   ctx.arc(indicatorX, indicatorY, 2, 0, Math.PI * 2);
+    //   ctx.stroke();
+
+    //   ctx.beginPath();
+    //   ctx.moveTo(indicatorX - 3, indicatorY);
+    //   ctx.lineTo(indicatorX + 3, indicatorY);
+    //   ctx.moveTo(indicatorX, indicatorY - 3);
+    //   ctx.lineTo(indicatorX, indicatorY + 3);
+    //   ctx.stroke();
+    // }
+    // --- END OLD CODE ---
+
+    // --- NEW CODE: Display Level as Text for ArcherTower ---
+    ctx.fillStyle = "#ffffff"; // White color for the text
+    ctx.font = "12px Arial"; // Font size and type
+    ctx.textAlign = "center"; // Center the text horizontally
+    ctx.textBaseline = "middle"; // Center the text vertically
+    // Position the text below the tower. Adjust y + 25 as needed for spacing.
+    ctx.fillText(`Lv. ${this.level}`, x, y + 25);
+    // --- END NEW CODE ---
   }
 }

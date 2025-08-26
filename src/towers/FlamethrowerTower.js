@@ -464,28 +464,39 @@ export class FlamethrowerTower extends BaseTower {
 
     ctx.restore();
 
-    // Draw level indicators as fuel canisters
-    for (let i = 0; i < this.level; i++) {
-      const indicatorX = x - 12 + i * 6;
-      const indicatorY = y + 25;
+    // --- OLD CODE (REMOVE OR COMMENT OUT) ---
+    // // Draw level indicators as fuel canisters
+    // for (let i = 0; i < this.level; i++) {
+    //   const indicatorX = x - 12 + i * 6;
+    //   const indicatorY = y + 25;
 
-      // Canister
-      ctx.fillStyle = s.color;
-      ctx.beginPath();
-      ctx.roundRect(indicatorX - 2, indicatorY - 4, 4, 8, 1);
-      ctx.fill();
+    //   // Canister
+    //   ctx.fillStyle = s.color;
+    //   ctx.beginPath();
+    //   ctx.roundRect(indicatorX - 2, indicatorY - 4, 4, 8, 1);
+    //   ctx.fill();
 
-      // Canister top
-      ctx.fillStyle = "#888";
-      ctx.beginPath();
-      ctx.arc(indicatorX, indicatorY - 4, 2, 0, Math.PI * 2);
-      ctx.fill();
+    //   // Canister top
+    //   ctx.fillStyle = "#888";
+    //   ctx.beginPath();
+    //   ctx.arc(indicatorX, indicatorY - 4, 2, 0, Math.PI * 2);
+    //   ctx.fill();
 
-      // Flame effect for higher levels
-      if (this.level > 3 && i >= this.level - 3) {
-        this.drawMiniFlame(indicatorX, indicatorY - 6, time);
-      }
-    }
+    //   // Flame effect for higher levels
+    //   if (this.level > 3 && i >= this.level - 3) {
+    //     this.drawMiniFlame(indicatorX, indicatorY - 6, time);
+    //   }
+    // }
+    // --- END OLD CODE ---
+
+    // --- NEW CODE: Display Level as Text for FlamethrowerTower ---
+    ctx.fillStyle = "#ffffff"; // White color for the text
+    ctx.font = "12px Arial"; // Font size and type
+    ctx.textAlign = "center"; // Center the text horizontally
+    ctx.textBaseline = "middle"; // Center the text vertically
+    // Position the text below the tower. Adjust y + 25 as needed for spacing.
+    ctx.fillText(`Lv. ${this.level}`, x, y + 25);
+    // --- END NEW CODE ---
 
     // Draw fuel meter
     this.drawFuelMeter(x, y - 30, s);

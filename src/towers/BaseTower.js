@@ -145,6 +145,7 @@ export class BaseTower {
     // To be implemented in LaserTower
   }
 
+  // Inside BaseTower's draw() method
   draw() {
     const s = this.spec();
     const { x, y } = this.center;
@@ -160,10 +161,21 @@ export class BaseTower {
     ctx.fillRect(0, -3, 14, 6);
     ctx.restore();
 
-    for (let i = 0; i < this.level; i++) {
-      ctx.fillStyle = s.color;
-      ctx.fillRect(x - 10 + i * 6, y + 18, 4, 4);
-    }
+    // --- OLD CODE (REMOVE OR COMMENT OUT) ---
+    // for (let i = 0; i < this.level; i++) {
+    //   ctx.fillStyle = s.color;
+    //   ctx.fillRect(x - 10 + i * 6, y + 18, 4, 4);
+    // }
+    // --- END OLD CODE ---
+
+    // --- NEW CODE: Display Level as Text ---
+    ctx.fillStyle = "#ffffff"; // White color for the text
+    ctx.font = "12px Arial"; // Font size and type
+    ctx.textAlign = "center"; // Center the text horizontally
+    ctx.textBaseline = "middle"; // Center the text vertically
+    // Position the text below the tower. Adjust y + 25 as needed for spacing.
+    ctx.fillText(`Lv. ${this.level}`, x, y + 25);
+    // --- END NEW CODE ---
 
     if (this.isHexed) {
       ctx.fillStyle = "rgba(80, 200, 120, 0.4)";

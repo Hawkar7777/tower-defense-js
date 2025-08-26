@@ -91,19 +91,30 @@ export class CannonTower extends BaseTower {
 
     ctx.restore(); // End of turret rotation
 
-    // --- 5. Level Indicators on the Base ---
-    for (let i = 0; i < this.level; i++) {
-      const angle = -0.8 - i * 0.4;
-      const lx = x + Math.cos(angle) * 16;
-      const ly = y + Math.sin(angle) * 16;
-      ctx.fillStyle = s.color;
-      ctx.shadowColor = s.color;
-      ctx.shadowBlur = 6;
-      ctx.beginPath();
-      ctx.arc(lx, ly, 3, 0, Math.PI * 2);
-      ctx.fill();
-    }
-    ctx.shadowBlur = 0; // Reset shadow
+    // --- OLD CODE (REMOVE OR COMMENT OUT) ---
+    // // --- 5. Level Indicators on the Base ---
+    // for (let i = 0; i < this.level; i++) {
+    //   const angle = -0.8 - i * 0.4;
+    //   const lx = x + Math.cos(angle) * 16;
+    //   const ly = y + Math.sin(angle) * 16;
+    //   ctx.fillStyle = s.color;
+    //   ctx.shadowColor = s.color;
+    //   ctx.shadowBlur = 6;
+    //   ctx.beginPath();
+    //   ctx.arc(lx, ly, 3, 0, Math.PI * 2);
+    //   ctx.fill();
+    // }
+    // ctx.shadowBlur = 0; // Reset shadow (no longer needed here if no other shadows exist)
+    // --- END OLD CODE ---
+
+    // --- NEW CODE: Display Level as Text for CannonTower ---
+    ctx.fillStyle = "#ffffff"; // White color for the text
+    ctx.font = "12px Arial"; // Font size and type
+    ctx.textAlign = "center"; // Center the text horizontally
+    ctx.textBaseline = "middle"; // Center the text vertically
+    // Position the text below the tower. Adjust y + 25 as needed for spacing.
+    ctx.fillText(`Lv. ${this.level}`, x, y + 25);
+    // --- END NEW CODE ---
   }
 }
 

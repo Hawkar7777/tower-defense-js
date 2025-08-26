@@ -322,6 +322,15 @@ export class HelicopterTower extends BaseTower {
     ctx.restore();
 
     ctx.restore();
+
+    // --- NEW CODE: Display Level as Text for HelicopterTower ---
+    ctx.fillStyle = "#ffffff"; // White color for the text
+    ctx.font = "12px Arial"; // Font size and type
+    ctx.textAlign = "center"; // Center the text horizontally
+    ctx.textBaseline = "middle"; // Center the text vertically
+    // Position the text below the helipad. Adjusted y for better spacing.
+    ctx.fillText(`Lv. ${this.level}`, x, y + 38);
+    // --- END NEW CODE ---
   }
 }
 

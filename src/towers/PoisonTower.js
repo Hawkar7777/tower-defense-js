@@ -276,30 +276,41 @@ export class PoisonTower extends BaseTower {
 
     ctx.restore();
 
-    // Draw level indicators as toxic bubbles
-    for (let i = 0; i < this.level; i++) {
-      const indicatorX = x - 10 + i * 6;
-      const indicatorY = y + 22;
-      const bubblePulse = Math.sin(time * 4 + i) * 0.5 + 1;
+    // --- OLD CODE (REMOVE OR COMMENT OUT) ---
+    // // Draw level indicators as toxic bubbles
+    // for (let i = 0; i < this.level; i++) {
+    //   const indicatorX = x - 10 + i * 6;
+    //   const indicatorY = y + 22;
+    //   const bubblePulse = Math.sin(time * 4 + i) * 0.5 + 1;
 
-      // Bubble glow
-      ctx.fillStyle = `rgba(76, 175, 80, ${0.4 * bubblePulse})`;
-      ctx.beginPath();
-      ctx.arc(indicatorX, indicatorY, 5 * bubblePulse, 0, Math.PI * 2);
-      ctx.fill();
+    //   // Bubble glow
+    //   ctx.fillStyle = `rgba(76, 175, 80, ${0.4 * bubblePulse})`;
+    //   ctx.beginPath();
+    //   ctx.arc(indicatorX, indicatorY, 5 * bubblePulse, 0, Math.PI * 2);
+    //   ctx.fill();
 
-      // Main bubble
-      ctx.fillStyle = s.color;
-      ctx.beginPath();
-      ctx.arc(indicatorX, indicatorY, 3, 0, Math.PI * 2);
-      ctx.fill();
+    //   // Main bubble
+    //   ctx.fillStyle = s.color;
+    //   ctx.beginPath();
+    //   ctx.arc(indicatorX, indicatorY, 3, 0, Math.PI * 2);
+    //   ctx.fill();
 
-      // Bubble highlight
-      ctx.fillStyle = "rgba(255, 255, 255, 0.6)";
-      ctx.beginPath();
-      ctx.arc(indicatorX - 1, indicatorY - 1, 1, 0, Math.PI * 2);
-      ctx.fill();
-    }
+    //   // Bubble highlight
+    //   ctx.fillStyle = "rgba(255, 255, 255, 0.6)";
+    //   ctx.beginPath();
+    //   ctx.arc(indicatorX - 1, indicatorY - 1, 1, 0, Math.PI * 2);
+    //   ctx.fill();
+    // }
+    // --- END OLD CODE ---
+
+    // --- NEW CODE: Display Level as Text for PoisonTower ---
+    ctx.fillStyle = "#ffffff"; // White color for the text
+    ctx.font = "12px Arial"; // Font size and type
+    ctx.textAlign = "center"; // Center the text horizontally
+    ctx.textBaseline = "middle"; // Center the text vertically
+    // Position the text below the tower. Adjust y + 25 as needed for spacing.
+    ctx.fillText(`Lv. ${this.level}`, x, y + 25);
+    // --- END NEW CODE ---
 
     // Occasional toxic bubbles rising from tower
     if (Math.random() < 0.1) {
@@ -315,7 +326,7 @@ export class PoisonTower extends BaseTower {
   drawRisingBubble(x, y, time) {
     const bubbleX = x + (Math.random() - 0.5) * 15;
     const bubbleY = y - 20 - Math.random() * 10;
-    const size = 1.5 + Math.random() * 1.5;
+    const size = 1 + Math.random() * 1.5;
 
     ctx.fillStyle = "rgba(165, 214, 167, 0.8)";
     ctx.beginPath();

@@ -5,9 +5,6 @@ import { ctx } from "../core.js";
 import { enemies, particles, projectiles } from "../state.js";
 import { dist } from "../utils.js";
 
-// Fireball projectile
-// ===== FILE: src/towers/WizardTower.js =====
-
 // Fireball projectile - change 'done' to 'dead'
 class Fireball {
   constructor(start, target, dmg, color) {
@@ -177,17 +174,28 @@ export class WizardTower extends BaseTower {
       });
     }
 
-    // Level indicators
-    for (let i = 0; i < this.level; i++) {
-      const ix = x - 10 + i * 5;
-      const iy = y + 25;
-      ctx.strokeStyle = "#ff8800";
-      ctx.lineWidth = 1.5;
-      ctx.beginPath();
-      ctx.moveTo(ix, iy);
-      ctx.lineTo(ix, iy + 4);
-      ctx.stroke();
-    }
+    // --- OLD CODE (REMOVE OR COMMENT OUT) ---
+    // // Level indicators
+    // for (let i = 0; i < this.level; i++) {
+    //   const ix = x - 10 + i * 5;
+    //   const iy = y + 25;
+    //   ctx.strokeStyle = "#ff8800";
+    //   ctx.lineWidth = 1.5;
+    //   ctx.beginPath();
+    //   ctx.moveTo(ix, iy);
+    //   ctx.lineTo(ix, iy + 4);
+    //   ctx.stroke();
+    // }
+    // --- END OLD CODE ---
+
+    // --- NEW CODE: Display Level as Text for WizardTower ---
+    ctx.fillStyle = "#ffffff"; // White color for the text
+    ctx.font = "12px Arial"; // Font size and type
+    ctx.textAlign = "center"; // Center the text horizontally
+    ctx.textBaseline = "middle"; // Center the text vertically
+    // Position the text below the tower. Adjust y + 25 as needed for spacing.
+    ctx.fillText(`Lv. ${this.level}`, x, y + 25);
+    // --- END NEW CODE ---
   }
 }
 
@@ -200,7 +208,8 @@ export function updateProjectiles(dt) {
 
   // Remove completed projectiles
   for (let i = projectiles.length - 1; i >= 0; i--) {
-    if (projectiles[i].done) {
+    if (projectiles[i].dead) {
+      // Changed to 'dead' from 'done' to match Fireball class
       projectiles.splice(i, 1);
     }
   }

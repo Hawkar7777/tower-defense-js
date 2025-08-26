@@ -80,7 +80,6 @@ export class MissileTower extends BaseTower {
     }
 
     // Only rotate if we have a target (either new best or locked one)
-    // Only rotate if we have a target (either new best or locked one)
     if (best) {
       // local coordinates of the missile nose (must match drawMissileInSilo & fireMissile)
       const localX = 0;
@@ -284,34 +283,45 @@ export class MissileTower extends BaseTower {
 
     ctx.restore();
 
-    // Draw level indicators as missile icons
-    for (let i = 0; i < this.level; i++) {
-      const indicatorX = x - 12 + i * 6;
-      const indicatorY = y + 25;
+    // --- OLD CODE (REMOVE OR COMMENT OUT) ---
+    // // Draw level indicators as missile icons
+    // for (let i = 0; i < this.level; i++) {
+    //   const indicatorX = x - 12 + i * 6;
+    //   const indicatorY = y + 25;
 
-      // Missile icon
-      ctx.fillStyle = s.color;
-      ctx.beginPath();
-      ctx.moveTo(indicatorX - 2, indicatorY - 4);
-      ctx.lineTo(indicatorX + 2, indicatorY - 4);
-      ctx.lineTo(indicatorX + 2, indicatorY + 4);
-      ctx.lineTo(indicatorX - 2, indicatorY + 4);
-      ctx.closePath();
-      ctx.fill();
+    //   // Missile icon
+    //   ctx.fillStyle = s.color;
+    //   ctx.beginPath();
+    //   ctx.moveTo(indicatorX - 2, indicatorY - 4);
+    //   ctx.lineTo(indicatorX + 2, indicatorY - 4);
+    //   ctx.lineTo(indicatorX + 2, indicatorY + 4);
+    //   ctx.lineTo(indicatorX - 2, indicatorY + 4);
+    //   ctx.closePath();
+    //   ctx.fill();
 
-      // Missile tip
-      ctx.beginPath();
-      ctx.moveTo(indicatorX + 2, indicatorY);
-      ctx.lineTo(indicatorX + 4, indicatorY);
-      ctx.lineTo(indicatorX + 2, indicatorY - 2);
-      ctx.closePath();
-      ctx.fill();
+    //   // Missile tip
+    //   ctx.beginPath();
+    //   ctx.moveTo(indicatorX + 2, indicatorY);
+    //   ctx.lineTo(indicatorX + 4, indicatorY);
+    //   ctx.lineTo(indicatorX + 2, indicatorY - 2);
+    //   ctx.closePath();
+    //   ctx.fill();
 
-      // Fire effect for higher levels
-      if (this.level > 3 && i >= this.level - 3) {
-        this.drawMiniExhaust(indicatorX, indicatorY, time);
-      }
-    }
+    //   // Fire effect for higher levels
+    //   if (this.level > 3 && i >= this.level - 3) {
+    //     this.drawMiniExhaust(indicatorX, indicatorY, time);
+    //   }
+    // }
+    // --- END OLD CODE ---
+
+    // --- NEW CODE: Display Level as Text for MissileTower ---
+    ctx.fillStyle = "#ffffff"; // White color for the text
+    ctx.font = "12px Arial"; // Font size and type
+    ctx.textAlign = "center"; // Center the text horizontally
+    ctx.textBaseline = "middle"; // Center the text vertically
+    // Position the text below the tower. Adjust y + 25 as needed for spacing.
+    ctx.fillText(`Lv. ${this.level}`, x, y + 25);
+    // --- END NEW CODE ---
 
     // Random targeting laser effect
     if (Math.random() < 0.05) {

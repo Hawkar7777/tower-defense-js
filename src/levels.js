@@ -7,8 +7,8 @@ export const levels = [
   {
     level: 1,
     map: { width: 50, height: 25 },
-    startMoney: 100000000,
-    startLives: 50, // Increased lives to be more forgiving
+    startMoney: 100000000, // Very generous for testing purposes
+    startLives: 50,
     path: (TILE, T_HALF, MAP_W, MAP_H) => [
       { x: 0, y: TILE * 5 + T_HALF },
       { x: MAP_W * 0.25, y: TILE * 5 + T_HALF },
@@ -16,20 +16,38 @@ export const levels = [
       { x: MAP_W, y: MAP_H * 0.75 },
     ],
     waves: [
+      // --- Individual Regular Enemy Waves (count: 1 for each type) ---
+      { count: 1, types: { basic: 1.0 } },
+      { count: 1, types: { brute: 1.0 } },
+      { count: 1, types: { swift: 1.0 } },
+      { count: 1, types: { elite: 1.0 } },
+      { count: 1, types: { sapper: 1.0 } },
+      { count: 1, types: { wraith: 1.0 } },
+      { count: 1, types: { mimic: 1.0 } },
+      { count: 1, types: { leech: 1.0 } },
+      { count: 1, types: { shifter: 1.0 } },
+      { count: 1, types: { hive: 1.0 } },
+      { count: 1, types: { swarmer: 1.0 } }, // Swarmers can be spawned independently for testing
+      { count: 1, types: { specter: 1.0 } },
+      { count: 1, types: { collector: 1.0 } },
+      { count: 1, types: { disruptor: 1.0 } },
+
+      // --- Individual Boss Waves (1 boss per wave) ---
+      { boss: "Goliath" },
       { boss: "Phantom" },
-      {
-        count: 10,
-        types: { bosses: ["Juggernaut", "Basilisk"], brute: 0.5 },
-      }, // Wave 10
-      { bosses: ["Juggernaut", "Basilisk"] },
-      // REMOVE THE COMMA HERE ^
-      { count: 10, types: { basic: 1.0 } }, // Wave 1: Only basic enemies
-      { count: 18, types: { basic: 0.8, swift: 0.2 } }, // Wave 4: Introduce Swift
-      { count: 20, types: { basic: 0.7, swift: 0.3 } }, // Wave 5
-      { count: 15, types: { basic: 0.5, brute: 0.5 } }, // Wave 6: Introduce Brute
-      { count: 18, types: { basic: 0.4, brute: 0.6 } }, // Wave 7
-      { count: 20, types: { swift: 0.5, brute: 0.5 } }, // Wave 8: Mix of new types
-      { count: 25, types: { basic: 0.3, brute: 0.5, swift: 0.2 } }, // Wave 9
+      { boss: "Warlock" },
+      { boss: "Juggernaut" },
+      { boss: "Basilisk" },
+      { boss: "Marauder" },
+      { boss: "Scorcher" },
+      { boss: "Devastator" },
+      { boss: "Reaper" },
+
+      // You can add more specific test waves here if needed,
+      // for example, a wave with two specific bosses:
+      // { bosses: ["Juggernaut", "Basilisk"] },
+      // Or a boss with other enemies:
+      // { count: 5, types: { boss: "Basilisk", basic: 0.5, swift: 0.5 } },
     ],
   },
   {

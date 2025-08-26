@@ -261,29 +261,40 @@ export class TeslaTower extends BaseTower {
 
     ctx.restore();
 
-    // Draw level indicators as electric orbs
-    for (let i = 0; i < this.level; i++) {
-      const indicatorX = x - 12 + i * 6;
-      const indicatorY = y + 25;
-      const orbPulse = Math.sin(time * 4 + i) * 0.5 + 1;
+    // --- OLD CODE (REMOVE OR COMMENT OUT) ---
+    // // Draw level indicators as electric orbs
+    // for (let i = 0; i < this.level; i++) {
+    //   const indicatorX = x - 12 + i * 6;
+    //   const indicatorY = y + 25;
+    //   const orbPulse = Math.sin(time * 4 + i) * 0.5 + 1;
 
-      // Energy glow
-      ctx.fillStyle = `rgba(157, 78, 221, ${0.4 * orbPulse})`;
-      ctx.beginPath();
-      ctx.arc(indicatorX, indicatorY, 5 * orbPulse, 0, Math.PI * 2);
-      ctx.fill();
+    //   // Energy glow
+    //   ctx.fillStyle = `rgba(157, 78, 221, ${0.4 * orbPulse})`;
+    //   ctx.beginPath();
+    //   ctx.arc(indicatorX, indicatorY, 5 * orbPulse, 0, Math.PI * 2);
+    //   ctx.fill();
 
-      // Main orb
-      ctx.fillStyle = s.color;
-      ctx.beginPath();
-      ctx.arc(indicatorX, indicatorY, 3, 0, Math.PI * 2);
-      ctx.fill();
+    //   // Main orb
+    //   ctx.fillStyle = s.color;
+    //   ctx.beginPath();
+    //   ctx.arc(indicatorX, indicatorY, 3, 0, Math.PI * 2);
+    //   ctx.fill();
 
-      // Electric spark effect for higher levels
-      if (this.level > 3 && i >= this.level - 3) {
-        this.drawElectricSpark(indicatorX, indicatorY, time);
-      }
-    }
+    //   // Electric spark effect for higher levels
+    //   if (this.level > 3 && i >= this.level - 3) {
+    //     this.drawElectricSpark(indicatorX, indicatorY, time);
+    //   }
+    // }
+    // --- END OLD CODE ---
+
+    // --- NEW CODE: Display Level as Text for TeslaTower ---
+    ctx.fillStyle = "#ffffff"; // White color for the text
+    ctx.font = "12px Arial"; // Font size and type
+    ctx.textAlign = "center"; // Center the text horizontally
+    ctx.textBaseline = "middle"; // Center the text vertically
+    // Position the text below the tower. Adjust y + 25 as needed for spacing.
+    ctx.fillText(`Lv. ${this.level}`, x, y + 25);
+    // --- END NEW CODE ---
 
     // Random electric arcs between tower parts
     if (Math.random() < 0.1) {

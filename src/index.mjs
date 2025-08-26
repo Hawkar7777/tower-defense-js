@@ -23,7 +23,7 @@ import { initPath, path } from "./path.js";
 import { updateEffects, drawEffects } from "./effects.js";
 import { spawner, startNextWave } from "./spawner.js";
 import {
-  drawBackground,
+  // drawBackground, // Removed, as it's now handled by the map and base fill
   drawTopbar,
   drawShop,
   drawGhost,
@@ -39,9 +39,11 @@ import {
   getOccupiedCells,
 } from "./occupation.js";
 import { levels } from "./levels.js";
+import { loadMap, drawMap } from "./map/mapRenderer.js";
 
 // --- GLOBAL STATE ---
 let currentLevelConfig = null;
+let currentLoadedMapData = null; // Store the loaded map data
 
 // --- OPTIMIZATION: Off-screen canvases for static background elements ---
 const gridCanvas = document.createElement("canvas");
@@ -96,10 +98,12 @@ let animationFrameId = null;
 
 /**
  * OPTIMIZATION: Pre-renders the static grid to an off-screen canvas.
+ * This now uses the MAP_GRID_W and MAP_GRID_H from the loaded map.
  */
 function precomputeGrid() {
   gridCanvas.width = MAP_GRID_W * TILE;
   gridCanvas.height = MAP_GRID_H * TILE;
+  gridCtx.clearRect(0, 0, gridCanvas.width, gridCanvas.height); // Clear previous grid
   gridCtx.strokeStyle = "rgba(255, 255, 255, 0.05)";
   gridCtx.lineWidth = 1;
   gridCtx.beginPath();
@@ -116,13 +120,8 @@ function precomputeGrid() {
 
 /**
  * OPTIMIZATION: Pre-renders the static path to an off-screen canvas.
+ * This now uses the 'path' array which is updated by initPath (from map data).
  */
-// --- In index.mjs, REPLACE your old precomputePath function with this one ---
-
-/**
- * OPTIMIZATION: Pre-renders the static path to an off-screen canvas.
- */
-
 function precomputePath() {
   pathCanvas.width = MAP_GRID_W * TILE;
   pathCanvas.height = MAP_GRID_H * TILE;
@@ -162,8 +161,6 @@ function precomputePath() {
   pathCtx.lineWidth = 3;
   pathCtx.globalAlpha = 1; // Fully opaque
   pathCtx.stroke();
-
-  // --- End of New Drawing Style ---
 }
 
 /**
@@ -220,15 +217,21 @@ function loop(ts) {
   }
 
   // --- DRAWING LOGIC ---
-  drawBackground(state.time, path);
-  drawTopbar(canvas.clientWidth);
-  drawShop(canvas.clientWidth, canvas.clientHeight);
 
-  ctx.save();
+  // 1. Clear the whole canvas and draw a base background color
+  ctx.clearRect(0, 0, canvas.clientWidth, canvas.clientHeight);
+  ctx.fillStyle = "#0b0f1a";
+  ctx.fillRect(0, 0, canvas.clientWidth, canvas.clientHeight);
+
+  ctx.save(); // Save the untransformed context state
+
+  // Apply camera and zoom transformations for the game world
   ctx.translate(-state.camera.x * state.zoom, -state.camera.y * state.zoom);
   ctx.scale(state.zoom, state.zoom);
 
-  // OPTIMIZATION: Draw pre-rendered canvases instead of raw shapes.
+  // Draw the loaded map first (game world layer 0)
+  drawMap(state.camera, state.zoom);
+  // Draw pre-rendered grid and path over the map (game world layers 1 & 2)
   ctx.drawImage(gridCanvas, 0, 0);
   ctx.drawImage(pathCanvas, 0, 0);
 
@@ -249,7 +252,7 @@ function loop(ts) {
   ctx.globalAlpha = 1.0; // Reset alpha for other drawing operations
   // --- MODIFICATION END ---
 
-  // --- Draw dynamic elements (ghosts, ranges, etc.) ---
+  // --- Draw dynamic game world elements (ghosts, ranges, entities) ---
   drawPlacementOverlay();
   if (ui.heldTower) drawHeldTowerRange(ui.heldTower);
 
@@ -311,9 +314,11 @@ function loop(ts) {
   for (const p of projectiles) p.draw();
   drawEffects();
 
-  ctx.restore();
+  ctx.restore(); // Restore the canvas to its untransformed (screen) state
 
-  // Draw UI on top of everything
+  // --- Draw UI elements on top of everything else ---
+  drawTopbar(canvas.clientWidth);
+  drawShop(canvas.clientWidth, canvas.clientHeight);
   drawInspector(ui.selectedTower, state.camera, state.zoom);
 
   animationFrameId = requestAnimationFrame(loop);
@@ -322,20 +327,30 @@ function loop(ts) {
 /**
  * Public function to initialize and start a specific level.
  */
-export function startGame(levelNumber) {
+export async function startGame(levelNumber) {
+  // Made async to await map loading
   currentLevelConfig = levels.find((l) => l.level === levelNumber);
   if (!currentLevelConfig) {
     alert(`Error: Level ${levelNumber} configuration not found!`);
     return;
   }
 
-  // Make the level config globally accessible
-  state.currentLevelConfig = currentLevelConfig;
+  // Load the map for the current level
+  try {
+    currentLoadedMapData = await loadMap(currentLevelConfig.mapFile);
+  } catch (error) {
+    alert(`Failed to load map for level ${levelNumber}: ${error.message}`);
+    console.error(error);
+    return;
+  }
+
+  // Update core map dimensions based on the loaded map
+  setMapDimensions(currentLoadedMapData.width, currentLoadedMapData.height);
+  state.currentLevelConfig = currentLevelConfig; // Make the level config globally accessible
 
   resetState(currentLevelConfig);
-  setMapDimensions(currentLevelConfig.map.width, currentLevelConfig.map.height);
-  resize();
-  initPath(currentLevelConfig.path);
+  resize(); // Recalculate canvas size based on new MAP_GRID_W/H
+  initPath(); // Now initPath gets its data from the loaded map
 
   // --- MODIFICATION START ---
   // Resize the new aura canvas to match the full map dimensions
@@ -364,9 +379,14 @@ function stopGame() {
 function gameOver() {
   stopGame();
   // Draw one final frame to show the game over state
-  drawBackground(state.time, path);
+  ctx.clearRect(0, 0, canvas.clientWidth, canvas.clientHeight); // Clear the whole canvas
+  drawMap(state.camera, state.zoom); // Draw the map (game world background)
+  ctx.drawImage(gridCanvas, 0, 0); // Draw grid
+  ctx.drawImage(pathCanvas, 0, 0); // Draw path
+
+  // Now draw the UI elements on top
   drawTopbar(canvas.clientWidth);
-  ctx.fillStyle = "rgba(10,20,36,0.86)";
+  ctx.fillStyle = "rgba(10,20,36,0.86)"; // Overlay for game over
   ctx.fillRect(0, 0, canvas.clientWidth, canvas.clientHeight);
   ctx.fillStyle = "#fff";
   ctx.font = "800 48px Inter";
@@ -401,9 +421,14 @@ function levelComplete() {
     );
   }
   // Draw one final frame for the victory screen
-  drawBackground(state.time, path);
+  ctx.clearRect(0, 0, canvas.clientWidth, canvas.clientHeight); // Clear the whole canvas
+  drawMap(state.camera, state.zoom); // Draw the map (game world background)
+  ctx.drawImage(gridCanvas, 0, 0); // Draw grid
+  ctx.drawImage(pathCanvas, 0, 0); // Draw path
+
+  // Now draw the UI elements on top
   drawTopbar(canvas.clientWidth);
-  ctx.fillStyle = "rgba(10, 36, 20, 0.86)";
+  ctx.fillStyle = "rgba(10, 36, 20, 0.86)"; // Overlay for victory
   ctx.fillRect(0, 0, canvas.clientWidth, canvas.clientHeight);
   ctx.fillStyle = "#fff";
   ctx.font = "800 48px Inter";
@@ -426,7 +451,7 @@ function levelComplete() {
   canvas.addEventListener("touchend", reload, { once: true });
 }
 
-// --- INPUT HANDLING (No changes below this line) ---
+// --- INPUT HANDLING (No changes below this line, but make sure MAP_GRID_W/H is updated) ---
 function getCanvasPos(clientX, clientY) {
   const rect = canvas.getBoundingClientRect();
   return { x: clientX - rect.left, y: clientY - rect.top };

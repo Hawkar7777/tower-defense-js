@@ -1,0 +1,2417 @@
+
+
+// ===== FILE: ui.js =====
+
+import { ctx, TILE, MAP_GRID_W, MAP_GRID_H } from "./core.js";
+import { roundRect, clamp } from "./utils.js";
+import { TOWER_TYPES } from "./config.js";
+import { state, pulses, towers } from "./state.js";
+import { ui } from "./state.js";
+import { blocked } from "./path.js";
+import { getOccupiedCells, isPlacementValid } from "./occupation.js";
+
+export function drawBackground(t, pathArr) {
+  const W = ctx.canvas.clientWidth;
+  const H = ctx.canvas.clientHeight;
+
+  ctx.fillStyle = "#0b0f1a";
+  ctx.fillRect(0, 0, W, H);
+  const g = ctx.createLinearGradient(0, 0, W, H);
+  g.addColorStop(0, "rgba(0,180,255,0.05)");
+  g.addColorStop(1, "rgba(255,0,220,0.05)");
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, W, H);
+}
+
+function formatMoney(num) {
+  if (num < 1000) return num.toString();
+  const tiers = [
+    { value: 1e12, symbol: "t" },
+    { value: 1e9, symbol: "b" },
+    { value: 1e6, symbol: "m" },
+    { value: 1e3, symbol: "k" },
+  ];
+  const tier = tiers.find((t) => num >= t.value);
+  if (tier) {
+    const formatted = (num / tier.value).toFixed(1).replace(/.0$/, "");
+    return formatted + tier.symbol;
+  }
+  return num.toString();
+}
+
+export function drawTopbar(W) {
+  ctx.font = "700 10px Inter, system-ui, -apple-system, Segoe UI, Roboto";
+  ctx.fillStyle = "#bfe7ff";
+  ctx.fillText(`Wave ${state.wave}`, 15, 20);
+  ctx.fillStyle = "#e6ffb3";
+  ctx.fillText(`$ ${formatMoney(state.money)}`, 90, 20);
+  ctx.fillStyle = state.lives > 5 ? "#b3ffd9" : "#ffc7c7";
+  ctx.fillText(`❤ ${state.lives}`, 150, 20);
+
+  for (const p of pulses) {
+    p.y -= 20 / 60;
+    p.life -= 1 / 60;
+    ctx.globalAlpha = Math.max(0, p.life);
+    ctx.fillStyle = p.c;
+    ctx.fillText(p.text, p.x || W - 120, p.y || 58);
+    ctx.globalAlpha = 1;
+  }
+  for (let i = pulses.length - 1; i >= 0; i--)
+    if (pulses[i].life <= 0) pulses.splice(i, 1);
+}
+
+export function getShopButtons(W, H) {
+  const pad = 18;
+  const y = H - 78;
+  const h = 60;
+  const w = 140;
+  // Only get the keys for towers the player has unlocked
+  const keys = window.playerData.unlockedTowers || ["gun"];
+
+  ui.shopScrollOffset = ui.shopScrollOffset || 0;
+
+  return keys.map((k, i) => ({
+    key: k,
+    x: pad + i * (w + 12) - ui.shopScrollOffset,
+    y,
+    w,
+    h,
+  }));
+}
+
+export function drawShop(W, H) {
+  const buttons = getShopButtons(W, H);
+  if (!TOWER_TYPES || Object.keys(TOWER_TYPES).length === 0) return;
+
+  const unlockedKeys = window.playerData.unlockedTowers || ["gun"];
+  const totalWidth = unlockedKeys.length * (140 + 12) - 12 + 18 * 2;
+
+  ui.maxShopScroll = Math.max(0, totalWidth - W);
+  ui.shopScrollOffset = Math.max(
+    0,
+    Math.min(ui.maxShopScroll, ui.shopScrollOffset || 0)
+  );
+
+  if (ui.maxShopScroll > 0) {
+    if (ui.shopScrollOffset > 0) {
+      ctx.fillStyle = "rgba(255, 255, 255, 0.5)";
+      ctx.beginPath();
+      ctx.moveTo(10, H - 48);
+      ctx.lineTo(20, H - 58);
+      ctx.lineTo(20, H - 38);
+      ctx.closePath();
+      ctx.fill();
+    }
+    if (ui.shopScrollOffset < ui.maxShopScroll) {
+      ctx.fillStyle = "rgba(255, 255, 255, 0.5)";
+      ctx.beginPath();
+      ctx.moveTo(W - 10, H - 48);
+      ctx.lineTo(W - 20, H - 58);
+      ctx.lineTo(W - 20, H - 38);
+      ctx.closePath();
+      ctx.fill();
+    }
+  }
+
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(0, H - 100, W, 100);
+  ctx.clip();
+
+  for (const b of buttons) {
+    const spec = TOWER_TYPES[b.key];
+    const active = ui.selectedShopKey === b.key;
+    const canAfford = state.money >= spec.cost;
+
+    const bgColor = canAfford
+      ? active
+        ? "rgba(26,46,76,0.95)"
+        : "rgba(12,22,36,0.9)"
+      : "rgba(36,36,48,0.8)";
+    const borderColor = canAfford
+      ? active
+        ? "#3d6fb6"
+        : "#24496f"
+      : "#444455";
+    const textColor = canAfford ? spec.color : "#666677";
+    const costColor = canAfford ? "#bfe7ff" : "#888899";
+
+    roundRect(b.x, b.y, b.w, b.h, 8, bgColor, true, borderColor);
+
+    ctx.fillStyle = textColor;
+    ctx.font = "700 16px Inter, system-ui";
+    ctx.fillText(spec.name, b.x + 16, b.y + 24);
+    ctx.fillStyle = costColor;
+    ctx.font = "500 13px Inter, system-ui";
+    ctx.fillText(`$${spec.cost}  •  Rng ${spec.range}`, b.x + 16, b.y + 45);
+  }
+
+  ctx.restore();
+}
+
+// ... the rest of your ui.js functions (drawGhost, drawInspector, etc.) remain unchanged
+// Just copy them below this line.
+export function drawGhost(
+  hoveredTile,
+  TILEparam,
+  selectedShopKey,
+  isDragging = false
+) {
+  if (!hoveredTile || !selectedShopKey) return;
+
+  const gx = hoveredTile.gx;
+  const gy = hoveredTile.gy;
+
+  const spec = TOWER_TYPES[selectedShopKey];
+  if (!spec) return;
+
+  const valid = isPlacementValid(gx, gy, spec);
+  const cells = getOccupiedCells(gx, gy, spec.size);
+
+  const minGx = Math.min(...cells.map((c) => c.gx));
+  const maxGx = Math.max(...cells.map((c) => c.gx));
+  const minGy = Math.min(...cells.map((c) => c.gy));
+  const maxGy = Math.max(...cells.map((c) => c.gy));
+
+  const ghostX = minGx * TILEparam;
+  const ghostY = minGy * TILEparam;
+  const ghostW = (maxGx - minGx + 1) * TILEparam;
+  const ghostH = (maxGy - minGy + 1) * TILEparam;
+
+  const c = { x: (gx + 0.5) * TILEparam, y: (gy + 0.5) * TILEparam };
+
+  ctx.globalAlpha = isDragging ? 0.2 : 0.12;
+  ctx.fillStyle = valid ? "#9f9" : "#f99";
+  ctx.beginPath();
+  ctx.arc(c.x, c.y, spec.range, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.globalAlpha = 1;
+
+  roundRect(
+    ghostX + 4,
+    ghostY + 4,
+    ghostW - 8,
+    ghostH - 8,
+    10,
+    valid
+      ? isDragging
+        ? "rgba(120,220,140,0.6)"
+        : "rgba(120,220,140,0.35)"
+      : isDragging
+      ? "rgba(255,120,120,0.6)"
+      : "rgba(255,120,120,0.35)"
+  );
+}
+
+export function drawHeldTowerRange(tower) {
+  if (!tower) return;
+  const s = tower.spec();
+
+  ctx.globalAlpha = 0.2;
+  ctx.fillStyle = "#fff";
+  ctx.beginPath();
+  ctx.arc(tower.center.x, tower.center.y, s.range, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.globalAlpha = 1;
+}
+
+export function drawInspector(selectedTower, camera, zoom) {
+  if (!selectedTower) {
+    ui.inspectorButtons = null; // Clear buttons when no tower is selected
+    return;
+  }
+  const t = selectedTower;
+  const s = t.spec(); // This gets the tower's configuration from config.js
+
+  const screenX = (t.center.x - camera.x) * zoom;
+  const screenY = (t.center.y - camera.y) * zoom;
+
+  const W = ctx.canvas.clientWidth;
+  const H = ctx.canvas.clientHeight;
+
+  const panel = {
+    x: clamp(screenX - 90, 12, W - 192),
+    y: clamp(screenY - 120, 12, H - 220),
+    w: 180,
+    h: 130,
+  };
+
+  ui.inspectorButtons = { panel };
+
+  roundRect(
+    panel.x,
+    panel.y,
+    panel.w,
+    panel.h,
+    12,
+    "rgba(12,22,36,0.95)",
+    true,
+    "#2c527f"
+  );
+
+  const isMaxLevel = t.level >= s.maxLevel;
+  const levelText = isMaxLevel ? "Lv.MAX" : `Lv.${t.level}`;
+
+  ctx.fillStyle = isMaxLevel ? "#ffd700" : "#bfe7ff"; // Gold color for MAX level text
+  ctx.font = "700 16px Inter";
+  ctx.fillText(`${s.name} ${levelText}`, panel.x + 14, panel.y + 28);
+
+  ctx.font = "500 13px Inter";
+  ctx.fillStyle = "#aaccff";
+  ctx.fillText(`Dmg ${Math.round(s.dmg)}`, panel.x + 14, panel.y + 52);
+
+  // --- THIS IS THE NEW LINE TO SHOW HP ---
+  ctx.fillText(
+    `HP ${Math.round(t.hp)} / ${Math.round(t.maxHp)}`,
+    panel.x + 88,
+    panel.y + 52
+  );
+  // --- END NEW LINE ---
+
+  ctx.fillText(`Rng ${Math.round(s.range)}`, panel.x + 14, panel.y + 70);
+  ctx.fillText(`Rate ${s.fireRate.toFixed(1)}/s`, panel.x + 88, panel.y + 70);
+
+  const buttonY = panel.y + 88;
+  const buttonH = 32;
+  const buttonW = (panel.w - 30) / 2;
+
+  if (!isMaxLevel) {
+    if (typeof t.upgradeCost === "function") {
+      const upgradeCost = t.upgradeCost();
+      const canAfford = state.money >= upgradeCost;
+      const upgradeButton = {
+        x: panel.x + 10,
+        y: buttonY,
+        w: buttonW,
+        h: buttonH,
+      };
+
+      ui.inspectorButtons.upgrade = upgradeButton;
+
+      roundRect(
+        upgradeButton.x,
+        upgradeButton.y,
+        upgradeButton.w,
+        upgradeButton.h,
+        6,
+        canAfford ? "rgba(40, 80, 130, 0.8)" : "rgba(50, 50, 60, 0.7)",
+        true,
+        canAfford ? "#3d6fb6" : "#555566"
+      );
+
+      ctx.fillStyle = canAfford ? "#bfe7ff" : "#888899";
+      ctx.textAlign = "center";
+
+      ctx.beginPath();
+      ctx.moveTo(upgradeButton.x + upgradeButton.w / 2, upgradeButton.y + 8);
+      ctx.lineTo(
+        upgradeButton.x + upgradeButton.w / 2 - 5,
+        upgradeButton.y + 14
+      );
+      ctx.lineTo(
+        upgradeButton.x + upgradeButton.w / 2 + 5,
+        upgradeButton.y + 14
+      );
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.font = "600 12px Inter";
+      ctx.fillText(
+        `$${formatMoney(upgradeCost)}`,
+        upgradeButton.x + upgradeButton.w / 2,
+        upgradeButton.y + 26
+      );
+      ctx.textAlign = "start";
+    }
+  } else {
+    const upgradeButtonArea = {
+      x: panel.x + 10,
+      y: buttonY,
+      w: buttonW,
+      h: buttonH,
+    };
+    roundRect(
+      upgradeButtonArea.x,
+      upgradeButtonArea.y,
+      upgradeButtonArea.w,
+      upgradeButtonArea.h,
+      6,
+      "rgba(20, 30, 50, 0.7)",
+      true,
+      "#1c2541"
+    );
+    ctx.fillStyle = "#5c7bfa";
+    ctx.font = "700 13px Inter";
+    ctx.textAlign = "center";
+    ctx.fillText(
+      "MAX",
+      upgradeButtonArea.x + upgradeButtonArea.w / 2,
+      upgradeButtonArea.y + 22
+    );
+    ctx.textAlign = "start";
+  }
+
+  if (typeof t.sellValue === "function") {
+    const sellValue = Math.round(t.sellValue());
+    const sellButton = {
+      x: panel.x + 20 + buttonW,
+      y: buttonY,
+      w: buttonW,
+      h: buttonH,
+    };
+    ui.inspectorButtons.sell = sellButton;
+
+    roundRect(
+      sellButton.x,
+      sellButton.y,
+      sellButton.w,
+      sellButton.h,
+      6,
+      "rgba(130, 40, 60, 0.8)",
+      true,
+      "#b63d56"
+    );
+
+    ctx.fillStyle = "#ffdde5";
+    ctx.textAlign = "center";
+
+    ctx.font = "700 14px Inter";
+    ctx.fillText(`$`, sellButton.x + sellButton.w / 2, sellButton.y + 15);
+
+    ctx.font = "600 12px Inter";
+    ctx.fillText(
+      `${formatMoney(sellValue)}`,
+      sellButton.x + sellButton.w / 2,
+      sellButton.y + 28
+    );
+    ctx.textAlign = "start";
+  }
+}
+
+export function drawPlacementOverlay() {
+  if (!ui.selectedShopKey) {
+    return;
+  }
+
+  const allOccupiedCells = new Set();
+  for (const tower of towers) {
+    const spec = TOWER_TYPES[tower.key];
+    if (!spec) continue;
+    const cells = getOccupiedCells(tower.gx, tower.gy, spec.size);
+    for (const cell of cells) {
+      allOccupiedCells.add(`${cell.gx},${cell.gy}`);
+    }
+  }
+
+  for (let gy = 0; gy < MAP_GRID_H; gy++) {
+    for (let gx = 0; gx < MAP_GRID_W; gx++) {
+      const isInvalid =
+        gy >= MAP_GRID_H - 2 ||
+        blocked.has(`${gx},${gy}`) ||
+        allOccupiedCells.has(`${gx},${gy}`);
+
+      if (isInvalid) {
+        ctx.fillStyle = "rgba(255, 100, 100, 0.4)";
+        ctx.fillRect(gx * TILE, gy * TILE, TILE, TILE);
+      }
+    }
+  }
+}
+
+
+// ===== FILE: index.mjs =====
+
+import {
+  canvas,
+  ctx,
+  TILE,
+  resize,
+  MIN_ZOOM,
+  MAX_ZOOM,
+  MAP_GRID_W,
+  MAP_GRID_H,
+  setMapDimensions,
+} from "./core.js";
+import {
+  state,
+  enemies,
+  towers,
+  projectiles,
+  ui,
+  resetState,
+} from "./state.js";
+import { clamp, dist, pulse } from "./utils.js";
+import { TOWER_TYPES } from "./config.js";
+import { initPath, path } from "./path.js";
+import { updateEffects, drawEffects } from "./effects.js";
+import { spawner, startNextWave } from "./spawner.js";
+import {
+  drawBackground,
+  drawTopbar,
+  drawShop,
+  drawGhost,
+  drawInspector,
+  getShopButtons,
+  drawHeldTowerRange,
+  drawPlacementOverlay,
+} from "./ui.js";
+import {
+  updateOccupiedCells,
+  isPlacementValid,
+  findTowerAt,
+  getOccupiedCells,
+} from "./occupation.js";
+import { levels } from "./levels.js";
+
+// --- GLOBAL STATE ---
+let currentLevelConfig = null;
+
+// --- OPTIMIZATION: Off-screen canvases for static background elements ---
+const gridCanvas = document.createElement("canvas");
+const gridCtx = gridCanvas.getContext("2d");
+const pathCanvas = document.createElement("canvas");
+const pathCtx = pathCanvas.getContext("2d");
+
+// --- MODIFICATION START ---
+// Added a new off-screen canvas specifically for disruptor auras
+const auraCanvas = document.createElement("canvas");
+const auraCtx = auraCanvas.getContext("2d");
+// --- MODIFICATION END ---
+
+// --- CONSTANTS ---
+const TOUCH_PAN_SENSITIVITY = 1.5;
+const HOLD_DURATION = 200;
+
+// --- INPUT STATE (Restored from original for full functionality) ---
+let mouse = {
+  x: 0,
+  y: 0,
+  gx: 0,
+  gy: 0,
+  down: false,
+  draggingTower: false,
+  isPanning: false,
+  panStartX: 0,
+  panStartY: 0,
+  camStart: { x: 0, y: 0 },
+  isHolding: false,
+  holdTimer: null,
+  shopInteraction: false,
+};
+
+let touch = {
+  action: "idle",
+  startX: 0,
+  startY: 0,
+  currentX: 0,
+  currentY: 0,
+  isHolding: false, // True for ANY active drag (from map or shop)
+  holdTimer: null,
+  potentialSelection: null, // Holds object/key being held over
+};
+
+let initialPinchDist = null;
+let initialZoom = 1.0;
+
+// --- GAME LOOP CONTROL ---
+let last = performance.now();
+let animationFrameId = null;
+
+/**
+ * OPTIMIZATION: Pre-renders the static grid to an off-screen canvas.
+ */
+function precomputeGrid() {
+  gridCanvas.width = MAP_GRID_W * TILE;
+  gridCanvas.height = MAP_GRID_H * TILE;
+  gridCtx.strokeStyle = "rgba(255, 255, 255, 0.05)";
+  gridCtx.lineWidth = 1;
+  gridCtx.beginPath();
+  for (let i = 0; i <= MAP_GRID_W; i++) {
+    gridCtx.moveTo(i * TILE, 0);
+    gridCtx.lineTo(i * TILE, MAP_GRID_H * TILE);
+  }
+  for (let i = 0; i <= MAP_GRID_H; i++) {
+    gridCtx.moveTo(0, i * TILE);
+    gridCtx.lineTo(MAP_GRID_W * TILE, i * TILE);
+  }
+  gridCtx.stroke();
+}
+
+/**
+ * OPTIMIZATION: Pre-renders the static path to an off-screen canvas.
+ */
+// --- In index.mjs, REPLACE your old precomputePath function with this one ---
+
+/**
+ * OPTIMIZATION: Pre-renders the static path to an off-screen canvas.
+ */
+
+function precomputePath() {
+  pathCanvas.width = MAP_GRID_W * TILE;
+  pathCanvas.height = MAP_GRID_H * TILE;
+  pathCtx.clearRect(0, 0, pathCanvas.width, pathCanvas.height); // Clear previous path
+
+  // Make sure there is a path to draw
+  if (!path || path.length < 2) return;
+
+  // Set properties for smooth corners
+  pathCtx.lineCap = "round";
+  pathCtx.lineJoin = "round";
+
+  // --- Start Drawing the New Path Style ---
+
+  // 1. Draw the wide, soft outer glow.
+  // This is a very wide, very transparent line that creates the glow effect.
+  pathCtx.strokeStyle = "#29e3ff"; // A nice glowing cyan color
+  pathCtx.lineWidth = 15;
+  pathCtx.globalAlpha = 0.2; // Set transparency to 20%
+
+  pathCtx.beginPath();
+  pathCtx.moveTo(path[0].x, path[0].y);
+  for (let i = 1; i < path.length; i++) {
+    pathCtx.lineTo(path[i].x, path[i].y);
+  }
+  pathCtx.stroke();
+
+  // 2. Draw a slightly brighter middle glow.
+  // We draw over the same path, but with a thinner line and less transparency.
+  pathCtx.lineWidth = 7;
+  pathCtx.globalAlpha = 0.4; // Set transparency to 40%
+  pathCtx.stroke(); // No need to beginPath again, just stroke the same path
+
+  // 3. Draw the bright, solid inner core.
+  // This is the final, thin, bright line that makes the path look like an energy beam.
+  pathCtx.strokeStyle = "#ffffff"; // A pure white core
+  pathCtx.lineWidth = 3;
+  pathCtx.globalAlpha = 1; // Fully opaque
+  pathCtx.stroke();
+
+  // --- End of New Drawing Style ---
+}
+
+/**
+ * The main game loop.
+ */
+function loop(ts) {
+  if (!state.running) {
+    if (animationFrameId) cancelAnimationFrame(animationFrameId);
+    animationFrameId = null;
+    return;
+  }
+
+  const dt = Math.min(0.033, (ts - last) / 1000);
+  last = ts;
+  state.time += dt;
+
+  // --- UPDATE LOGIC ---
+  spawner(dt);
+  for (const t of towers) t.update(dt, enemies);
+
+  // --- MODIFIED PROJECTILE UPDATE LOGIC ---
+  for (const p of projectiles) {
+    if (p.isEnemyProjectile || p.isBossProjectile) {
+      p.update(dt);
+    } else {
+      p.update(dt, enemies);
+    }
+  }
+  // --- END MODIFIED LOGIC ---
+
+  for (const e of enemies) e.update(dt);
+  updateEffects(dt);
+
+  // OPTIMIZATION: Efficiently remove dead entities without repeated splicing.
+  for (let i = projectiles.length - 1; i >= 0; i--) {
+    if (projectiles[i].dead) projectiles.splice(i, 1);
+  }
+  for (let i = enemies.length - 1; i >= 0; i--) {
+    if (enemies[i].dead) enemies.splice(i, 1);
+  }
+
+  // --- WIN/LOSS CHECKS ---
+  if (state.lives <= 0) {
+    gameOver();
+    return;
+  }
+  if (
+    state.wave >= currentLevelConfig.waves.length &&
+    enemies.length === 0 &&
+    state.toSpawn.length === 0
+  ) {
+    levelComplete();
+    return;
+  }
+
+  // --- DRAWING LOGIC ---
+  drawBackground(state.time, path);
+  drawTopbar(canvas.clientWidth);
+  drawShop(canvas.clientWidth, canvas.clientHeight);
+
+  ctx.save();
+  ctx.translate(-state.camera.x * state.zoom, -state.camera.y * state.zoom);
+  ctx.scale(state.zoom, state.zoom);
+
+  // OPTIMIZATION: Draw pre-rendered canvases instead of raw shapes.
+  ctx.drawImage(gridCanvas, 0, 0);
+  ctx.drawImage(pathCanvas, 0, 0);
+
+  // --- MODIFICATION START: NEW AURA RENDERING LOGIC ---
+  // 1. Clear the aura buffer for this frame.
+  auraCtx.clearRect(0, 0, auraCanvas.width, auraCanvas.height);
+
+  // 2. Populate the buffer by drawing each Disruptor's opaque aura onto it.
+  for (const e of enemies) {
+    if (e.type === "disruptor" && !e.dead) {
+      e.drawAuraToBuffer(auraCtx);
+    }
+  }
+
+  // 3. Draw the complete, merged aura buffer to the main canvas with a single alpha setting.
+  ctx.globalAlpha = 0.25; // Apply transparency to the entire layer at once
+  ctx.drawImage(auraCanvas, 0, 0);
+  ctx.globalAlpha = 1.0; // Reset alpha for other drawing operations
+  // --- MODIFICATION END ---
+
+  // --- Draw dynamic elements (ghosts, ranges, etc.) ---
+  drawPlacementOverlay();
+  if (ui.heldTower) drawHeldTowerRange(ui.heldTower);
+
+  const pointerY = touch.action !== "idle" ? touch.currentY : mouse.y;
+  const isDraggingNewTowerFromShop =
+    mouse.draggingTower || (touch.isHolding && !!ui.selectedShopKey);
+
+  if (
+    (isDraggingNewTowerFromShop || (ui.hoveredTile && ui.selectedShopKey)) &&
+    pointerY <= canvas.clientHeight - 100
+  ) {
+    drawGhost(
+      ui.hoveredTile,
+      TILE,
+      ui.selectedShopKey,
+      isDraggingNewTowerFromShop
+    );
+  }
+
+  // Draw game entities
+  for (const t of towers) {
+    t.draw();
+
+    // --- DRAW HP BAR FOR EACH TOWER ---
+    if (
+      typeof t.hp === "number" &&
+      typeof t.maxHp === "number" &&
+      t.maxHp > 0
+    ) {
+      const spec = t.spec();
+      const cells = getOccupiedCells(t.gx, t.gy, spec.size);
+      const minGy = Math.min(...cells.map((c) => c.gy));
+      const minGx = Math.min(...cells.map((c) => c.gx));
+      const maxGx = Math.max(...cells.map((c) => c.gx));
+
+      const barWidth = (maxGx - minGx + 1) * TILE * 0.8;
+      const barHeight = 4;
+
+      const x = t.center.x - barWidth / 2;
+      const y = minGy * TILE - barHeight - 3;
+
+      ctx.fillStyle = "rgba(40, 40, 40, 0.7)";
+      ctx.fillRect(x, y, barWidth, barHeight);
+
+      const hpPercentage = Math.max(0, t.hp / t.maxHp);
+      if (hpPercentage > 0.6) {
+        ctx.fillStyle = "#4CAF50"; // Green
+      } else if (hpPercentage > 0.3) {
+        ctx.fillStyle = "#FFC107"; // Yellow
+      } else {
+        ctx.fillStyle = "#F44336"; // Red
+      }
+      ctx.fillRect(x, y, barWidth * hpPercentage, barHeight);
+    }
+    // --- END NEW HP BAR LOGIC ---
+  }
+
+  for (const e of enemies) e.draw();
+  for (const p of projectiles) p.draw();
+  drawEffects();
+
+  ctx.restore();
+
+  // Draw UI on top of everything
+  drawInspector(ui.selectedTower, state.camera, state.zoom);
+
+  animationFrameId = requestAnimationFrame(loop);
+}
+
+/**
+ * Public function to initialize and start a specific level.
+ */
+export function startGame(levelNumber) {
+  currentLevelConfig = levels.find((l) => l.level === levelNumber);
+  if (!currentLevelConfig) {
+    alert(`Error: Level ${levelNumber} configuration not found!`);
+    return;
+  }
+
+  // Make the level config globally accessible
+  state.currentLevelConfig = currentLevelConfig;
+
+  resetState(currentLevelConfig);
+  setMapDimensions(currentLevelConfig.map.width, currentLevelConfig.map.height);
+  resize();
+  initPath(currentLevelConfig.path);
+
+  // --- MODIFICATION START ---
+  // Resize the new aura canvas to match the full map dimensions
+  auraCanvas.width = MAP_GRID_W * TILE;
+  auraCanvas.height = MAP_GRID_H * TILE;
+  // --- MODIFICATION END ---
+
+  // --- OPTIMIZATION: Pre-render static elements for this level ---
+  precomputeGrid();
+  precomputePath();
+
+  last = performance.now();
+  if (animationFrameId) cancelAnimationFrame(animationFrameId);
+  state.running = true; // Set running state before requesting frame
+  animationFrameId = requestAnimationFrame(loop);
+}
+
+function stopGame() {
+  state.running = false;
+  if (animationFrameId) {
+    cancelAnimationFrame(animationFrameId);
+    animationFrameId = null;
+  }
+}
+
+function gameOver() {
+  stopGame();
+  // Draw one final frame to show the game over state
+  drawBackground(state.time, path);
+  drawTopbar(canvas.clientWidth);
+  ctx.fillStyle = "rgba(10,20,36,0.86)";
+  ctx.fillRect(0, 0, canvas.clientWidth, canvas.clientHeight);
+  ctx.fillStyle = "#fff";
+  ctx.font = "800 48px Inter";
+  ctx.textAlign = "center";
+  ctx.fillText(
+    "Game Over",
+    canvas.clientWidth / 2,
+    canvas.clientHeight / 2 - 10
+  );
+  ctx.font = "500 18px Inter";
+  ctx.fillStyle = "#bfe7ff";
+  ctx.fillText(
+    `You reached wave ${state.wave}. Tap or click to return.`,
+    canvas.clientWidth / 2,
+    canvas.clientHeight / 2 + 28
+  );
+  ctx.textAlign = "start";
+  const reload = () => window.location.reload();
+  canvas.addEventListener("click", reload, { once: true });
+  canvas.addEventListener("touchend", reload, { once: true });
+}
+
+function levelComplete() {
+  stopGame();
+  const unlocked = parseInt(
+    localStorage.getItem("towerDefenseHighestLevel") || "1"
+  );
+  if (currentLevelConfig.level >= unlocked) {
+    localStorage.setItem(
+      "towerDefenseHighestLevel",
+      currentLevelConfig.level + 1
+    );
+  }
+  // Draw one final frame for the victory screen
+  drawBackground(state.time, path);
+  drawTopbar(canvas.clientWidth);
+  ctx.fillStyle = "rgba(10, 36, 20, 0.86)";
+  ctx.fillRect(0, 0, canvas.clientWidth, canvas.clientHeight);
+  ctx.fillStyle = "#fff";
+  ctx.font = "800 48px Inter";
+  ctx.textAlign = "center";
+  ctx.fillText(
+    "Victory!",
+    canvas.clientWidth / 2,
+    canvas.clientHeight / 2 - 10
+  );
+  ctx.font = "500 18px Inter";
+  ctx.fillStyle = "#bfe7ff";
+  ctx.fillText(
+    `Level ${currentLevelConfig.level} complete! Tap or click to continue.`,
+    canvas.clientWidth / 2,
+    canvas.clientHeight / 2 + 28
+  );
+  ctx.textAlign = "start";
+  const reload = () => window.location.reload();
+  canvas.addEventListener("click", reload, { once: true });
+  canvas.addEventListener("touchend", reload, { once: true });
+}
+
+// --- INPUT HANDLING (No changes below this line) ---
+function getCanvasPos(clientX, clientY) {
+  const rect = canvas.getBoundingClientRect();
+  return { x: clientX - rect.left, y: clientY - rect.top };
+}
+
+function applyZoom(zoomDelta, zoomCenter) {
+  const oldZoom = state.zoom;
+  const newZoom = clamp(state.zoom + zoomDelta, MIN_ZOOM, MAX_ZOOM);
+  if (newZoom === oldZoom) return;
+  const worldX = zoomCenter.x / oldZoom + state.camera.x;
+  const worldY = zoomCenter.y / oldZoom + state.camera.y;
+  state.zoom = newZoom;
+  state.camera.x = worldX - zoomCenter.x / state.zoom;
+  state.camera.y = worldY - zoomCenter.y / state.zoom;
+  const maxCamX = Math.max(
+    0,
+    MAP_GRID_W * TILE - canvas.clientWidth / state.zoom
+  );
+  const maxCamY = Math.max(
+    0,
+    MAP_GRID_H * TILE - canvas.clientHeight / state.zoom
+  );
+  state.camera.x = clamp(state.camera.x, 0, maxCamX);
+  state.camera.y = clamp(state.camera.y, 0, maxCamY);
+}
+
+function handleInspectorClick(pos) {
+  if (!ui.selectedTower || !ui.inspectorButtons) return false;
+  const { upgrade, sell } = ui.inspectorButtons;
+
+  if (
+    upgrade &&
+    pos.x >= upgrade.x &&
+    pos.x <= upgrade.x + upgrade.w &&
+    pos.y >= upgrade.y &&
+    pos.y <= upgrade.y + upgrade.h
+  ) {
+    const spec = ui.selectedTower.spec();
+    if (ui.selectedTower.level >= spec.maxLevel) {
+      pulse("Max Level!", "#f66");
+      return true;
+    }
+    const cost = ui.selectedTower.upgradeCost();
+    if (state.money >= cost) {
+      state.money -= cost;
+      ui.selectedTower.level++;
+      if (typeof ui.selectedTower.maxHp === "number") {
+        ui.selectedTower.maxHp = Math.round(ui.selectedTower.maxHp * 1.25);
+        ui.selectedTower.hp = ui.selectedTower.maxHp;
+      }
+      pulse(`Upgrade -$${cost}`);
+    } else {
+      pulse("Need more $", "#f66");
+    }
+    return true;
+  }
+
+  if (
+    sell &&
+    pos.x >= sell.x &&
+    pos.x <= sell.x + sell.w &&
+    pos.y >= sell.y &&
+    pos.y <= sell.y + sell.h
+  ) {
+    const sellValue = Math.round(ui.selectedTower.sellValue());
+    state.money += sellValue;
+    const towerIndex = towers.findIndex((t) => t === ui.selectedTower);
+    if (towerIndex > -1) {
+      towers.splice(towerIndex, 1);
+    }
+    ui.selectedTower = null;
+    updateOccupiedCells();
+    pulse(`Sell +$${sellValue}`, "#afb");
+    return true;
+  }
+  return false;
+}
+canvas.addEventListener("wheel", (e) => {
+  e.preventDefault();
+  const pos = getCanvasPos(e.clientX, e.clientY);
+  if (pos.y > canvas.clientHeight - 100) {
+    ui.shopScrollOffset =
+      (ui.shopScrollOffset || 0) + (e.deltaY > 0 ? 150 : -150);
+    ui.shopScrollOffset = Math.max(
+      0,
+      Math.min(ui.maxShopScroll || 0, ui.shopScrollOffset)
+    );
+  } else {
+    applyZoom(e.deltaY * -0.005, pos);
+  }
+});
+
+canvas.addEventListener("mousemove", (e) => {
+  const pos = getCanvasPos(e.clientX, e.clientY);
+  mouse.x = pos.x;
+  mouse.y = pos.y;
+  if (mouse.isPanning) {
+    const dx = mouse.x - mouse.panStartX;
+    const dy = mouse.y - mouse.panStartY;
+    state.camera.x = mouse.camStart.x - dx;
+    state.camera.y = mouse.camStart.y - dy;
+    const maxCamX = Math.max(
+      0,
+      MAP_GRID_W * TILE - canvas.clientWidth / state.zoom
+    );
+    const maxCamY = Math.max(
+      0,
+      MAP_GRID_H * TILE - canvas.clientHeight / state.zoom
+    );
+    state.camera.x = clamp(state.camera.x, 0, maxCamX);
+    state.camera.y = clamp(state.camera.y, 0, maxCamY);
+  }
+  const worldX = mouse.x / state.zoom + state.camera.x;
+  const worldY = mouse.y / state.zoom + state.camera.y;
+  mouse.gx = Math.floor(worldX / TILE);
+  mouse.gy = Math.floor(worldY / TILE);
+  ui.hoveredTile = { gx: mouse.gx, gy: mouse.gy };
+});
+
+canvas.addEventListener("mousedown", (e) => {
+  mouse.shopInteraction = false;
+  const pos = getCanvasPos(e.clientX, e.clientY);
+  mouse.x = pos.x;
+  mouse.y = pos.y;
+  mouse.down = true;
+  mouse.panStartX = mouse.x;
+  mouse.panStartY = mouse.y;
+  if (mouse.y > canvas.clientHeight - 100) {
+    const buttons = getShopButtons(canvas.clientWidth, canvas.clientHeight);
+    for (const b of buttons) {
+      if (
+        mouse.x >= b.x &&
+        mouse.x <= b.x + b.w &&
+        mouse.y >= b.y &&
+        mouse.y <= b.y + b.h
+      ) {
+        const spec = TOWER_TYPES[b.key];
+        if (state.money < spec.cost) {
+          pulse("Not enough money!", "#f66");
+        } else {
+          ui.selectedShopKey = ui.selectedShopKey === b.key ? null : b.key;
+          ui.selectedTower = null;
+        }
+        mouse.shopInteraction = true;
+        return;
+      }
+    }
+    return;
+  }
+  const worldX = mouse.x / state.zoom + state.camera.x;
+  const worldY = mouse.y / state.zoom + state.camera.y;
+  mouse.gx = Math.floor(worldX / TILE);
+  mouse.gy = Math.floor(worldY / TILE);
+  const t = findTowerAt(mouse.gx, mouse.gy);
+  if (t) {
+    mouse.holdTimer = setTimeout(() => {
+      mouse.isHolding = true;
+      ui.heldTower = t;
+      ui.selectedTower = null;
+    }, HOLD_DURATION);
+    return;
+  }
+  if (ui.selectedShopKey) {
+    mouse.draggingTower = true;
+    return;
+  }
+  mouse.isPanning = true;
+  mouse.camStart.x = state.camera.x;
+  mouse.camStart.y = state.camera.y;
+});
+
+canvas.addEventListener("mouseup", (e) => {
+  if (mouse.shopInteraction) {
+    mouse.down = false;
+    mouse.shopInteraction = false;
+    return;
+  }
+  clearTimeout(mouse.holdTimer);
+  const wasHolding = mouse.isHolding;
+  mouse.isHolding = false;
+  ui.heldTower = null;
+  const dragDistance = dist(
+    { x: mouse.panStartX, y: mouse.panStartY },
+    { x: mouse.x, y: mouse.y }
+  );
+  const wasJustAClick =
+    !mouse.draggingTower && (dragDistance < 10 || !mouse.isPanning);
+  if (wasJustAClick && handleInspectorClick({ x: mouse.x, y: mouse.y })) {
+    mouse.isPanning = false;
+    mouse.down = false;
+    mouse.draggingTower = false;
+    return;
+  }
+  if (wasHolding) {
+    mouse.isPanning = false;
+    mouse.down = false;
+    return;
+  }
+  if (mouse.draggingTower && ui.selectedShopKey) {
+    const spec = TOWER_TYPES[ui.selectedShopKey];
+    if (isPlacementValid(mouse.gx, mouse.gy, spec)) {
+      if (state.money >= spec.cost) {
+        // --- MODIFIED TOWER CREATION ---
+        const newTower = new spec.class(mouse.gx, mouse.gy, ui.selectedShopKey);
+        // Set initial level from persistent data
+        newTower.level = window.playerData.towerLevels[ui.selectedShopKey] || 1;
+        towers.push(newTower);
+
+        state.money -= spec.cost;
+        pulse(`-${spec.cost}`);
+        ui.selectedShopKey = null;
+        updateOccupiedCells();
+      } else {
+        pulse("Not enough $", "#f66");
+      }
+    }
+  } else if (wasJustAClick) {
+    const t = findTowerAt(mouse.gx, mouse.gy);
+    if (t) {
+      ui.selectedTower = ui.selectedTower === t ? null : t;
+      ui.selectedShopKey = null;
+    } else {
+      ui.selectedTower = null;
+      ui.selectedShopKey = null;
+    }
+  }
+  mouse.isPanning = false;
+  mouse.down = false;
+  mouse.draggingTower = false;
+});
+
+canvas.addEventListener("mouseleave", () => {
+  clearTimeout(mouse.holdTimer);
+  ui.hoveredTile = null;
+  mouse.down = false;
+  mouse.draggingTower = false;
+  mouse.isHolding = false;
+  ui.heldTower = null;
+});
+
+window.addEventListener("keydown", (e) => {
+  if (e.key === "Escape") {
+    ui.selectedTower = null;
+    ui.selectedShopKey = null;
+    ui.heldTower = null;
+  }
+});
+
+canvas.addEventListener(
+  "touchstart",
+  (e) => {
+    e.preventDefault();
+    if (e.touches.length >= 2) {
+      touch.action = "zooming";
+      const [t1, t2] = e.touches;
+      initialPinchDist = dist(
+        { x: t1.clientX, y: t1.clientY },
+        { x: t2.clientX, y: t2.clientY }
+      );
+      initialZoom = state.zoom;
+      clearTimeout(touch.holdTimer);
+      return;
+    }
+    if (e.touches.length !== 1) return;
+    const t = e.touches[0];
+    const pos = getCanvasPos(t.clientX, t.clientY);
+    touch.startX = pos.x;
+    touch.startY = pos.y;
+    touch.currentX = pos.x;
+    touch.currentY = pos.y;
+
+    if (pos.y > canvas.clientHeight - 100) {
+      touch.action = "scrollingShop";
+      const button = getShopButtons(
+        canvas.clientWidth,
+        canvas.clientHeight
+      ).find(
+        (b) =>
+          pos.x >= b.x &&
+          pos.x <= b.x + b.w &&
+          pos.y >= b.y &&
+          pos.y <= b.y + b.h
+      );
+      if (button) {
+        const spec = TOWER_TYPES[button.key];
+        if (state.money >= spec.cost) {
+          touch.potentialSelection = button.key;
+          touch.holdTimer = setTimeout(() => {
+            touch.isHolding = true;
+            ui.selectedShopKey = button.key;
+            ui.selectedTower = null;
+            touch.potentialSelection = null;
+          }, HOLD_DURATION);
+        } else {
+          pulse("Not enough money!", "#f66");
+        }
+      }
+    } else {
+      touch.action = "panning";
+      mouse.camStart.x = state.camera.x;
+      mouse.camStart.y = state.camera.y;
+      const worldX = pos.x / state.zoom + state.camera.x;
+      const worldY = pos.y / state.zoom + state.camera.y;
+      const gx = Math.floor(worldX / TILE);
+      const gy = Math.floor(worldY / TILE);
+      const clickedTower = findTowerAt(gx, gy);
+      if (clickedTower) {
+        touch.potentialSelection = clickedTower;
+        touch.holdTimer = setTimeout(() => {
+          touch.isHolding = true;
+          ui.heldTower = clickedTower;
+          ui.selectedTower = null;
+        }, HOLD_DURATION);
+      }
+    }
+  },
+  { passive: false }
+);
+
+canvas.addEventListener(
+  "touchmove",
+  (e) => {
+    e.preventDefault();
+    if (e.touches.length >= 2 && touch.action === "zooming") {
+      const [t1, t2] = e.touches;
+      const currentDist = dist(
+        { x: t1.clientX, y: t1.clientY },
+        { x: t2.clientX, y: t2.clientY }
+      );
+      const zoomFactor = currentDist / initialPinchDist;
+      const newZoom = clamp(initialZoom * zoomFactor, MIN_ZOOM, MAX_ZOOM);
+      applyZoom(
+        newZoom - state.zoom,
+        getCanvasPos(
+          (t1.clientX + t2.clientX) / 2,
+          (t1.clientY + t2.clientY) / 2
+        )
+      );
+      return;
+    }
+    if (e.touches.length !== 1) return;
+    const t = e.touches[0];
+    const pos = getCanvasPos(t.clientX, t.clientY);
+    touch.currentX = pos.x;
+    touch.currentY = pos.y;
+
+    const worldX = pos.x / state.zoom + state.camera.x;
+    const worldY = pos.y / state.zoom + state.camera.y;
+    ui.hoveredTile = {
+      gx: Math.floor(worldX / TILE),
+      gy: Math.floor(worldY / TILE),
+    };
+
+    if (dist({ x: touch.startX, y: touch.startY }, pos) > 10) {
+      clearTimeout(touch.holdTimer);
+      if (!touch.isHolding) {
+        touch.potentialSelection = null;
+        ui.heldTower = null;
+      }
+    }
+
+    if (!touch.isHolding) {
+      if (touch.action === "scrollingShop") {
+        const deltaX = touch.startX - pos.x;
+        ui.shopScrollOffset = Math.max(
+          0,
+          Math.min(ui.maxShopScroll || 0, (ui.shopScrollOffset || 0) + deltaX)
+        );
+        touch.startX = pos.x;
+      } else if (touch.action === "panning") {
+        const dx = pos.x - touch.startX;
+        const dy = pos.y - touch.startY;
+        state.camera.x = mouse.camStart.x - dx * TOUCH_PAN_SENSITIVITY;
+        state.camera.y = mouse.camStart.y - dy * TOUCH_PAN_SENSITIVITY;
+        const maxCamX = Math.max(
+          0,
+          MAP_GRID_W * TILE - canvas.clientWidth / state.zoom
+        );
+        const maxCamY = Math.max(
+          0,
+          MAP_GRID_H * TILE - canvas.clientHeight / state.zoom
+        );
+        state.camera.x = clamp(state.camera.x, 0, maxCamX);
+        state.camera.y = clamp(state.camera.y, 0, maxCamY);
+      }
+    }
+  },
+  { passive: false }
+);
+
+canvas.addEventListener(
+  "touchend",
+  (e) => {
+    e.preventDefault();
+    clearTimeout(touch.holdTimer);
+
+    const wasHolding = touch.isHolding;
+    const wasJustATap =
+      dist(
+        { x: touch.startX, y: touch.startY },
+        { x: touch.currentX, y: touch.currentY }
+      ) < 10;
+
+    if (wasHolding && ui.selectedShopKey) {
+      const gx = ui.hoveredTile ? ui.hoveredTile.gx : -1;
+      const gy = ui.hoveredTile ? ui.hoveredTile.gy : -1;
+      if (touch.currentY < canvas.clientHeight - 100) {
+        const spec = TOWER_TYPES[ui.selectedShopKey];
+        if (isPlacementValid(gx, gy, spec)) {
+          // --- MODIFIED TOWER CREATION ---
+          const newTower = new spec.class(gx, gy, ui.selectedShopKey);
+          newTower.level =
+            window.playerData.towerLevels[ui.selectedShopKey] || 1;
+          towers.push(newTower);
+
+          state.money -= spec.cost;
+          pulse(`-${spec.cost}`);
+          updateOccupiedCells();
+        }
+      }
+      ui.selectedShopKey = null;
+    } else if (!wasHolding && wasJustATap) {
+      if (handleInspectorClick({ x: touch.startX, y: touch.startY })) {
+        // Click was handled by inspector, do nothing else
+      } else if (touch.action === "scrollingShop" && touch.potentialSelection) {
+        ui.selectedShopKey =
+          ui.selectedShopKey === touch.potentialSelection
+            ? null
+            : touch.potentialSelection;
+        ui.selectedTower = null;
+      } else if (touch.action === "panning") {
+        const worldX = touch.startX / state.zoom + state.camera.x;
+        const worldY = touch.startY / state.zoom + state.camera.y;
+        const gx = Math.floor(worldX / TILE);
+        const gy = Math.floor(worldY / TILE);
+        const clickedTower = findTowerAt(gx, gy);
+
+        if (ui.selectedShopKey) {
+          const spec = TOWER_TYPES[ui.selectedShopKey];
+          if (isPlacementValid(gx, gy, spec)) {
+            if (state.money >= spec.cost) {
+              // --- MODIFIED TOWER CREATION ---
+              const newTower = new spec.class(gx, gy, ui.selectedShopKey);
+              newTower.level =
+                window.playerData.towerLevels[ui.selectedShopKey] || 1;
+              towers.push(newTower);
+
+              state.money -= spec.cost;
+              pulse(`-${spec.cost}`);
+              ui.selectedShopKey = null;
+              updateOccupiedCells();
+            } else {
+              pulse("Not enough $", "#f66");
+            }
+          }
+        } else if (clickedTower) {
+          ui.selectedTower =
+            ui.selectedTower === clickedTower ? null : clickedTower;
+        } else {
+          ui.selectedTower = null;
+        }
+      }
+    }
+
+    if (e.touches.length === 0) {
+      touch.action = "idle";
+      initialPinchDist = null;
+    }
+    ui.heldTower = null;
+    touch.isHolding = false;
+    touch.potentialSelection = null;
+  },
+  { passive: false }
+);
+
+canvas.addEventListener("touchcancel", (e) => {
+  e.preventDefault();
+  clearTimeout(touch.holdTimer);
+  touch.action = "idle";
+  initialPinchDist = null;
+  ui.heldTower = null;
+  touch.isHolding = false;
+  touch.potentialSelection = null;
+  ui.selectedShopKey = null;
+});
+
+
+// ===== FILE: path.js =====
+
+// path.js
+
+import { TILE, MAP_GRID_W, MAP_GRID_H } from "./core.js";
+import { lerp } from "./utils.js";
+
+// We'll compute path after canvas size sync. Export initPath to call from main.
+export let path = [];
+export let segLens = [];
+export let totalLen = 0;
+export const blocked = new Set();
+
+// --- NEW FUNCTION: Generates a smooth curve through a set of points ---
+/**
+ * Generates a Catmull-Rom spline through a series of points.
+ * @param {Array<{x: number, y: number}>} points - The array of points to pass through.
+ * @param {number} numPoints - The number of points to generate for the final curve.
+ * @returns {Array<{x: number, y: number}>} - The array of points forming the smooth curve.
+ */
+function generateSpline(points, numPoints = 1000) {
+  const curvedPath = [];
+  const tension = 0.5; // Catmull-Rom tension. 0.5 is standard.
+
+  for (let i = 0; i < points.length - 1; i++) {
+    const p0 = i === 0 ? points[i] : points[i - 1];
+    const p1 = points[i];
+    const p2 = points[i + 1];
+    const p3 = i === points.length - 2 ? points[i + 1] : points[i + 2];
+
+    const numSegments = Math.floor(numPoints / (points.length - 1));
+
+    for (let j = 0; j < numSegments; j++) {
+      const t = j / numSegments;
+      const t2 = t * t;
+      const t3 = t2 * t;
+
+      const c1 = -tension * t3 + 2 * tension * t2 - tension * t;
+      const c2 = (2 - tension) * t3 + (tension - 3) * t2 + 1;
+      const c3 = (tension - 2) * t3 + (3 - 2 * tension) * t2 + tension * t;
+      const c4 = tension * t3 - tension * t2;
+
+      const x = c1 * p0.x + c2 * p1.x + c3 * p2.x + c4 * p3.x;
+      const y = c1 * p0.y + c2 * p1.y + c3 * p2.y + c4 * p3.y;
+
+      curvedPath.push({ x, y });
+    }
+  }
+  curvedPath.push(points[points.length - 1]); // Ensure the last point is included
+  return curvedPath;
+}
+
+// --- MODIFIED FUNCTION ---
+export function initPath(levelPathGenerator) {
+  if (!levelPathGenerator) {
+    path = [];
+    segLens = [];
+    totalLen = 0;
+    blocked.clear();
+    return;
+  }
+
+  const MAP_W = MAP_GRID_W * TILE;
+  const MAP_H = MAP_GRID_H * TILE;
+  const T_HALF = TILE / 2;
+
+  // Generate the original straight-line path
+  const roughPath = levelPathGenerator(TILE, T_HALF, MAP_W, MAP_H);
+
+  // Generate the smooth curve from the rough path
+  if (roughPath.length > 1) {
+    path = generateSpline(roughPath);
+  } else {
+    path = roughPath;
+  }
+
+  // This part correctly calculates lengths and blocked tiles for the new path
+  segLens.length = 0;
+  totalLen = 0;
+  for (let i = 0; i < path.length - 1; i++) {
+    const a = path[i],
+      b = path[i + 1];
+    const L = Math.hypot(b.x - a.x, b.y - a.y);
+    segLens.push(L);
+    totalLen += L;
+  }
+
+  blocked.clear();
+  for (let i = 0; i < totalLen; i += TILE * 0.6) {
+    const p = pointAt(i / totalLen);
+    const gx = Math.floor(p.x / TILE),
+      gy = Math.floor(p.y / TILE);
+    blocked.add(`${gx},${gy}`);
+  }
+}
+
+/**
+ * Calculates a point along the path.
+ * @param {number} t - A value from 0 (start) to 1 (end).
+ * @returns {{x: number, y: number}} The coordinates of the point.
+ */
+export function pointAt(t) {
+  if (totalLen === 0 || !path.length) return { x: 0, y: 0 };
+  let d = t * totalLen;
+  for (let i = 0; i < segLens.length; i++) {
+    if (d <= segLens[i]) {
+      const a = path[i],
+        b = path[i + 1];
+      const r = segLens[i] === 0 ? 0 : d / segLens[i]; // Avoid division by zero
+      return { x: lerp(a.x, b.x, r), y: lerp(a.y, b.y, r) };
+    }
+    d -= segLens[i];
+  }
+  // If t is 1 or slightly more, return the last point
+  return { ...path[path.length - 1] };
+}
+
+
+// ===== FILE: levels.js =====
+
+// ===== FILE: levels.js =====
+
+// This array holds the configuration for all levels.
+// You can now define custom waves for each level.
+export const levels = [
+  // Level 1: A classic S-curve on a standard map. Rebalanced for beginners.
+  {
+    level: 1,
+    map: { width: 50, height: 25 },
+    startMoney: 100000000, // Very generous for testing purposes
+    startLives: 50,
+    path: (TILE, T_HALF, MAP_W, MAP_H) => [
+      { x: 0, y: TILE * 5 + T_HALF },
+      { x: MAP_W * 0.25, y: TILE * 5 + T_HALF },
+      { x: MAP_W * 0.25, y: MAP_H * 0.75 },
+      { x: MAP_W, y: MAP_H * 0.75 },
+    ],
+    waves: [
+      // --- Individual Regular Enemy Waves (count: 1 for each type) ---
+      { count: 1, types: { basic: 1.0 } },
+      { count: 1, types: { brute: 1.0 } },
+      { count: 1, types: { swift: 1.0 } },
+      { count: 1, types: { elite: 1.0 } },
+      { count: 1, types: { sapper: 1.0 } },
+      { count: 1, types: { wraith: 1.0 } },
+      { count: 1, types: { mimic: 1.0 } },
+      { count: 1, types: { leech: 1.0 } },
+      { count: 1, types: { shifter: 1.0 } },
+      { count: 1, types: { hive: 1.0 } },
+      { count: 1, types: { swarmer: 1.0 } }, // Swarmers can be spawned independently for testing
+      { count: 1, types: { specter: 1.0 } },
+      { count: 1, types: { collector: 1.0 } },
+      { count: 1, types: { disruptor: 1.0 } },
+
+      // --- Individual Boss Waves (1 boss per wave) ---
+      { boss: "Goliath" },
+      { boss: "Phantom" },
+      { boss: "Warlock" },
+      { boss: "Juggernaut" },
+      { boss: "Basilisk" },
+      { boss: "Marauder" },
+      { boss: "Scorcher" },
+      { boss: "Devastator" },
+      { boss: "Reaper" },
+
+      // You can add more specific test waves here if needed,
+      // for example, a wave with two specific bosses:
+      // { bosses: ["Juggernaut", "Basilisk"] },
+      // Or a boss with other enemies:
+      // { count: 5, types: { boss: "Basilisk", basic: 0.5, swift: 0.5 } },
+    ],
+  },
+  {
+    level: 2,
+    map: { width: 30, height: 30 },
+    startMoney: 1200, // Slightly more money
+    startLives: 40, // More lives
+    path: (TILE, T_HALF, MAP_W, MAP_H) => [
+      { x: 0, y: MAP_H * 0.2 },
+      { x: MAP_W * 0.8, y: MAP_H * 0.2 },
+      { x: MAP_W * 0.8, y: MAP_H * 0.5 },
+      { x: MAP_W * 0.2, y: MAP_H * 0.5 },
+      { x: MAP_W * 0.2, y: MAP_H * 0.8 },
+      { x: MAP_W, y: MAP_H * 0.8 },
+    ],
+    waves: [
+      { boss: "Phantom" }, // Wave 10
+      { count: 15, types: { basic: 1.0 } }, // Wave 1: Start simple
+      { count: 18, types: { basic: 0.7, swift: 0.3 } }, // Wave 2
+      { count: 20, types: { swift: 1.0 } }, // Wave 3: A wave of pure swift
+      { count: 22, types: { basic: 0.5, brute: 0.5 } }, // Wave 4
+      { count: 25, types: { brute: 0.6, swift: 0.4 } }, // Wave 5
+      { count: 28, types: { brute: 0.8, swift: 0.2 } }, // Wave 6
+      { count: 20, types: { elite: 1.0 } }, // Wave 7: Introduce Elite
+      { count: 25, types: { brute: 0.5, elite: 0.5 } }, // Wave 8
+      { count: 30, types: { swift: 0.5, elite: 0.5 } }, // Wave 9
+    ],
+  },
+];
+
+
+// ===== FILE: spawner.js =====
+
+import { enemies, state } from "./state.js";
+import { pulse } from "./utils.js";
+import { ENEMY_TYPES } from "./enemy/enemyTypes.js";
+import { totalLen } from "./path.js";
+
+// --- Enemy Imports ---
+import { BaseEnemy } from "./enemy/BaseEnemy.js";
+import { Sapper } from "./enemy/Sapper.js";
+import { Wraith } from "./enemy/Wraith.js";
+import { Mimic } from "./enemy/Mimic.js";
+import { Leech } from "./enemy/Leech.js";
+import { Shifter } from "./enemy/Shifter.js";
+import { Specter } from "./enemy/Specter.js";
+import { Hive } from "./enemy/Hive.js";
+import { Collector } from "./enemy/Collector.js";
+import { Disruptor } from "./enemy/Disruptor.js";
+
+// --- Boss Imports ---
+import { goliath } from "./boss/goliath.js";
+import { phantom } from "./boss/phantom.js";
+import { warlock } from "./boss/warlock.js";
+import { Juggernaut } from "./boss/Juggernaut.js";
+import { Basilisk } from "./boss/Basilisk.js";
+import { Marauder } from "./boss/Marauder.js";
+import { Scorcher } from "./boss/Scorcher.js";
+import { Devastator } from "./boss/Devastator.js";
+import { Reaper } from "./boss/Reaper.js";
+
+let spawnTimer = 0;
+
+// --- NEW: Map boss names to their constructors for easier lookup ---
+const BOSS_CONSTRUCTORS = {
+  Goliath: goliath,
+  Phantom: phantom,
+  Warlock: warlock,
+  Juggernaut: Juggernaut,
+  Basilisk: Basilisk,
+  Marauder: Marauder,
+  Scorcher: Scorcher,
+  Devastator: Devastator,
+  Reaper: Reaper,
+};
+
+/**
+ * Creates an instance of a boss based on its name and the current wave.
+ * Handles specific constructor arguments for difficulty scaling.
+ * @param {string} bossName - The name of the boss.
+ * @param {number} waveNumber - The current wave number, used for difficulty scaling.
+ * @returns {any | null} The boss instance or null if the boss is unknown.
+ */
+function createBossInstance(bossName, waveNumber) {
+  const BossClass = BOSS_CONSTRUCTORS[bossName];
+  if (BossClass) {
+    const difficultyMult = 1 + (waveNumber - 1) * 0.15;
+    // Apply difficulty multiplier to bosses that are designed to use it
+    switch (bossName) {
+      case "Basilisk":
+      case "Marauder":
+      case "Scorcher":
+      case "Devastator":
+      case "Reaper":
+        return new BossClass(difficultyMult);
+      default:
+        return new BossClass();
+    }
+  }
+  console.error(`Unknown boss type: ${bossName}.`);
+  return null;
+}
+
+/**
+ * Creates an enemy or boss instance based on type, tier, and wave, and `isBoss` flag.
+ * @param {string} type - The type of enemy or boss (e.g., "basic", "Basilisk").
+ * @param {number | null} tier - The enemy tier (for regular enemies), null for bosses.
+ * @param {number} waveNumber - The current wave number, passed to boss constructors for scaling.
+ * @param {boolean} isBoss - True if this entity is a boss, false otherwise.
+ * @returns {any | null} The enemy/boss instance.
+ */
+function createEntity(type, tier, waveNumber, isBoss) {
+  if (isBoss) {
+    return createBossInstance(type, waveNumber);
+  }
+
+  // Handle regular enemies
+  const spec = ENEMY_TYPES[type];
+  if (!spec) {
+    console.error(`Unknown enemy type: ${type}. Spawning a basic enemy.`);
+    return new BaseEnemy("basic", tier); // Fallback to basic enemy
+  }
+
+  if (spec.isMimic) return new Mimic(tier);
+  if (spec.isSupport) return new Wraith(tier);
+  if (spec.isAttacker) return new Sapper(tier);
+  if (spec.isLeech) return new Leech(tier);
+  if (spec.isShifter) return new Shifter(tier);
+  if (spec.isHive) return new Hive(tier);
+  if (spec.isSpecter) return new Specter(tier);
+  if (spec.isCollector) return new Collector(tier);
+  if (spec.isDisruptor) return new Disruptor(tier);
+
+  return new BaseEnemy(type, tier);
+}
+
+export function startNextWave() {
+  const levelConfig = state.currentLevelConfig;
+  if (!levelConfig || state.wave >= levelConfig.waves.length) return;
+
+  state.wave++;
+  const currentWaveNumber = state.wave;
+  const waveConfig = levelConfig.waves[currentWaveNumber - 1];
+
+  // --- REVISED LOGIC FOR waveConfig.types (e.g., { count: 10, types: { boss: "Basilisk", brute: 0.5 } }
+  // --- OR { count: 10, types: { bosses: ["Juggernaut", "Basilisk"], brute: 0.5 } }) ---
+  if (waveConfig.types && typeof waveConfig.count === "number") {
+    let bossesToSpawnFromTypes = []; // Use an array for potentially multiple bosses
+    let bossToSpawnFromSingularType = null; // For the singular 'boss' key
+    const actualEnemyTypesForRandom = {};
+
+    for (const typeKey in waveConfig.types) {
+      if (typeKey === "boss" && typeof waveConfig.types[typeKey] === "string") {
+        // Handle singular 'boss' key within 'types'
+        bossToSpawnFromSingularType = waveConfig.types[typeKey];
+      } else if (
+        typeKey === "bosses" &&
+        Array.isArray(waveConfig.types[typeKey])
+      ) {
+        // Handle plural 'bosses' array within 'types'
+        bossesToSpawnFromTypes.push(...waveConfig.types[typeKey]);
+      } else {
+        // For other keys, ensure their values are numbers (probabilities)
+        if (typeof waveConfig.types[typeKey] === "number") {
+          actualEnemyTypesForRandom[typeKey] = waveConfig.types[typeKey];
+        } else {
+          console.warn(
+            `Invalid type probability for '${typeKey}': ${waveConfig.types[typeKey]}. Skipping.`
+          );
+        }
+      }
+    }
+
+    // Add boss(es) found in 'types' to the spawn queue
+    if (bossToSpawnFromSingularType) {
+      state.toSpawn.push({
+        type: bossToSpawnFromSingularType,
+        tier: null,
+        isBoss: true,
+        waveNumber: currentWaveNumber,
+      });
+      waveConfig.count--; // Decrement count for this boss
+    }
+    for (const bossName of bossesToSpawnFromTypes) {
+      if (typeof bossName === "string") {
+        state.toSpawn.push({
+          type: bossName,
+          tier: null,
+          isBoss: true,
+          waveNumber: currentWaveNumber,
+        });
+        waveConfig.count--; // Decrement count for each boss
+      } else {
+        console.warn(
+          `Invalid boss name in 'bosses' array within 'types' object: ${bossName}. Skipping.`
+        );
+      }
+    }
+
+    if (waveConfig.count < 0) waveConfig.count = 0; // Prevent negative count
+
+    // Now process the remaining `waveConfig.count` for random enemies based on `actualEnemyTypesForRandom`
+    const enemyTypesForRandom = Object.keys(actualEnemyTypesForRandom);
+    if (enemyTypesForRandom.length > 0 && waveConfig.count > 0) {
+      const weights = enemyTypesForRandom.map(
+        (t) => actualEnemyTypesForRandom[t]
+      );
+      const totalWeight = weights.reduce((sum, weight) => sum + weight, 0);
+
+      if (totalWeight === 0) {
+        console.warn(
+          "Total weight for random enemy types is zero after boss extraction. Skipping random enemy spawn."
+        );
+      } else {
+        for (let i = 0; i < waveConfig.count; i++) {
+          let random = Math.random() * totalWeight;
+          let chosenType = enemyTypesForRandom[0];
+          for (let j = 0; j < enemyTypesForRandom.length; j++) {
+            random -= weights[j];
+            if (random <= 0) {
+              chosenType = enemyTypesForRandom[j];
+              break;
+            }
+          }
+          const tier = Math.floor((currentWaveNumber - 1) / 1.5);
+          state.toSpawn.push({
+            type: chosenType,
+            tier: tier,
+            isBoss: false,
+            waveNumber: currentWaveNumber,
+          });
+        }
+      }
+    }
+  }
+  // --- END REVISED LOGIC FOR waveConfig.types ---
+
+  // Handle a single boss directly specified (e.g., { boss: "Phantom" })
+  if (waveConfig.boss && typeof waveConfig.boss === "string") {
+    state.toSpawn.push({
+      type: waveConfig.boss,
+      tier: null,
+      isBoss: true,
+      waveNumber: currentWaveNumber,
+    });
+  }
+
+  // Handle multiple bosses specified in 'bosses' array (e.g., { bosses: ["Juggernaut", "Basilisk"] })
+  if (waveConfig.bosses && Array.isArray(waveConfig.bosses)) {
+    for (const bossName of waveConfig.bosses) {
+      if (typeof bossName === "string") {
+        // Ensure bossName is a string
+        state.toSpawn.push({
+          type: bossName,
+          tier: null,
+          isBoss: true,
+          waveNumber: currentWaveNumber,
+        });
+      } else {
+        console.warn(
+          `Invalid boss name in 'bosses' array: ${bossName}. Skipping.`
+        );
+      }
+    }
+  }
+
+  spawnTimer = 0;
+  pulse(`Wave ${state.wave}!`, "#adf");
+}
+
+export function spawner(dt) {
+  // If no enemies left and no more waves, and all enemies are cleared, return
+  if (
+    state.toSpawn.length === 0 &&
+    enemies.length === 0 &&
+    state.wave >= state.currentLevelConfig.waves.length
+  ) {
+    return;
+  }
+
+  // Automatically start the next wave if the current wave is depleted
+  // and there are still waves left in the level config
+  if (
+    state.toSpawn.length === 0 &&
+    enemies.length === 0 &&
+    state.wave < state.currentLevelConfig.waves.length
+  ) {
+    startNextWave();
+    return;
+  }
+
+  spawnTimer -= dt;
+
+  // Only try to spawn if the timer is ready AND there are entities in the queue
+  if (spawnTimer <= 0 && state.toSpawn.length > 0) {
+    const lastEntity = enemies.length > 0 ? enemies[enemies.length - 1] : null;
+    let canSpawn = false;
+
+    if (!lastEntity) {
+      // If the map is empty, we can always spawn the first entity.
+      canSpawn = true;
+    } else {
+      const nextEntityData = state.toSpawn[0];
+      let nextEntityRadius;
+
+      // --- ROBUST RADIUS CALCULATION ---
+      if (nextEntityData.isBoss) {
+        // Try to get radius from ENEMY_TYPES if boss specs are there, otherwise use a default
+        nextEntityRadius =
+          ENEMY_TYPES[nextEntityData.type] &&
+          typeof ENEMY_TYPES[nextEntityData.type].radius === "number"
+            ? ENEMY_TYPES[nextEntityData.type].radius
+            : 25; // Default boss radius
+      } else {
+        const enemySpec = ENEMY_TYPES[nextEntityData.type];
+        if (enemySpec && typeof enemySpec.radius === "number") {
+          nextEntityRadius = enemySpec.radius;
+        } else {
+          console.warn(
+            `Radius not found for enemy type: ${nextEntityData.type}. Using default radius.`
+          );
+          nextEntityRadius = 10; // Default radius for unknown or missing enemy radius
+        }
+      }
+      // --- END ROBUST RADIUS CALCULATION ---
+
+      const desiredGap = 15; // <--- YOU CAN CHANGE THIS VALUE for spacing between enemies/bosses
+      const requiredDistancePixels =
+        lastEntity.r + nextEntityRadius + desiredGap;
+
+      const requiredT = totalLen === 0 ? 0 : requiredDistancePixels / totalLen;
+
+      if (lastEntity.t >= requiredT) {
+        canSpawn = true;
+      }
+    }
+
+    if (canSpawn) {
+      const nextEntityData = state.toSpawn.shift();
+      const newEntity = createEntity(
+        nextEntityData.type,
+        nextEntityData.tier,
+        nextEntityData.waveNumber,
+        nextEntityData.isBoss
+      );
+      if (newEntity) {
+        enemies.push(newEntity);
+      }
+      spawnTimer = 0.1;
+    }
+  }
+}
+
+
+// ===== FILE: core.js =====
+
+// --- MODIFIED ---
+// Find the canvas from the HTML instead of creating a new one.
+export const canvas = document.getElementById("game");
+if (!canvas) {
+  throw new Error(
+    "Fatal Error: Canvas element with id 'game' was not found in the HTML."
+  );
+}
+export const ctx = canvas.getContext("2d");
+
+export const DPR = Math.min(2, window.devicePixelRatio || 1);
+export const TILE = 40;
+export const MIN_ZOOM = 0.5;
+export const MAX_ZOOM = 2.5;
+
+// Change from 'const' to 'let' to allow modification
+export let MAP_GRID_W = 50; // Default width
+export let MAP_GRID_H = 30; // Default height
+
+export let GRID_W = 0;
+export let GRID_H = 0;
+export let W = 0;
+export let H = 0;
+
+// This function allows us to set the map size from outside this module.
+export function setMapDimensions(width, height) {
+  MAP_GRID_W = width;
+  MAP_GRID_H = height;
+}
+
+function computeGrid() {
+  GRID_W = Math.floor(canvas.clientWidth / TILE);
+  GRID_H = Math.floor(canvas.clientHeight / TILE);
+  W = GRID_W * TILE;
+  H = GRID_H * TILE;
+}
+
+export function resize() {
+  // This will calculate the VISIBLE grid based on the full screen size...
+  computeGrid();
+  // ...and this will resize the actual canvas to perfectly fit that visible grid.
+  syncLogicalSize();
+}
+window.addEventListener("resize", resize);
+
+export function syncLogicalSize() {
+  computeGrid();
+  canvas.width = Math.floor(W * DPR);
+  canvas.height = Math.floor(H * DPR);
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+}
+
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Mini Tower Defense</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#0b0f1a" />
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      html {
+        background-color: #0b0f1a;
+        color: white;
+        font-family: "Arial", sans-serif;
+      }
+      html,
+      body {
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+      }
+      #mainMenu {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        width: 100%;
+        height: 100%;
+        text-align: center;
+        padding: 20px;
+      }
+      #mainMenu h1 {
+        font-size: clamp(2.5em, 8vw, 4em);
+        margin-bottom: 20px;
+      }
+      .menu-button {
+        background-color: #2a3a63;
+        border: 2px solid #5c7bfa;
+        color: white;
+        padding: 15px 32px;
+        text-decoration: none;
+        font-size: 1.2em;
+        margin: 10px 2px;
+        width: 200px;
+        max-width: 90%;
+        cursor: pointer;
+        transition: background-color 0.3s;
+      }
+      .menu-button:hover {
+        background-color: #3e528e;
+      }
+      #levelSelection {
+        display: none;
+        width: 100%;
+        height: 100%;
+        padding: 20px;
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(90px, 1fr));
+        gap: 15px;
+        overflow-y: auto;
+      }
+      .level-button {
+        background-color: #2a3a63;
+        border: 2px solid #5c7bfa;
+        color: white;
+        text-decoration: none;
+        font-size: 1.2em;
+        font-weight: bold;
+        cursor: pointer;
+        transition: background-color 0.3s;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        aspect-ratio: 1 / 1;
+      }
+      .level-button:hover {
+        background-color: #3e528e;
+      }
+      .level-button.locked {
+        background-color: #1c2541;
+        border-color: #3a506b;
+        color: #6b7b9e;
+        cursor: not-allowed;
+      }
+      .level-button.locked:hover {
+        background-color: #1c2541;
+      }
+      canvas#game {
+        display: none;
+        width: 100%;
+        height: 100%;
+      }
+
+      /* --- MODIFIED SHOP STYLES --- */
+      #shopScreen {
+        display: none;
+        flex-direction: column;
+        width: 100%;
+        height: 100%;
+        padding: 20px;
+
+        /* --- FIX STARTS HERE --- */
+        position: absolute; /* Take it out of the normal document flow */
+        top: 0;
+        left: 0;
+        background-color: #0b0f1a; /* Give it a solid background */
+        z-index: 100; /* Ensure it's on top of other elements like the canvas */
+        /* --- FIX ENDS HERE --- */
+      }
+      #shopHeader {
+        text-align: center;
+        padding-bottom: 20px;
+        border-bottom: 2px solid #2a3a63;
+      }
+      #shopHeader h2 {
+        font-size: 2em;
+        margin-bottom: 10px;
+      }
+      #shopMoneyBalance {
+        font-weight: bold;
+        color: #ffd700;
+      }
+      #towerList {
+        flex-grow: 1;
+        overflow-y: auto;
+        padding: 20px 5px;
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 15px;
+      }
+      .shop-item {
+        background-color: #1c2541;
+        border: 1px solid #3a506b;
+        border-radius: 8px;
+        padding: 15px;
+        text-align: center;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+      }
+      .shop-item h3 {
+        color: #5c7bfa;
+        margin-bottom: 10px;
+      }
+      .shop-item p {
+        margin-bottom: 15px;
+      }
+      .shop-item button {
+        background-color: #4caf50;
+        border: none;
+        color: white;
+        padding: 10px 15px;
+        border-radius: 5px;
+        cursor: pointer;
+        transition: background-color 0.3s;
+      }
+      .shop-item button:hover:not(:disabled) {
+        background-color: #66bb6a;
+      }
+      .shop-item button:disabled {
+        background-color: #444;
+        cursor: not-allowed;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="mainMenu">
+      <h1>Mini Tower Defense</h1>
+      <button id="startButton" class="menu-button">Start</button>
+      <button id="shopButton" class="menu-button">Shop</button>
+      <button id="exitButton" class="menu-button">Exit</button>
+    </div>
+
+    <div id="levelSelection"></div>
+
+    <div id="shopScreen">
+      <div id="shopHeader">
+        <h2>Persistent Upgrades</h2>
+        <p>Shop Money: <span id="shopMoneyBalance">0</span></p>
+      </div>
+      <div id="towerList"></div>
+      <button
+        id="backToMenuButton"
+        class="menu-button"
+        style="margin: 20px auto 0"
+      >
+        Back
+      </button>
+    </div>
+
+    <canvas id="game"></canvas>
+  </body>
+
+  <script type="module">
+    import { startGame } from "./index.mjs";
+    import { levels } from "./levels.js";
+    import { TOWER_TYPES } from "./config.js";
+
+    const playerData = {};
+
+    function loadPlayerData() {
+      const savedData = localStorage.getItem("towerDefensePlayerData");
+      const defaultData = {
+        shopMoney: 11123500,
+        unlockedTowers: ["gun"],
+        towerLevels: { gun: 1 },
+      };
+
+      Object.assign(
+        playerData,
+        defaultData,
+        savedData ? JSON.parse(savedData) : {}
+      );
+
+      if (TOWER_TYPES) {
+        Object.keys(TOWER_TYPES).forEach((key) => {
+          if (!playerData.towerLevels[key]) {
+            playerData.towerLevels[key] = 0; // 0 means locked
+          }
+        });
+      }
+    }
+
+    function savePlayerData() {
+      localStorage.setItem(
+        "towerDefensePlayerData",
+        JSON.stringify(playerData)
+      );
+    }
+
+    window.playerData = playerData;
+
+    const mainMenu = document.getElementById("mainMenu");
+    const levelSelection = document.getElementById("levelSelection");
+    const startButton = document.getElementById("startButton");
+    const shopButton = document.getElementById("shopButton");
+    const exitButton = document.getElementById("exitButton");
+    const shopScreen = document.getElementById("shopScreen");
+    const backToMenuButton = document.getElementById("backToMenuButton");
+    const towerList = document.getElementById("towerList");
+    const shopMoneyBalance = document.getElementById("shopMoneyBalance");
+
+    function showShopScreen() {
+      mainMenu.style.display = "none";
+      shopScreen.style.display = "flex";
+      renderShop();
+    }
+
+    function hideShopScreen() {
+      shopScreen.style.display = "none";
+      mainMenu.style.display = "flex";
+    }
+
+    function renderShop() {
+      shopMoneyBalance.textContent = playerData.shopMoney;
+      towerList.innerHTML = "";
+
+      for (const key in TOWER_TYPES) {
+        const towerConfig = TOWER_TYPES[key];
+        const isUnlocked = playerData.unlockedTowers.includes(key);
+        const currentLevel = playerData.towerLevels[key] || 0;
+        const maxLevel = towerConfig.persistentMaxLevel;
+
+        const towerDiv = document.createElement("div");
+        towerDiv.className = "shop-item";
+
+        let statusText = isUnlocked
+          ? `Level ${currentLevel} / ${maxLevel}`
+          : "Locked";
+        if (isUnlocked && currentLevel >= maxLevel) {
+          statusText = `Level ${maxLevel} / Max`;
+        }
+
+        let actionButtonHTML = "";
+        if (!isUnlocked) {
+          const canAfford = playerData.shopMoney >= towerConfig.unlockPrice;
+          actionButtonHTML = `<button class="unlock-btn" data-key="${key}" ${
+            !canAfford ? "disabled" : ""
+          }>Unlock ($${towerConfig.unlockPrice})</button>`;
+        } else if (currentLevel < maxLevel) {
+          const upgradeCost = towerConfig.upgradePriceBase * currentLevel;
+          const canAfford = playerData.shopMoney >= upgradeCost;
+          actionButtonHTML = `<button class="upgrade-btn" data-key="${key}" ${
+            !canAfford ? "disabled" : ""
+          }>Upgrade ($${upgradeCost})</button>`;
+        } else {
+          actionButtonHTML = `<button disabled>Max Level</button>`;
+        }
+
+        towerDiv.innerHTML = `
+                <h3>${towerConfig.name}</h3>
+                <p>Status: ${statusText}</p>
+                ${actionButtonHTML}
+            `;
+        towerList.appendChild(towerDiv);
+      }
+    }
+
+    towerList.addEventListener("click", (e) => {
+      const key = e.target.dataset.key;
+      if (!key) return;
+      const towerConfig = TOWER_TYPES[key];
+
+      if (e.target.classList.contains("unlock-btn")) {
+        if (playerData.shopMoney >= towerConfig.unlockPrice) {
+          playerData.shopMoney -= towerConfig.unlockPrice;
+          playerData.unlockedTowers.push(key);
+          playerData.towerLevels[key] = 1;
+          savePlayerData();
+          renderShop();
+        }
+      } else if (e.target.classList.contains("upgrade-btn")) {
+        const currentLevel = playerData.towerLevels[key];
+        const upgradeCost = towerConfig.upgradePriceBase * currentLevel;
+        if (
+          playerData.shopMoney >= upgradeCost &&
+          currentLevel < towerConfig.persistentMaxLevel
+        ) {
+          playerData.shopMoney -= upgradeCost;
+          playerData.towerLevels[key]++;
+          savePlayerData();
+          renderShop();
+        }
+      }
+    });
+
+    const showLevelSelection = (e) => {
+      if (e) e.preventDefault();
+      mainMenu.style.display = "none";
+      levelSelection.style.display = "grid";
+
+      const highestUnlockedLevel = parseInt(
+        localStorage.getItem("towerDefenseHighestLevel") || "1"
+      );
+      levelSelection.innerHTML = "";
+
+      for (const level of levels) {
+        const levelButton = document.createElement("button");
+        levelButton.textContent = `${level.level}`;
+        levelButton.className = "level-button";
+
+        if (level.level > highestUnlockedLevel) {
+          levelButton.classList.add("locked");
+          levelButton.disabled = true;
+        } else {
+          levelButton.addEventListener("click", () => startLevel(level.level));
+        }
+        levelSelection.appendChild(levelButton);
+      }
+    };
+
+    const startLevel = (levelNumber) => {
+      levelSelection.style.display = "none";
+      const gameCanvas = document.getElementById("game");
+      if (gameCanvas) {
+        gameCanvas.style.display = "block";
+        startGame(levelNumber);
+      } else {
+        console.error("The game canvas element could not be found!");
+      }
+    };
+
+    startButton.addEventListener("click", showLevelSelection);
+    shopButton.addEventListener("click", showShopScreen);
+    backToMenuButton.addEventListener("click", hideShopScreen);
+    exitButton.addEventListener("click", () => alert("Thanks for playing!"));
+
+    loadPlayerData();
+  </script>
+</html>
+
+
+
+map11.tmj
+{ "compressionlevel":-1,
+ "height":30,
+ "infinite":false,
+ "layers":[
+        {
+         "data":[1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+            1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+            1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+            1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+            1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+            1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+            1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+            1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+            1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+            1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+            1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+            1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+            1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+            1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+            1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+            1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+            1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+            1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+            1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+            1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+            1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+            1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+            1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+            1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+            1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+            1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+            1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+            1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+            1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+            1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+         "height":30,
+         "id":1,
+         "name":"Tile Layer 1",
+         "opacity":1,
+         "type":"tilelayer",
+         "visible":true,
+         "width":50,
+         "x":0,
+         "y":0
+        }, 
+        {
+         "data":[0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+         "height":30,
+         "id":2,
+         "name":"Tile Layer 2",
+         "opacity":1,
+         "type":"tilelayer",
+         "visible":true,
+         "width":50,
+         "x":0,
+         "y":0
+        }],
+ "nextlayerid":3,
+ "nextobjectid":1,
+ "orientation":"orthogonal",
+ "renderorder":"left-down",
+ "tiledversion":"1.11.2",
+ "tileheight":40,
+ "tilesets":[
+        {
+         "columns":1,
+         "firstgid":1,
+         "image":"a block (1).png",
+         "imageheight":40,
+         "imagewidth":40,
+         "margin":0,
+         "name":"bg",
+         "spacing":0,
+         "tilecount":1,
+         "tileheight":40,
+         "tilewidth":40
+        }, 
+        {
+         "columns":1,
+         "firstgid":2,
+         "image":"a7374c08f22048909a51054642681b0a (1).webp",
+         "imageheight":40,
+         "imagewidth":40,
+         "margin":0,
+         "name":"road",
+         "spacing":0,
+         "tilecount":1,
+         "tileheight":40,
+         "tilewidth":40
+        }],
+ "tilewidth":40,
+ "type":"map",
+ "version":"1.10",
+ "width":50
+}

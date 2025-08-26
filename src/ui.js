@@ -1,22 +1,19 @@
+// ===== FILE: ui.js =====
+
 import { ctx, TILE, MAP_GRID_W, MAP_GRID_H } from "./core.js";
 import { roundRect, clamp } from "./utils.js";
 import { TOWER_TYPES } from "./config.js";
 import { state, pulses, towers } from "./state.js";
 import { ui } from "./state.js";
-import { blocked } from "./path.js";
+import { blocked } from "./path.js"; // 'blocked' is now exported from path.js
 import { getOccupiedCells, isPlacementValid } from "./occupation.js";
+// import { drawMap } from "./map/mapRenderer.js"; // Not needed here, drawn in index.mjs
 
 export function drawBackground(t, pathArr) {
-  const W = ctx.canvas.clientWidth;
-  const H = ctx.canvas.clientHeight;
-
-  ctx.fillStyle = "#0b0f1a";
-  ctx.fillRect(0, 0, W, H);
-  const g = ctx.createLinearGradient(0, 0, W, H);
-  g.addColorStop(0, "rgba(0,180,255,0.05)");
-  g.addColorStop(1, "rgba(255,0,220,0.05)");
-  ctx.fillStyle = g;
-  ctx.fillRect(0, 0, W, H);
+  // pathArr is no longer needed
+  // This function is now effectively replaced by drawMap in index.mjs loop.
+  // Drawing the map is handled directly in index.mjs before other elements.
+  // Keeping it minimal here, doing nothing.
 }
 
 function formatMoney(num) {
@@ -401,9 +398,10 @@ export function drawPlacementOverlay() {
 
   for (let gy = 0; gy < MAP_GRID_H; gy++) {
     for (let gx = 0; gx < MAP_GRID_W; gx++) {
+      // Check if the tile is blocked by the map (path or other unbuildable areas)
+      // or if it's occupied by another tower.
       const isInvalid =
-        gy >= MAP_GRID_H - 2 ||
-        blocked.has(`${gx},${gy}`) ||
+        blocked.has(`${gx},${gy}`) || // Uses the 'blocked' set from path.js
         allOccupiedCells.has(`${gx},${gy}`);
 
       if (isInvalid) {

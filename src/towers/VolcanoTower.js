@@ -128,9 +128,12 @@ export class VolcanoTower extends BaseTower {
     };
   }
 
-  // --- MODIFIED --- Moved up to match new taller design
+  // Projectile should originate from the top crater
   getAttackOrigin() {
-    return { x: this.center.x, y: this.center.y - 35 };
+    const { x, y } = this.center;
+    // This Y value should match the visual peak/crater of the new design
+    const craterCenterY = y - 35; // Adjust based on new draw method
+    return { x: x, y: craterCenterY };
   }
 
   update(dt, enemiesList) {
@@ -163,117 +166,147 @@ export class VolcanoTower extends BaseTower {
       }
     }
 
-    // --- MODIFIED --- Particles now erupt from the taller peak
-    const particleOriginY = this.center.y - 38;
+    // Particle eruption from the new crater position
+    const particleOriginY = this.getAttackOrigin().y - 5; // A bit below the very top for visual
     if (Math.random() < 0.2) {
+      // Smoke/ash particles
       particles.push({
         x: this.center.x + (Math.random() - 0.5) * 15,
-        y: particleOriginY,
-        vx: (Math.random() - 0.5) * 10,
-        vy: -40 - Math.random() * 20,
-        life: 1.5,
-        r: 4 + Math.random() * 4,
-        c: `rgba(50, 40, 30, 0.6)`,
+        y: particleOriginY + Math.random() * 5,
+        vx: (Math.random() - 0.5) * 15,
+        vy: -30 - Math.random() * 20, // Rise up
+        life: 1.8,
+        r: 5 + Math.random() * 4,
+        c: `rgba(50, 40, 30, 0.6)`, // Dark, smoky color
         fade: 0.97,
       });
     }
     if (Math.random() < 0.1) {
+      // Small lava flickers
       particles.push({
-        x: this.center.x,
+        x: this.center.x + (Math.random() - 0.5) * 10,
         y: particleOriginY,
-        vx: (Math.random() - 0.5) * 40,
-        vy: -80 - Math.random() * 40,
-        life: 0.8,
-        r: 1 + Math.random() * 2,
-        c: "#ffaa00",
+        vx: (Math.random() - 0.5) * 50,
+        vy: -70 - Math.random() * 50, // Burst higher
+        life: 0.6,
+        r: 2 + Math.random() * 3,
+        c: "#ffaa00", // Bright orange
         fade: 0.9,
       });
     }
   }
 
-  // --- TALLER DESIGN DRAW METHOD ---
+  // --- NEW, RUGGED VOLCANO DESIGN DRAW METHOD ---
   draw() {
     const { x, y } = this.center;
     const time = performance.now();
+    const s = this.spec();
 
-    // 1. Ambient heat glow (Unchanged)
-    const heatRadius = 25 + Math.sin(time / 400) * 3;
-    const heatGlow = ctx.createRadialGradient(
-      x,
-      y + 10,
-      5,
-      x,
-      y + 10,
-      heatRadius
-    );
-    heatGlow.addColorStop(0, `rgba(255, 100, 0, 0.4)`);
-    heatGlow.addColorStop(1, `rgba(255, 100, 0, 0)`);
-    ctx.fillStyle = heatGlow;
-    ctx.fillRect(
-      x - heatRadius,
-      y + 10 - heatRadius,
-      heatRadius * 2,
-      heatRadius * 2
-    );
+    ctx.save();
 
-    // 2. Taller, steeper rocky cone
-    ctx.fillStyle = "#412b23";
+    // 1. Base Plateau - wider, more stable looking
+    ctx.fillStyle = "#333333"; // Dark gray rock
+    ctx.strokeStyle = "#555555";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.ellipse(x, y + 18, 35, 15, 0, 0, Math.PI * 2); // Wider oval base
+    ctx.fill();
+    ctx.stroke();
+
+    // 2. Main Volcanic Mountain - jagged and layered
+    ctx.fillStyle = "#412b23"; // Earthy brown/dark red for rock
     ctx.strokeStyle = "#241813";
     ctx.lineWidth = 1.5;
+
     ctx.beginPath();
-    ctx.moveTo(x - 20, y + 18); // Base starts a little lower and narrower
-    ctx.lineTo(x - 12, y - 15);
-    ctx.lineTo(x - 5, y - 25);
-    ctx.lineTo(x, y - 38); // New, higher peak
-    ctx.lineTo(x + 8, y - 22);
-    ctx.lineTo(x + 15, y - 10);
-    ctx.lineTo(x + 22, y + 18); // Base starts a little lower and narrower
+    // Left side
+    ctx.moveTo(x - 30, y + 18); // Start from wider base
+    ctx.lineTo(x - 20, y - 5);
+    ctx.lineTo(x - 10, y - 20);
+    ctx.lineTo(x - 3, y - 30); // Towards peak
+
+    // Right side
+    ctx.lineTo(x + 3, y - 30); // Peak
+    ctx.lineTo(x + 10, y - 20);
+    ctx.lineTo(x + 20, y - 5);
+    ctx.lineTo(x + 30, y + 18); // End at wider base
     ctx.closePath();
     ctx.fill();
     ctx.stroke();
 
-    // 3. Glowing lava cracks, adjusted for the taller cone
-    ctx.strokeStyle = `rgba(255, 180, 0, ${0.6 + Math.sin(time / 200) * 0.4})`;
-    ctx.lineWidth = 2;
+    // Secondary rock layers / texture
+    ctx.fillStyle = "#3b251d"; // Slightly darker rock
     ctx.beginPath();
-    ctx.moveTo(x - 10, y + 10); // Start lower
-    ctx.lineTo(x - 4, y - 18); // End higher
-    ctx.moveTo(x + 12, y + 5); // Start lower
-    ctx.lineTo(x + 3, y - 24); // End higher
+    ctx.moveTo(x - 25, y + 10);
+    ctx.lineTo(x - 15, y - 10);
+    ctx.lineTo(x + 15, y - 10);
+    ctx.lineTo(x + 25, y + 10);
+    ctx.closePath();
+    ctx.fill();
+
+    // 3. Active Crater at the Peak
+    const craterY = y - 35; // Position of the crater
+    const craterRadiusX = 10;
+    const craterRadiusY = 5;
+
+    // Outer crater rim (dark rock)
+    ctx.fillStyle = "#2c1c16";
+    ctx.beginPath();
+    ctx.ellipse(x, craterY, craterRadiusX, craterRadiusY, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Inner lava pool - bubbling effect
+    ctx.fillStyle = "#ff4400"; // Bright orange lava
+    ctx.beginPath();
+    ctx.ellipse(
+      x,
+      craterY + 2,
+      craterRadiusX * 0.7,
+      craterRadiusY * 0.7,
+      0,
+      0,
+      Math.PI * 2
+    );
+    ctx.fill();
+
+    // Lava bubbles (animated)
+    ctx.globalCompositeOperation = "lighter";
+    const bubble1X = x + Math.sin(time / 200) * 2;
+    const bubble1Y = craterY + 2 + Math.cos(time / 200) * 1;
+    const bubble1R = 1.5 + Math.sin(time / 150) * 0.8;
+    ctx.fillStyle = `rgba(255, 220, 0, ${0.7 + Math.sin(time / 100) * 0.3})`;
+    ctx.beginPath();
+    ctx.arc(bubble1X, bubble1Y, bubble1R, 0, Math.PI * 2);
+    ctx.fill();
+
+    const bubble2X = x - Math.sin(time / 180) * 3;
+    const bubble2Y = craterY + 2 - Math.cos(time / 180) * 1.5;
+    const bubble2R = 1.0 + Math.sin(time / 120) * 0.6;
+    ctx.fillStyle = `rgba(255, 255, 100, ${0.6 + Math.sin(time / 90) * 0.2})`;
+    ctx.beginPath();
+    ctx.arc(bubble2X, bubble2Y, bubble2R, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalCompositeOperation = "source-over"; // Reset blend mode
+
+    // Lava cracks glowing down the mountain
+    ctx.strokeStyle = `rgba(255, 120, 0, ${0.5 + Math.sin(time / 150) * 0.2})`;
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(x - 5, y - 25);
+    ctx.lineTo(x - 15, y + 5);
+    ctx.moveTo(x + 5, y - 25);
+    ctx.lineTo(x + 18, y + 10);
     ctx.stroke();
 
-    // 4. Bubbling lava in the taller caldera
-    const calderaY = y - 35; // New, higher position
-    ctx.fillStyle = "#ff4400";
-    ctx.beginPath();
-    ctx.ellipse(x, calderaY, 8, 4, 0, 0, Math.PI * 2); // Slightly smaller caldera
-    ctx.fill();
+    // --- Display Level as Text for VolcanoTower ---
+    ctx.fillStyle = "#ffffff"; // White color for the text
+    ctx.font = "12px Arial"; // Font size and type
+    ctx.textAlign = "center"; // Center the text horizontally
+    ctx.textBaseline = "middle"; // Center the text vertically
+    // Position the text below the tower base
+    ctx.fillText(`Lv. ${this.level}`, x, y + 35);
+    // --- END NEW CODE ---
 
-    ctx.globalCompositeOperation = "lighter";
-    const bubble1X = x + Math.sin(time / 300) * 3;
-    const bubble1R = 1.5 + Math.sin(time / 250) * 1;
-    ctx.fillStyle = `rgba(255, 220, 0, 0.8)`;
-    ctx.beginPath();
-    ctx.arc(bubble1X, calderaY, bubble1R, 0, Math.PI * 2);
-    ctx.fill();
-    const bubble2X = x - Math.sin(time / 220) * 2.5;
-    const bubble2R = 1.5 + Math.sin(time / 350) * 1;
-    ctx.fillStyle = `rgba(255, 255, 100, 0.7)`;
-    ctx.beginPath();
-    ctx.arc(bubble2X, calderaY, bubble2R, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.globalCompositeOperation = "source-over";
-
-    // 5. Level indicators (Unchanged, still on the base)
-    for (let i = 0; i < this.level; i++) {
-      const angle = -1.8 - i * 0.5;
-      const runeX = x + Math.cos(angle) * 18;
-      const runeY = y + 12 + Math.sin(angle) * 4;
-      ctx.fillStyle = "#ffdd00";
-      ctx.shadowColor = "#ffaa00";
-      ctx.shadowBlur = 4;
-      ctx.fillRect(runeX, runeY, 3, 3);
-    }
-    ctx.shadowBlur = 0;
+    ctx.restore(); // Restore global context
   }
 }

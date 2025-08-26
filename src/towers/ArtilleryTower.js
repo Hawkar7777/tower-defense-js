@@ -21,6 +21,11 @@ export class ArtilleryTower extends BaseTower {
     color: "#8d6e63",
   };
 
+  constructor(gx, gy, key) {
+    super(gx, gy, key);
+    this.recoilEffect = 0; // Initialize recoil effect
+  }
+
   // Override spec to include artillery properties
   spec() {
     const base = this.constructor.SPEC;
@@ -39,11 +44,32 @@ export class ArtilleryTower extends BaseTower {
     };
   }
 
+  /**
+   * Calculates the precise world coordinates from where the projectile should originate.
+   * This is at the center of the muzzle opening.
+   * @returns {{x: number, y: number}} The world coordinates for the projectile origin.
+   */
+  getAttackOrigin() {
+    const c = this.center;
+    // The muzzle opening is centered at local (55, 0) in the draw method
+    const muzzleCenterOffset = 55;
+    // Scale recoil effect for visual displacement
+    const currentRecoilVisual = this.recoilEffect * 10;
+
+    // Calculate the position at the center of the muzzle, accounting for rotation and recoil.
+    // The barrel is drawn horizontally (along local +X axis) when this.rot = 0.
+    return {
+      x: c.x + Math.cos(this.rot) * (muzzleCenterOffset - currentRecoilVisual),
+      y: c.y + Math.sin(this.rot) * (muzzleCenterOffset - currentRecoilVisual),
+    };
+  }
+
   update(dt, enemiesList) {
     const s = this.spec();
     this.cool -= dt;
+    this.recoilEffect = Math.max(0, this.recoilEffect - dt * 3); // Decay recoil
 
-    // Find best target (prioritize groups of enemies)
+    // Find best target (prioritize enemies farthest along the path, and in groups)
     let best = null;
     let bestScore = -1;
 
@@ -52,18 +78,19 @@ export class ArtilleryTower extends BaseTower {
       const p = e.pos;
       const d = dist(this.center, p);
 
-      // Check if in range but not too close
+      // Check if in range but not too close (minRange for artillery)
       if (d <= s.range && d >= s.minRange) {
-        // Score based on number of enemies near this target
+        // Score based on number of enemies near this target (for splash efficiency)
         let nearbyEnemies = 0;
         for (const other of enemiesList) {
           if (other.dead) continue;
           if (dist(p, other.pos) <= s.splash * 0.8) {
+            // Consider enemies within a portion of splash radius
             nearbyEnemies++;
           }
         }
 
-        const score = e.t * (1 + nearbyEnemies * 0.3); // Prefer later enemies with groups
+        const score = e.t * (1 + nearbyEnemies * 0.3); // Prioritize later enemies with groups
 
         if (score > bestScore) {
           best = e;
@@ -72,49 +99,46 @@ export class ArtilleryTower extends BaseTower {
       }
     }
 
-    // If we found a target, aim at it
+    // If we found a target, aim the turret at it
     if (best) {
       const dx = best.pos.x - this.center.x;
       const dy = best.pos.y - this.center.y;
-      this.rot = Math.atan2(dy, dx) + Math.PI / 2;
+      // Calculate rotation to point the barrel (drawn along +X when rot=0) towards the target
+      this.rot = Math.atan2(dy, dx);
     }
 
     // Fire if cooldown is ready and there's a target
     if (this.cool <= 0 && best) {
-      this.cool = 1 / s.fireRate;
+      this.cool = 1 / s.fireRate; // Reset cooldown
       this.fireArtilleryShot(best, s);
     }
   }
 
   fireArtilleryShot(target, spec) {
-    const c = this.center;
-
-    // Calculate starting position at the mortar barrel
-    const barrelLength = 25;
-    const startX = c.x + Math.cos(this.rot - Math.PI / 2) * barrelLength;
-    const startY = c.y + Math.sin(this.rot - Math.PI / 2) * barrelLength;
+    // Get the precise origin from the barrel tip
+    const origin = this.getAttackOrigin();
 
     // Create artillery shell with arc trajectory
     const shell = new ArtilleryShell(
-      startX,
-      startY,
+      origin.x,
+      origin.y,
       target.pos.x,
       target.pos.y,
       spec
     );
     projectiles.push(shell);
 
-    // Muzzle flash and smoke
-    this.spawnMuzzleBlast(startX, startY);
+    // Spawn muzzle flash and smoke directly at the projectile's origin
+    this.spawnMuzzleBlast(origin.x, origin.y);
 
-    // Recoil effect
+    // Apply recoil effect to the tower's drawing
     this.recoilEffect = 0.4;
   }
 
   spawnMuzzleBlast(x, y) {
     // Large muzzle blast for artillery
     for (let i = 0; i < 15; i++) {
-      const angle = this.rot - Math.PI / 2 + (Math.random() - 0.5) * 0.5;
+      const angle = this.rot + (Math.random() - 0.5) * 0.5; // Spread particles around fire direction
       const speed = 60 + Math.random() * 60;
       const size = 4 + Math.random() * 3;
       const life = 1.2 + Math.random() * 0.5;
@@ -126,16 +150,16 @@ export class ArtilleryTower extends BaseTower {
         vy: Math.sin(angle) * speed,
         life,
         r: size,
-        c: "#666",
+        c: "#666", // Smoke color
         gravity: 0.2,
         fade: 0.9,
         shrink: 0.95,
       });
     }
 
-    // Flash
+    // Flash particles
     for (let i = 0; i < 8; i++) {
-      const angle = this.rot - Math.PI / 2 + (Math.random() - 0.5) * 0.3;
+      const angle = this.rot + (Math.random() - 0.5) * 0.3;
       const speed = 120 + Math.random() * 120;
       const size = 2 + Math.random() * 2;
       const life = 0.3 + Math.random() * 0.2;
@@ -147,7 +171,7 @@ export class ArtilleryTower extends BaseTower {
         vy: Math.sin(angle) * speed,
         life,
         r: size,
-        c: "#ff8c00",
+        c: "#ff8c00", // Orange flash color
         fade: 0.95,
       });
     }
@@ -157,6 +181,7 @@ export class ArtilleryTower extends BaseTower {
     const s = this.spec();
     const { x, y } = this.center;
     const time = performance.now() / 1000;
+    const currentRecoilVisual = this.recoilEffect * 10; // Scale recoil for drawing
 
     ctx.save();
     ctx.translate(x, y);
@@ -164,130 +189,154 @@ export class ArtilleryTower extends BaseTower {
     // Shadow for depth
     ctx.fillStyle = "rgba(0,0,0,0.25)";
     ctx.beginPath();
-    ctx.arc(4, 4, 24, 0, Math.PI * 2);
+    ctx.ellipse(4, 4, 30, 20, 0, 0, Math.PI * 2); // Large, oval shadow for a bigger base
     ctx.fill();
 
-    // Base platform
-    ctx.fillStyle = "#5d4037";
+    // Base (sturdy, low profile carriage with wheels/tracks)
+    ctx.fillStyle = "#4a4a4a"; // Darker grey for a more realistic military vehicle
     ctx.beginPath();
-    ctx.arc(0, 0, 24, 0, Math.PI * 2);
+    ctx.ellipse(0, 0, 30, 20, 0, 0, Math.PI * 2);
     ctx.fill();
 
-    ctx.strokeStyle = "#4e342e";
+    ctx.strokeStyle = "#2c2c2c";
     ctx.lineWidth = 3;
     ctx.beginPath();
-    ctx.arc(0, 0, 24, 0, Math.PI * 2);
+    ctx.ellipse(0, 0, 30, 20, 0, 0, Math.PI * 2);
     ctx.stroke();
 
-    // Layered bolts / metallic trim
-    ctx.fillStyle = "#b0bec5";
-    for (let i = 0; i < 6; i++) {
-      const angle = (i * Math.PI * 2) / 6;
-      const bx = Math.cos(angle) * 16;
-      const by = Math.sin(angle) * 16;
-      ctx.beginPath();
-      ctx.arc(bx, by, 3, 0, Math.PI * 2);
-      ctx.fill();
-    }
-
-    ctx.save();
-    // Apply recoil
-    if (this.recoilEffect > 0) {
-      ctx.translate(0, this.recoilEffect * 4);
-      this.recoilEffect -= 0.03;
-    }
-
-    ctx.rotate(this.rot);
-
-    // Turret mount
-    ctx.fillStyle = "#4e342e";
+    // Wheels/Tracks (simplified as circles)
+    ctx.fillStyle = "#333333";
     ctx.beginPath();
-    ctx.roundRect(-18, -8, 36, 16, 4);
+    ctx.arc(-20, 15, 8, 0, Math.PI * 2);
+    ctx.arc(20, 15, 8, 0, Math.PI * 2);
     ctx.fill();
-
-    // Barrel base
-    ctx.fillStyle = "#6d4c41";
-    ctx.beginPath();
-    ctx.roundRect(-10, -20, 20, 12, 3);
-    ctx.fill();
-
-    // Barrel with highlights
-    ctx.fillStyle = "#5d4037";
-    ctx.beginPath();
-    ctx.roundRect(-8, -45, 16, 30, 4);
-    ctx.fill();
-
-    ctx.strokeStyle = "#3e2723";
+    ctx.strokeStyle = "#1a1a1a";
     ctx.lineWidth = 1.5;
     ctx.beginPath();
-    ctx.moveTo(-8, -45);
-    ctx.lineTo(-8, -15);
-    ctx.moveTo(8, -45);
-    ctx.lineTo(8, -15);
+    ctx.arc(-20, 15, 8, 0, Math.PI * 2);
+    ctx.arc(20, 15, 8, 0, Math.PI * 2);
     ctx.stroke();
 
-    // Barrel tip glow
-    ctx.fillStyle = "#ff8c00";
+    ctx.save();
+    // Apply recoil translation to the entire rotating turret assembly
+    // The translation direction is opposite to the barrel's firing direction (this.rot).
+    ctx.translate(
+      -Math.cos(this.rot) * currentRecoilVisual,
+      -Math.sin(this.rot) * currentRecoilVisual
+    );
+
+    ctx.rotate(this.rot); // Rotate the entire turret and barrel assembly
+
+    // Turret Mount/Shield (part that rotates with the barrel)
+    ctx.fillStyle = "#6d6d6d"; // Medium grey
     ctx.beginPath();
-    ctx.roundRect(-7, -50, 14, 8, 3);
+    // Adjusted rectangle to be centered relative to the barrel's pivot
+    // The barrel is drawn from x=-10, so the pivot is around x=0
+    ctx.roundRect(-15, -20, 30, 40, 8); // Wider, more substantial shield/mount
+    ctx.fill();
+    ctx.strokeStyle = "#4a4a4a";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.roundRect(-15, -20, 30, 40, 8);
+    ctx.stroke();
+
+    // Long Barrel
+    ctx.fillStyle = "#5d5d5d"; // Darker grey for barrel
+    ctx.beginPath();
+    // Barrel now extends along the local +X axis, from x=-10 to x=55
+    ctx.roundRect(-10, -8, 65, 16, 4); // Longer, thicker barrel
     ctx.fill();
 
-    // Aiming gear
-    ctx.fillStyle = "#3e2723";
+    ctx.strokeStyle = "#3a3a3a";
+    ctx.lineWidth = 2;
     ctx.beginPath();
-    ctx.arc(0, -15, 6, 0, Math.PI * 2);
+    ctx.moveTo(-10, -8);
+    ctx.lineTo(55, -8);
+    ctx.moveTo(-10, 8);
+    ctx.lineTo(55, 8);
+    ctx.stroke();
+
+    // Muzzle Brake
+    ctx.fillStyle = "#4a4a4a";
+    ctx.beginPath();
+    // Muzzle brake at the very end of the barrel (local x=55)
+    ctx.roundRect(50, -10, 8, 20, 3);
     ctx.fill();
 
-    ctx.restore();
+    // Muzzle opening (dark) - positioned at local (55, 0)
+    ctx.fillStyle = "#222222";
+    ctx.beginPath();
+    ctx.arc(55, 0, 5, 0, Math.PI * 2);
+    ctx.fill();
 
-    // Level indicators as explosive icons
-    for (let i = 0; i < this.level; i++) {
-      const ix = x - 12 + i * 6;
-      const iy = y + 28;
+    // Commander's Hatch/Scope (on the turret, adjusted for new barrel position)
+    ctx.fillStyle = "#4a4a4a";
+    ctx.beginPath();
+    ctx.arc(0, -10, 8, 0, Math.PI * 2); // Positioned further back on the turret
+    ctx.fill();
+    ctx.strokeStyle = "#2c2c2c";
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.arc(0, -10, 8, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.fillStyle = "rgba(100, 150, 255, 0.5)"; // Blue scope lens
+    ctx.beginPath();
+    ctx.arc(0, -10, 4, 0, Math.PI * 2);
+    ctx.fill();
 
-      ctx.fillStyle = s.color;
-      ctx.beginPath();
-      ctx.arc(ix, iy, 2, 0, Math.PI * 2);
-      ctx.fill();
+    ctx.restore(); // End recoil and rotation from ctx.save() before `ctx.rotate(this.rot)`
 
-      ctx.strokeStyle = s.color;
-      ctx.lineWidth = 1.5;
-      ctx.beginPath();
-      for (let j = 0; j < 8; j++) {
-        const angle = (j * Math.PI * 2) / 8;
-        ctx.moveTo(ix + Math.cos(angle) * 2, iy + Math.sin(angle) * 2);
-        ctx.lineTo(ix + Math.cos(angle) * 4, iy + Math.sin(angle) * 4);
-      }
-      ctx.stroke();
-    }
+    // --- Display Level as Text for ArtilleryTower ---
+    ctx.fillStyle = "#ffffff"; // White color for the text
+    ctx.font = "12px Arial"; // Font size and type
+    ctx.textAlign = "center"; // Center the text horizontally
+    ctx.textBaseline = "middle"; // Center the text vertically
+    // Position the text below the tower base
+    ctx.fillText(`Lv. ${this.level}`, 0, 35);
+    // --- END NEW CODE ---
 
-    ctx.restore();
+    ctx.restore(); // Restore global context from the first ctx.save()
 
-    // Idle smoke puffs
+    // Idle smoke puffs (adjusted for new barrel tip position)
     if (Math.random() < 0.02) {
       this.drawIdleSmoke(x, y, time);
     }
   }
 
+  /**
+   * Draws idle smoke from the barrel tip, accounting for rotation and recoil.
+   * @param {number} x - Center X of the tower.
+   * @param {number} y - Center Y of the tower.
+   * @param {number} time - Current game time for animation.
+   */
   drawIdleSmoke(x, y, time) {
-    const angle = this.rot - Math.PI / 2;
-    const barrelTipX = x + Math.cos(angle) * 45;
-    const barrelTipY = y + Math.sin(angle) * 45;
+    const angle = this.rot; // Direction the barrel is pointing (now directly this.rot)
+    const muzzleCenterOffset = 55; // Muzzle opening is at local (55, 0)
+    const currentRecoilVisual = this.recoilEffect * 10; // Current recoil displacement
+
+    // Calculate the world coordinates of the muzzle opening
+    const muzzleX =
+      x + Math.cos(angle) * (muzzleCenterOffset - currentRecoilVisual);
+    const muzzleY =
+      y + Math.sin(angle) * (muzzleCenterOffset - currentRecoilVisual);
 
     for (let i = 0; i < 4; i++) {
-      const offset = (Math.random() - 0.5) * 5;
+      const offset = (Math.random() - 0.5) * 5; // Slight random spread perpendicular to barrel
+      // To get a perpendicular offset, add/subtract PI/2 from the barrel's angle
+      const perpAngle = angle + Math.PI / 2;
+
       const life = 0.8 + Math.random() * 0.5;
       const size = 2 + Math.random() * 2;
 
       particles.push({
-        x: barrelTipX + Math.cos(angle + Math.PI / 2) * offset,
-        y: barrelTipY + Math.sin(angle + Math.PI / 2) * offset,
-        vx: Math.cos(angle) * 20 + (Math.random() - 0.5) * 10,
-        vy: Math.sin(angle) * 20 + (Math.random() - 0.5) * 10 - 10,
+        x: muzzleX + Math.cos(perpAngle) * offset,
+        y: muzzleY + Math.sin(perpAngle) * offset,
+        vx: Math.cos(angle) * 20 + (Math.random() - 0.5) * 10, // Smoke moves generally forward from barrel
+        vy: Math.sin(angle) * 20 + (Math.random() - 0.5) * 10,
         life,
         r: size,
-        c: "#888",
-        gravity: -0.1,
+        c: "#888", // Smoke color
+        gravity: -0.05, // Slight upward drift for smoke
         fade: 0.95,
       });
     }

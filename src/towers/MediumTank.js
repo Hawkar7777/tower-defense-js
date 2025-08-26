@@ -490,21 +490,32 @@ export class MediumTank extends BaseTower {
     ctx.fillText("M-III", x - 12, y - 12);
     ctx.restore();
 
-    // LEVEL CHEVRONS
-    for (let i = 0; i < Math.min(4, this.level); i++) {
-      const mx = x - 18 + i * 12;
-      const my = y - 28;
-      ctx.fillStyle = "#ffd24b";
-      ctx.beginPath();
-      ctx.moveTo(mx, my);
-      ctx.lineTo(mx - 4, my - 6);
-      ctx.lineTo(mx + 4, my - 6);
-      ctx.closePath();
-      ctx.fill();
-      ctx.strokeStyle = "#b77b00";
-      ctx.lineWidth = 1;
-      ctx.stroke();
-    }
+    // --- OLD CODE (REMOVE OR COMMENT OUT) ---
+    // // LEVEL CHEVRONS
+    // for (let i = 0; i < Math.min(4, this.level); i++) {
+    //   const mx = x - 18 + i * 12;
+    //   const my = y - 28;
+    //   ctx.fillStyle = "#ffd24b";
+    //   ctx.beginPath();
+    //   ctx.moveTo(mx, my);
+    //   ctx.lineTo(mx - 4, my - 6);
+    //   ctx.lineTo(mx + 4, my - 6);
+    //   ctx.closePath();
+    //   ctx.fill();
+    //   ctx.strokeStyle = "#b77b00";
+    //   ctx.lineWidth = 1;
+    //   ctx.stroke();
+    // }
+    // --- END OLD CODE ---
+
+    // --- NEW CODE: Display Level as Text for MediumTank ---
+    ctx.fillStyle = "#ffffff"; // White color for the text
+    ctx.font = "12px Arial"; // Font size and type
+    ctx.textAlign = "center"; // Center the text horizontally
+    ctx.textBaseline = "middle"; // Center the text vertically
+    // Position the text below the tank. Adjust y to clear other elements.
+    ctx.fillText(`Lv. ${this.level}`, x, y + 35);
+    // --- END NEW CODE ---
   }
 }
 

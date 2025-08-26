@@ -83,7 +83,7 @@ export class WizardTower extends BaseTower {
     range: 160,
     fireRate: 0.5, // slower fire like CoC
     dmg: 50,
-    color: "#ff3300",
+    color: "#ff3300", // Base color, but visuals will use more blues/purples
   };
 
   spec() {
@@ -96,8 +96,13 @@ export class WizardTower extends BaseTower {
     };
   }
 
+  // Attack origin should be where the orb is, for visual consistency
   getAttackOrigin() {
-    return { x: this.center.x, y: this.center.y - 20 };
+    const { x, y } = this.center;
+    const time = performance.now() / 600;
+    // Position of the floating orb, accounting for bobbing animation
+    const orbY = y - 30 + Math.sin(time) * 3;
+    return { x: x, y: orbY };
   }
 
   update(dt, enemiesList) {
@@ -127,75 +132,131 @@ export class WizardTower extends BaseTower {
 
   draw() {
     const { x, y } = this.center;
-    const time = performance.now() / 600;
+    const time = performance.now() / 600; // For animations
+    const s = this.spec(); // Get current spec for level, etc.
 
-    // Tower base
-    ctx.fillStyle = "#4b2a6c";
-    ctx.beginPath();
-    ctx.arc(x, y + 8, 16, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.strokeStyle = "#ff3300";
+    // Calculate hover effect for the entire structure
+    const hoverOffset = Math.sin(time * 0.5) * 2;
+    ctx.save();
+    ctx.translate(0, hoverOffset);
+
+    // 1. Arcane Base Platform
+    ctx.fillStyle = "#34495e"; // Dark blue-gray
+    ctx.strokeStyle = "#5d6d7e"; // Lighter blue-gray border
     ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.ellipse(x, y + 15, 25, 12, 0, 0, Math.PI * 2); // Wider, oval base
+    ctx.fill();
     ctx.stroke();
 
-    // Tower body - stone tower
-    ctx.fillStyle = "#6a3b8f";
-    ctx.beginPath();
-    ctx.rect(x - 8, y - 16, 16, 24);
-    ctx.fill();
-    ctx.strokeStyle = "#ff6600";
-    ctx.lineWidth = 2;
-    ctx.stroke();
+    // Base glowing runes
+    ctx.shadowColor = "#8e44ad"; // Purple glow
+    ctx.shadowBlur = 8;
+    for (let i = 0; i < 6; i++) {
+      const angle = (Math.PI / 3) * i + time * 0.1;
+      const runeX = x + Math.cos(angle) * 20;
+      const runeY = y + 15 + Math.sin(angle) * 8;
+      ctx.fillStyle = "rgba(142, 68, 173, 0.7)"; // Purple
+      ctx.beginPath();
+      ctx.arc(runeX, runeY, 2, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.shadowBlur = 0; // Reset shadow
 
-    // Crystal on top
-    const crystalY = y - 18 + Math.sin(time) * 3;
-    ctx.fillStyle = "#ff5500";
+    // 2. Central Energy Conduit/Pylon
+    const pylonHeight = 40;
+    ctx.fillStyle = "#2c3e50"; // Darker blue-gray
     ctx.beginPath();
-    ctx.moveTo(x, crystalY - 6);
-    ctx.lineTo(x - 5, crystalY + 3);
-    ctx.lineTo(x + 5, crystalY + 3);
+    ctx.moveTo(x - 8, y + 10);
+    ctx.lineTo(x - 5, y + 10 - pylonHeight);
+    ctx.lineTo(x + 5, y + 10 - pylonHeight);
+    ctx.lineTo(x + 8, y + 10);
     ctx.closePath();
     ctx.fill();
+    ctx.strokeStyle = "#4b6c8f"; // Blue-steel border
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
 
-    // Magic particles orbiting
-    for (let i = 0; i < 4; i++) {
-      const angle = time + i * (Math.PI / 2);
-      const px = x + Math.cos(angle) * 8;
-      const py = crystalY + Math.sin(angle) * 3;
+    // 3. Main Pulsating Arcane Orb
+    const orbY = y + 10 - pylonHeight; // Orb is at the top of the pylon
+    const orbPulseSize = 10 + Math.sin(time * 1.5) * 2; // Pulsating effect
+    const orbInnerGlowSize = orbPulseSize * 0.5;
+
+    // Outer glow for the orb
+    ctx.globalCompositeOperation = "lighter"; // Blending mode for glow
+    const outerOrbGrad = ctx.createRadialGradient(
+      x,
+      orbY,
+      0,
+      x,
+      orbY,
+      orbPulseSize * 2
+    );
+    outerOrbGrad.addColorStop(
+      0,
+      `rgba(155, 89, 182, ${0.7 + Math.sin(time * 2) * 0.3})`
+    ); // Strong purple
+    outerOrbGrad.addColorStop(1, "rgba(155, 89, 182, 0)");
+    ctx.fillStyle = outerOrbGrad;
+    ctx.beginPath();
+    ctx.arc(x, orbY, orbPulseSize * 2, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Main orb body
+    const orbGrad = ctx.createRadialGradient(x, orbY, 0, x, orbY, orbPulseSize);
+    orbGrad.addColorStop(0, "#E0BBE4"); // Light lavender
+    orbGrad.addColorStop(0.5, "#957DAD"); // Medium purple
+    orbGrad.addColorStop(1, "#60477E"); // Darker purple
+    ctx.fillStyle = orbGrad;
+    ctx.beginPath();
+    ctx.arc(x, orbY, orbPulseSize, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Inner core glow
+    const innerOrbGrad = ctx.createRadialGradient(
+      x,
+      orbY,
+      0,
+      x,
+      orbY,
+      orbInnerGlowSize
+    );
+    innerOrbGrad.addColorStop(0, "rgba(255, 255, 255, 1)");
+    innerOrbGrad.addColorStop(1, "rgba(200, 160, 240, 0.7)");
+    ctx.fillStyle = innerOrbGrad;
+    ctx.beginPath();
+    ctx.arc(x, orbY, orbInnerGlowSize, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalCompositeOperation = "source-over"; // Reset blending mode
+
+    // 4. Arcane energy flowing around the orb
+    for (let i = 0; i < 3; i++) {
+      const swirlAngle = time * 0.7 + i * ((Math.PI * 2) / 3);
+      const swirlRadius = orbPulseSize + 5 + Math.sin(time * 1.8 + i) * 3;
+      const pX = x + Math.cos(swirlAngle) * swirlRadius;
+      const pY = orbY + Math.sin(swirlAngle) * swirlRadius * 0.5; // Elliptical orbit
       particles.push({
-        x: px,
-        y: py,
+        x: pX,
+        y: pY,
         vx: 0,
         vy: 0,
         life: 0.3,
         r: 1.5,
-        c: "#ff8800",
+        c: `rgba(190, 150, 220, ${0.8 + Math.sin(time * 3 + i) * 0.2})`, // Pulsating particle alpha
         fade: 0.9,
       });
     }
 
-    // --- OLD CODE (REMOVE OR COMMENT OUT) ---
-    // // Level indicators
-    // for (let i = 0; i < this.level; i++) {
-    //   const ix = x - 10 + i * 5;
-    //   const iy = y + 25;
-    //   ctx.strokeStyle = "#ff8800";
-    //   ctx.lineWidth = 1.5;
-    //   ctx.beginPath();
-    //   ctx.moveTo(ix, iy);
-    //   ctx.lineTo(ix, iy + 4);
-    //   ctx.stroke();
-    // }
-    // --- END OLD CODE ---
-
-    // --- NEW CODE: Display Level as Text for WizardTower ---
+    // --- Display Level as Text for WizardTower ---
     ctx.fillStyle = "#ffffff"; // White color for the text
     ctx.font = "12px Arial"; // Font size and type
     ctx.textAlign = "center"; // Center the text horizontally
     ctx.textBaseline = "middle"; // Center the text vertically
-    // Position the text below the tower. Adjust y + 25 as needed for spacing.
-    ctx.fillText(`Lv. ${this.level}`, x, y + 25);
+    // Position the text below the tower base, accounting for hover
+    ctx.fillText(`Lv. ${this.level}`, x, y + 35 - hoverOffset);
     // --- END NEW CODE ---
+
+    ctx.restore(); // End hover translation
   }
 }
 

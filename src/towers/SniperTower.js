@@ -18,7 +18,7 @@ export class SniperTower extends BaseTower {
     penetration: 2, // Can penetrate through multiple enemies
     critChance: 0.25, // Chance for critical hit
     critMultiplier: 2.5, // Damage multiplier for critical hits
-    color: "#2b4162",
+    color: "#2b4162", // Base color, but visuals will use more blues/greys
   };
 
   // Override spec to include sniper properties
@@ -36,6 +36,24 @@ export class SniperTower extends BaseTower {
       critMultiplier: base.critMultiplier + (this.level - 1) * 0.1,
       color: base.color,
       cost: base.cost,
+    };
+  }
+
+  /**
+   * Calculates the precise world coordinates from where the projectile should originate.
+   * This is at the center of the muzzle opening of the new design.
+   * @returns {{x: number, y: number}} The world coordinates for the projectile origin.
+   */
+  getAttackOrigin() {
+    const c = this.center;
+    // The muzzle is at local (50, 0) in the new draw method (when this.rot = 0)
+    const muzzleCenterOffset = 50;
+
+    // Calculate the position at the center of the muzzle, accounting for rotation.
+    // The barrel is drawn horizontally (along local +X axis) when this.rot = 0.
+    return {
+      x: c.x + Math.cos(this.rot) * muzzleCenterOffset,
+      y: c.y + Math.sin(this.rot) * muzzleCenterOffset,
     };
   }
 
@@ -60,7 +78,8 @@ export class SniperTower extends BaseTower {
     if (best) {
       const dx = best.pos.x - this.center.x;
       const dy = best.pos.y - this.center.y;
-      this.rot = Math.atan2(dy, dx) + Math.PI / 2;
+      // Calculate rotation to point the barrel (drawn along +X when rot=0) towards the target
+      this.rot = Math.atan2(dy, dx);
     }
 
     // Fire if cooldown is ready and there's a target
@@ -71,25 +90,21 @@ export class SniperTower extends BaseTower {
   }
 
   fireSniperShot(target, spec) {
-    const c = this.center;
-
-    // Calculate starting position at the tip of the sniper barrel
-    const barrelLength = 35;
-    const startX = c.x + Math.cos(this.rot - Math.PI / 2) * barrelLength;
-    const startY = c.y + Math.sin(this.rot - Math.PI / 2) * barrelLength;
+    // Get the precise origin from the barrel tip
+    const origin = this.getAttackOrigin();
 
     // Create sniper bullet
     const bullet = new SniperBullet(
-      startX,
-      startY,
-      this.rot - Math.PI / 2, // Adjust rotation to point forward
+      origin.x,
+      origin.y,
+      this.rot, // Use tower's rotation directly as it now points forward
       spec
     );
     projectiles.push(bullet);
 
-    // Muzzle flash and smoke
-    spawnMuzzle(startX, startY, this.rot - Math.PI / 2, spec.color);
-    this.spawnSniperSmoke(startX, startY);
+    // Muzzle flash and smoke at the *true* origin
+    spawnMuzzle(origin.x, origin.y, this.rot, spec.color);
+    this.spawnSniperSmoke(origin.x, origin.y);
 
     // Sniper laser sight effect
     this.drawLaserSight(target);
@@ -97,7 +112,7 @@ export class SniperTower extends BaseTower {
 
   spawnSniperSmoke(x, y) {
     for (let i = 0; i < 8; i++) {
-      const angle = this.rot - Math.PI / 2 + (Math.random() - 0.5) * 0.3;
+      const angle = this.rot + (Math.random() - 0.5) * 0.3; // Spread particles around fire direction
       const speed = 40 + Math.random() * 40;
       const size = 2 + Math.random() * 2;
       const life = 0.8 + Math.random() * 0.4;
@@ -109,7 +124,7 @@ export class SniperTower extends BaseTower {
         vy: Math.sin(angle) * speed,
         life,
         r: size,
-        c: "#888888",
+        c: "#888888", // Smoke color
         gravity: 0.05,
         fade: 0.93,
         shrink: 0.97,
@@ -122,102 +137,102 @@ export class SniperTower extends BaseTower {
     const { x, y } = this.center;
     const time = performance.now() / 1000;
 
-    // Draw sniper tower base
-    ctx.fillStyle = "#1a1a2e";
-    ctx.beginPath();
-    ctx.arc(x, y, 20, 0, Math.PI * 2);
-    ctx.fill();
-
-    // Platform border
-    ctx.strokeStyle = "#2b4ff2";
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.arc(x, y, 20, 0, Math.PI * 2);
-    ctx.stroke();
-
-    // Draw sniper rifle
     ctx.save();
     ctx.translate(x, y);
-    ctx.rotate(this.rot);
 
-    // Rifle body
-    ctx.fillStyle = s.color;
+    // Shadow for depth
+    ctx.fillStyle = "rgba(0,0,0,0.25)";
     ctx.beginPath();
-    ctx.roundRect(-8, -35, 16, 50, 3);
+    ctx.ellipse(4, 4, 25, 12, 0, 0, Math.PI * 2);
     ctx.fill();
 
-    // Rifle barrel
-    ctx.fillStyle = "#2b4ff2";
-    ctx.beginPath();
-    ctx.roundRect(-4, -50, 8, 15, 2);
-    ctx.fill();
-
-    // Rifle scope
-    ctx.fillStyle = "#2b4ff2";
-    ctx.beginPath();
-    ctx.roundRect(-6, -25, 12, 8, 2);
-    ctx.fill();
-
-    // Scope lenses
-    ctx.fillStyle = "#2b4ff2";
-    ctx.beginPath();
-    ctx.arc(-6, -21, 3, 0, Math.PI * 2);
-    ctx.fill();
-
-    ctx.fillStyle = "#2b4ff2";
-    ctx.beginPath();
-    ctx.arc(6, -21, 3, 0, Math.PI * 2);
-    ctx.fill();
-
-    // Scope glow
-    const pulse = Math.sin(time * 3) * 0.2 + 0.8;
-    ctx.fillStyle = `rgba(0, 150, 255, ${0.4 * pulse})`;
-    ctx.beginPath();
-    ctx.arc(0, -21, 2, 0, Math.PI * 2);
-    ctx.fill();
-
-    // Bipod
-    ctx.strokeStyle = "#2b4ff2";
+    // 1. Sleek Base Platform
+    ctx.fillStyle = "#34495e"; // Dark blue-grey
+    ctx.strokeStyle = "#2c3e50";
     ctx.lineWidth = 2;
     ctx.beginPath();
-    ctx.moveTo(-8, 15);
-    ctx.lineTo(-15, 25);
-    ctx.moveTo(8, 15);
-    ctx.lineTo(15, 25);
+    ctx.ellipse(0, 0, 25, 12, 0, 0, Math.PI * 2);
+    ctx.fill();
     ctx.stroke();
 
-    ctx.restore();
+    // Base energy lines
+    ctx.strokeStyle = `rgba(45, 150, 255, ${0.4 + Math.sin(time * 2) * 0.2})`;
+    ctx.lineWidth = 1.5;
+    for (let i = 0; i < 4; i++) {
+      const angle = (Math.PI / 2) * i + time * 0.1;
+      ctx.beginPath();
+      ctx.moveTo(Math.cos(angle) * 15, Math.sin(angle) * 7);
+      ctx.lineTo(Math.cos(angle + 0.5) * 22, Math.sin(angle + 0.5) * 10);
+      ctx.stroke();
+    }
 
-    // --- OLD CODE (REMOVE OR COMMENT OUT) ---
-    // // Draw level indicators as crosshair icons
-    // for (let i = 0; i < this.level; i++) {
-    //   const indicatorX = x - 12 + i * 6;
-    //   const indicatorY = y + 25;
+    ctx.save();
+    ctx.rotate(this.rot); // Rotate the entire weapon assembly
 
-    //   // Crosshair icon
-    //   ctx.strokeStyle = s.color;
-    //   ctx.lineWidth = 1.5;
-    //   ctx.beginPath();
-    //   ctx.arc(indicatorX, indicatorY, 2, 0, Math.PI * 2);
-    //   ctx.stroke();
+    // 2. Weapon Mounting Platform
+    ctx.fillStyle = "#5d6d7e"; // Medium grey
+    ctx.beginPath();
+    ctx.roundRect(-10, -10, 20, 20, 5); // Central rotating mount
+    ctx.fill();
+    ctx.strokeStyle = "#4a5458";
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
 
-    //   ctx.beginPath();
-    //   ctx.moveTo(indicatorX - 3, indicatorY);
-    //   ctx.lineTo(indicatorX + 3, indicatorY);
-    //   ctx.moveTo(indicatorX, indicatorY - 3);
-    //   ctx.lineTo(indicatorX, indicatorY + 3);
-    //   ctx.stroke();
-    // }
-    // --- END OLD CODE ---
+    // 3. Long Railgun Barrel
+    ctx.fillStyle = "#2c3e50"; // Dark gunmetal
+    ctx.beginPath();
+    ctx.roundRect(-10, -5, 60, 10, 3); // Long barrel extending right (local X+)
+    ctx.fill();
+    ctx.strokeStyle = "#1a1f21";
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
 
-    // --- NEW CODE: Display Level as Text for SniperTower ---
+    // Barrel highlights/rails
+    ctx.fillStyle = "#4a6c8f"; // Blue-steel accent
+    ctx.fillRect(0, -3, 40, 2);
+    ctx.fillRect(0, 1, 40, 2);
+
+    // Muzzle tip / energy emitter
+    ctx.fillStyle = "#2b4ff2"; // Bright blue
+    ctx.beginPath();
+    ctx.arc(50, 0, 5, 0, Math.PI * 2); // Muzzle opening
+    ctx.fill();
+    ctx.fillStyle = "rgba(255, 255, 255, 0.8)";
+    ctx.beginPath();
+    ctx.arc(50, 0, 2, 0, Math.PI * 2); // Inner glow
+    ctx.fill();
+
+    // 4. Advanced Scope/Targeting Array
+    ctx.fillStyle = "#34495e";
+    ctx.beginPath();
+    ctx.roundRect(10, -15, 15, 10, 3); // Scope housing on top of barrel
+    ctx.fill();
+    ctx.strokeStyle = "#2c3e50";
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    // Scope lens
+    ctx.fillStyle = "rgba(45, 150, 255, 0.7)"; // Blue lens with reflection
+    ctx.beginPath();
+    ctx.ellipse(18, -10, 4, 3, Math.PI / 4, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = "rgba(255, 255, 255, 0.4)";
+    ctx.beginPath();
+    ctx.arc(16, -12, 1, 0, Math.PI * 2); // Glare highlight
+    ctx.fill();
+
+    ctx.restore(); // End weapon assembly rotation
+
+    // --- Display Level as Text for SniperTower ---
     ctx.fillStyle = "#ffffff"; // White color for the text
     ctx.font = "12px Arial"; // Font size and type
     ctx.textAlign = "center"; // Center the text horizontally
     ctx.textBaseline = "middle"; // Center the text vertically
-    // Position the text below the tower. Adjust y + 25 as needed for spacing.
-    ctx.fillText(`Lv. ${this.level}`, x, y + 25);
+    // Position the text below the base platform
+    ctx.fillText(`Lv. ${this.level}`, 0, 28);
     // --- END NEW CODE ---
+
+    ctx.restore(); // Restore global context from the first ctx.save()
 
     // Draw laser sight when not firing
     if (this.cool > 0.1) {
@@ -228,7 +243,7 @@ export class SniperTower extends BaseTower {
   drawLaserSight(target = null) {
     const s = this.spec();
     const { x, y } = this.center;
-    const angle = this.rot - Math.PI / 2;
+    const angle = this.rot; // Laser angle is now directly this.rot
 
     // Calculate laser end point
     let endX, endY;
@@ -247,8 +262,8 @@ export class SniperTower extends BaseTower {
     ctx.setLineDash([2, 4]);
     ctx.beginPath();
     ctx.moveTo(
-      x + Math.cos(angle) * 35, // Start at barrel tip
-      y + Math.sin(angle) * 35
+      x + Math.cos(angle) * 50, // Start at muzzle tip of new design (local x=50)
+      y + Math.sin(angle) * 50
     );
     ctx.lineTo(endX, endY);
     ctx.stroke();

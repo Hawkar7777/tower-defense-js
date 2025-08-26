@@ -18,19 +18,18 @@ export class FlamethrowerTower extends BaseTower {
     coneAngle: Math.PI / 3, // 60 degree cone
     spreadChance: 0.4,
     spreadRange: 40,
-    fuelCapacity: 500,
+    // fuelCapacity: 500, // Removed fuel capacity
     color: "#FF6B35",
   };
 
   constructor(gx, gy, key) {
     super(gx, gy, key);
-    this.fuel = this.constructor.SPEC.fuelCapacity;
-    this.refuelCooldown = 0;
+    // this.fuel = this.constructor.SPEC.fuelCapacity; // Removed fuel property
+    // this.refuelCooldown = 0; // Removed refuel cooldown
     this.isFiring = false;
-    this.fireStream = [];
+    // this.fireStream = []; // Not explicitly needed with new particle approach
     this.targetAngle = 0;
     this.flameThrowerEffect = 0;
-    // ensure rot exists (BaseTower probably sets it; if not, default)
     if (this.rot === undefined) this.rot = 0;
   }
 
@@ -47,13 +46,12 @@ export class FlamethrowerTower extends BaseTower {
       coneAngle: base.coneAngle + (this.level - 1) * 0.05, // Wider cone at higher levels
       spreadChance: base.spreadChance + (this.level - 1) * 0.05,
       spreadRange: base.spreadRange * (1 + (this.level - 1) * 0.05),
-      fuelCapacity: base.fuelCapacity * (1 + (this.level - 1) * 0.2),
+      // fuelCapacity: base.fuelCapacity * (1 + (this.level - 1) * 0.2), // Removed fuel scaling
       color: base.color,
       cost: base.cost,
     };
   }
 
-  // small helper to normalize angles to [-PI, PI]
   normalizeAngle(a) {
     return Math.atan2(Math.sin(a), Math.cos(a));
   }
@@ -61,22 +59,11 @@ export class FlamethrowerTower extends BaseTower {
   update(dt, enemiesList) {
     const s = this.spec();
     this.cool -= dt;
-    this.refuelCooldown -= dt;
+    // this.refuelCooldown -= dt; // Removed refuel cooldown update
     this.flameThrowerEffect = Math.max(0, this.flameThrowerEffect - dt * 3);
 
-    // Refuel when not firing and cooldown is ready
-    if (
-      !this.isFiring &&
-      this.refuelCooldown <= 0 &&
-      this.fuel < s.fuelCapacity
-    ) {
-      this.fuel = Math.min(
-        s.fuelCapacity,
-        this.fuel + s.fuelCapacity * dt * 0.5
-      );
-    }
+    // No refueling logic needed
 
-    // 1) Collect enemies that are within range (all directions)
     const inRange = [];
     const center = this.center;
     for (const enemy of enemiesList) {
@@ -91,20 +78,18 @@ export class FlamethrowerTower extends BaseTower {
       }
     }
 
-    // 2) If any in range, pick the closest and set targetAngle to it
-    if (inRange.length > 0 && this.fuel > 0) {
+    // Fire continuously if targets are in range
+    if (inRange.length > 0) {
+      // Removed fuel check here
       inRange.sort((a, b) => a.d - b.d);
       const closest = inRange[0];
       this.targetAngle = closest.angle;
 
-      // Smoothly rotate toward targetAngle (shortest path)
       const angleDiff = this.normalizeAngle(this.targetAngle - this.rot);
-      const rotateSpeed = 5; // tweak this to rotate faster / slower
-      // scale by dt, but clamp to avoid overshoot when dt large
+      const rotateSpeed = 5;
       const step = angleDiff * Math.min(1, dt * rotateSpeed);
       this.rot = this.normalizeAngle(this.rot + step);
 
-      // 3) Now find enemies inside the cone centered on targetAngle
       const enemiesInCone = this.getEnemiesInConeByCenter(
         enemiesList,
         s,
@@ -112,14 +97,12 @@ export class FlamethrowerTower extends BaseTower {
       );
 
       if (enemiesInCone.length > 0) {
-        // Fire at fireRate; continuous effect handled visually when isFiring is true
         if (this.cool <= 0) {
           this.cool = 1 / s.fireRate;
           this.fireFlame(enemiesInCone, s);
         }
         this.isFiring = true;
-        // consume fuel continuously while firing
-        this.fuel = Math.max(0, this.fuel - dt * 20);
+        // No fuel consumption
         this.flameThrowerEffect = 1.0;
       } else {
         this.isFiring = false;
@@ -128,11 +111,10 @@ export class FlamethrowerTower extends BaseTower {
       this.isFiring = false;
     }
 
-    // Update fire stream particles
-    this.updateFireStream(dt);
+    // No fire stream update needed if using the direct draw flame
+    // this.updateFireStream(dt);
   }
 
-  // Checks cone centered on given centerAngle (so detection is independent of current rot)
   getEnemiesInConeByCenter(enemiesList, spec, centerAngle) {
     const enemiesInCone = [];
     const center = this.center;
@@ -143,54 +125,37 @@ export class FlamethrowerTower extends BaseTower {
       const d = dist(center, enemy.pos);
       if (d > spec.range) continue;
 
-      // Calculate angle to enemy
       const angleToEnemy = Math.atan2(
         enemy.pos.y - center.y,
         enemy.pos.x - center.x
       );
 
-      // Calculate angle difference relative to the cone center (centerAngle)
       let angleDiff = angleToEnemy - centerAngle;
-      // Normalize angle difference to [-π, π]
       angleDiff = Math.atan2(Math.sin(angleDiff), Math.cos(angleDiff));
 
-      // Check if enemy is within cone
       if (Math.abs(angleDiff) <= spec.coneAngle / 2) {
         enemiesInCone.push(enemy);
       }
     }
-
     return enemiesInCone;
   }
 
-  // kept your original getEnemiesInCone for compatibility if other code uses it
   getEnemiesInCone(enemiesList, spec) {
     return this.getEnemiesInConeByCenter(enemiesList, spec, this.rot);
   }
 
   fireFlame(enemiesInCone, spec) {
     const center = this.center;
-    const fuelRatio = Math.max(0, this.fuel / spec.fuelCapacity); // 0 to 1
-
-    // Determine damage multiplier based on fuel
-    let damageMultiplier = 1;
-    if (fuelRatio >= 0.5) {
-      damageMultiplier = 1; // full damage
-    } else if (fuelRatio > 0) {
-      damageMultiplier = 0.8; // 20% reduction
-    } else {
-      damageMultiplier = 0.5; // 50% reduction
-    }
+    // Removed fuelRatio and damageMultiplier
 
     for (const enemy of enemiesInCone) {
       const d = dist(center, enemy.pos);
       const damageFalloff = Math.max(0.3, 1 - d / spec.range);
 
-      const finalDamage = spec.dmg * damageFalloff * damageMultiplier;
+      const finalDamage = spec.dmg * damageFalloff; // Removed damageMultiplier
       enemy.damage(finalDamage);
 
-      // Burn effect can also be scaled if desired
-      const burnDamage = spec.burnDamage * damageMultiplier;
+      const burnDamage = spec.burnDamage; // Removed damageMultiplier
       this.applyBurnEffect(enemy, { ...spec, burnDamage });
 
       if (Math.random() < spec.spreadChance) {
@@ -204,7 +169,6 @@ export class FlamethrowerTower extends BaseTower {
 
   applyBurnEffect(enemy, spec) {
     if (enemy.burning) {
-      // Refresh burn duration
       enemy.burnDuration = spec.burnDuration;
       return;
     }
@@ -214,7 +178,6 @@ export class FlamethrowerTower extends BaseTower {
     enemy.burnDuration = spec.burnDuration;
     enemy.burnStartTime = performance.now();
 
-    // Start burn damage tick
     const burnInterval = setInterval(() => {
       if (enemy.dead || !enemy.burning) {
         clearInterval(burnInterval);
@@ -228,9 +191,8 @@ export class FlamethrowerTower extends BaseTower {
         return;
       }
 
-      // Apply burn damage
-      enemy.damage(enemy.burnDamage / 2); // Damage 2 times per second
-    }, 500); // Tick every 0.5 seconds
+      enemy.damage(enemy.burnDamage / 2);
+    }, 500);
   }
 
   spreadFire(sourceEnemy, spec) {
@@ -241,85 +203,85 @@ export class FlamethrowerTower extends BaseTower {
       if (d <= spec.spreadRange) {
         this.applyBurnEffect(e, spec);
         this.spawnSpreadFireEffect(sourceEnemy.pos, e.pos);
-        break; // Only spread to one enemy at a time
+        break;
       }
     }
   }
 
   createFireStream(center, spec) {
-    // Create continuous flame stream effect
     const streamLength = spec.range;
-    const particleCount = 8;
+    const particleCount = 8; // More dense particles for a better stream feel
 
     for (let i = 0; i < particleCount; i++) {
       const distance = (i / particleCount) * streamLength;
-      const spread = (spec.coneAngle / 2) * (distance / streamLength); // Cone gets wider with distance
+      const spread = (spec.coneAngle / 2) * (distance / streamLength);
 
       const angle = this.rot + (Math.random() - 0.5) * spread;
-      const x = center.x + Math.cos(angle) * distance;
-      const y = center.y + Math.sin(angle) * distance;
+      const x = center.x + Math.cos(angle) * 20; // Start closer to nozzle
+      const y = center.y + Math.sin(angle) * 20;
 
       particles.push({
         x,
         y,
-        vx: Math.cos(angle) * 50 + (Math.random() - 0.5) * 30,
-        vy: Math.sin(angle) * 50 + (Math.random() - 0.5) * 30,
-        life: 0.3 + Math.random() * 0.2,
-        r: 3 + Math.random() * 2,
+        vx: Math.cos(angle) * 80 + (Math.random() - 0.5) * 40, // Stronger initial push
+        vy: Math.sin(angle) * 80 + (Math.random() - 0.5) * 40,
+        life: 0.4 + Math.random() * 0.3,
+        r: 4 + Math.random() * 3, // Larger particles
         c: this.getFlameColor(),
-        gravity: -0.2, // Fire rises
+        gravity: -0.2,
         fade: 0.85,
       });
     }
   }
 
   spawnFlameParticles(center, spec) {
-    for (let i = 0; i < 12; i++) {
-      const angle = this.rot + (Math.random() - 0.5) * spec.coneAngle;
-      const speed = 80 + Math.random() * 60;
-      const distance = Math.random() * spec.range * 0.7;
+    for (let i = 0; i < 15; i++) {
+      // Increased particle count
+      const angle = this.rot + (Math.random() - 0.5) * spec.coneAngle * 0.8; // Confine spread slightly
+      const speed = 100 + Math.random() * 80; // Faster particles
+      const distance = Math.random() * spec.range * 0.9;
 
-      const startX = center.x + Math.cos(angle) * distance;
-      const startY = center.y + Math.sin(angle) * distance;
+      const startX = center.x + Math.cos(angle) * 15; // Start closer to nozzle
+      const startY = center.y + Math.sin(angle) * 15;
 
       particles.push({
         x: startX,
         y: startY,
-        vx: Math.cos(angle) * speed * 0.5,
-        vy: Math.sin(angle) * speed * 0.5,
-        life: 0.4 + Math.random() * 0.3,
-        r: 2 + Math.random() * 3,
+        vx: Math.cos(angle) * speed * 0.7,
+        vy: Math.sin(angle) * speed * 0.7,
+        life: 0.5 + Math.random() * 0.4,
+        r: 3 + Math.random() * 3,
         c: this.getFlameColor(),
         gravity: -0.15,
-        fade: 0.9,
+        fade: 0.88,
       });
     }
   }
 
   spawnSpreadFireEffect(from, to) {
-    for (let i = 0; i < 6; i++) {
-      const t = i / 5; // Interpolation factor
+    for (let i = 0; i < 8; i++) {
+      const t = i / 7;
       const x = from.x + (to.x - from.x) * t;
       const y = from.y + (to.y - from.y) * t;
 
       particles.push({
         x,
         y,
-        vx: (Math.random() - 0.5) * 40,
-        vy: (Math.random() - 0.5) * 40,
-        life: 0.5 + Math.random() * 0.3,
-        r: 2 + Math.random() * 2,
+        vx: (Math.random() - 0.5) * 50,
+        vy: (Math.random() - 0.5) * 50,
+        life: 0.6 + Math.random() * 0.4,
+        r: 3 + Math.random() * 3,
         c: this.getFlameColor(),
         gravity: -0.1,
-        fade: 0.9,
+        fade: 0.85,
       });
     }
   }
 
-  updateFireStream(dt) {
-    // Clean up old fire stream particles
-    this.fireStream = this.fireStream.filter((p) => p.life > 0);
-  }
+  // updateFireStream is no longer needed if flame stream is entirely particle-based
+  // updateFireStream(dt) {
+  //   this.fireStream = this.fireStream.filter((p) => p.life > 0);
+  // }
 
   getFlameColor() {
     const colors = ["#FF6B35", "#FF8C42", "#FF4500", "#FFA500", "#FFFF00"];
@@ -367,20 +329,6 @@ export class FlamethrowerTower extends BaseTower {
     ctx.roundRect(-14, -12, 28, 24, 6);
     ctx.fill();
 
-    // Fuel tank
-    ctx.fillStyle = "#2a2a3a";
-    ctx.beginPath();
-    ctx.roundRect(-12, -10, 24, 20, 4);
-    ctx.fill();
-
-    // Fuel level indicator
-    const fuelLevel = this.fuel / s.fuelCapacity;
-    ctx.fillStyle =
-      fuelLevel > 0.5 ? "#4CAF50" : fuelLevel > 0.25 ? "#FFC107" : "#F44336";
-    ctx.beginPath();
-    ctx.roundRect(-10, 8 - fuelLevel * 16, 20, fuelLevel * 16, 2);
-    ctx.fill();
-
     // Tank details
     ctx.strokeStyle = "#555";
     ctx.lineWidth = 1.5;
@@ -408,7 +356,7 @@ export class FlamethrowerTower extends BaseTower {
     ctx.arc(20, -8, 2, 0, Math.PI * 2);
     ctx.fill();
 
-    // Fuel lines
+    // Fuel lines (kept for design aesthetic, no actual fuel function)
     ctx.strokeStyle = "#666";
     ctx.lineWidth = 2;
     ctx.beginPath();
@@ -417,7 +365,7 @@ export class FlamethrowerTower extends BaseTower {
     ctx.lineTo(16, 0);
     ctx.stroke();
 
-    // Pressure gauges
+    // Pressure gauges (kept for design aesthetic)
     ctx.strokeStyle = "#777";
     ctx.lineWidth = 1;
     ctx.beginPath();
@@ -425,7 +373,7 @@ export class FlamethrowerTower extends BaseTower {
     ctx.arc(8, -8, 3, 0, Math.PI * 2);
     ctx.stroke();
 
-    // Gauge needles
+    // Gauge needles (kept for design aesthetic)
     ctx.strokeStyle = "#FF0000";
     ctx.lineWidth = 1.5;
     const gaugeAngle = time * 3 + Math.sin(time * 5) * 0.5;
@@ -434,72 +382,76 @@ export class FlamethrowerTower extends BaseTower {
     ctx.lineTo(-8 + Math.cos(gaugeAngle) * 2, -6 + Math.sin(gaugeAngle) * 2);
     ctx.stroke();
 
-    // Warning labels
+    // Warning labels (kept for design aesthetic)
     ctx.fillStyle = "#FFEB3B";
     ctx.fillRect(-6, 2, 3, 2);
     ctx.fillRect(4, -2, 3, 2);
 
-    // Ignition system
+    // --- NEW: Dynamic Flame Visual at Nozzle ---
     if (this.isFiring) {
-      // Show active flame at nozzle
-      ctx.fillStyle = this.getFlameColor();
+      ctx.save();
+      ctx.globalCompositeOperation = "lighter"; // Blending for fire effects
+      ctx.translate(22, 0); // Start at nozzle tip
+
+      const flameLength = s.range * 0.7; // Visual length of the flame
+      const baseWidth = 10; // Width at the nozzle
+
+      // Outer, wider flame (orange/red)
+      const outerFlameGrad = ctx.createLinearGradient(0, 0, flameLength, 0);
+      outerFlameGrad.addColorStop(0, this.getFlameColor());
+      outerFlameGrad.addColorStop(1, "rgba(255, 69, 0, 0)"); // Fades to transparent red
+      ctx.fillStyle = outerFlameGrad;
       ctx.beginPath();
-      ctx.ellipse(24, 0, 4, 2, 0, 0, Math.PI * 2);
+      ctx.moveTo(0, -baseWidth / 2);
+      ctx.quadraticCurveTo(flameLength * 0.5, -baseWidth * 0.8, flameLength, 0);
+      ctx.quadraticCurveTo(
+        flameLength * 0.5,
+        baseWidth * 0.8,
+        0,
+        baseWidth / 2
+      );
+      ctx.closePath();
       ctx.fill();
 
-      // Flame stream
-      for (let i = 1; i <= 5; i++) {
-        const flameX = 24 + i * 8;
-        const flameSize = 6 - i;
-        const flameSpread = i * 2;
+      // Inner, brighter flame (yellow/white)
+      const innerFlameGrad = ctx.createLinearGradient(
+        0,
+        0,
+        flameLength * 0.7,
+        0
+      );
+      innerFlameGrad.addColorStop(0, "rgba(255, 255, 100, 1)"); // Bright yellow
+      innerFlameGrad.addColorStop(1, "rgba(255, 165, 0, 0)"); // Fades to transparent orange
+      ctx.fillStyle = innerFlameGrad;
+      ctx.beginPath();
+      ctx.moveTo(0, -baseWidth / 4);
+      ctx.quadraticCurveTo(
+        flameLength * 0.3,
+        -baseWidth * 0.5,
+        flameLength * 0.7,
+        0
+      );
+      ctx.quadraticCurveTo(
+        flameLength * 0.3,
+        baseWidth * 0.5,
+        0,
+        baseWidth / 4
+      );
+      ctx.closePath();
+      ctx.fill();
 
-        ctx.fillStyle = this.getFlameColor();
-        ctx.globalAlpha = 0.7 - i * 0.1;
-        ctx.beginPath();
-        ctx.ellipse(flameX, 0, flameSize, flameSpread, 0, 0, Math.PI * 2);
-        ctx.fill();
-      }
-      ctx.globalAlpha = 1;
+      ctx.restore(); // End dynamic flame save
+      ctx.globalCompositeOperation = "source-over"; // Reset blend mode
     }
 
-    ctx.restore();
+    ctx.restore(); // End main tower rotation save
 
-    // --- OLD CODE (REMOVE OR COMMENT OUT) ---
-    // // Draw level indicators as fuel canisters
-    // for (let i = 0; i < this.level; i++) {
-    //   const indicatorX = x - 12 + i * 6;
-    //   const indicatorY = y + 25;
-
-    //   // Canister
-    //   ctx.fillStyle = s.color;
-    //   ctx.beginPath();
-    //   ctx.roundRect(indicatorX - 2, indicatorY - 4, 4, 8, 1);
-    //   ctx.fill();
-
-    //   // Canister top
-    //   ctx.fillStyle = "#888";
-    //   ctx.beginPath();
-    //   ctx.arc(indicatorX, indicatorY - 4, 2, 0, Math.PI * 2);
-    //   ctx.fill();
-
-    //   // Flame effect for higher levels
-    //   if (this.level > 3 && i >= this.level - 3) {
-    //     this.drawMiniFlame(indicatorX, indicatorY - 6, time);
-    //   }
-    // }
-    // --- END OLD CODE ---
-
-    // --- NEW CODE: Display Level as Text for FlamethrowerTower ---
-    ctx.fillStyle = "#ffffff"; // White color for the text
-    ctx.font = "12px Arial"; // Font size and type
-    ctx.textAlign = "center"; // Center the text horizontally
-    ctx.textBaseline = "middle"; // Center the text vertically
-    // Position the text below the tower. Adjust y + 25 as needed for spacing.
+    // Display Level as Text
+    ctx.fillStyle = "#ffffff";
+    ctx.font = "12px Arial";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
     ctx.fillText(`Lv. ${this.level}`, x, y + 25);
-    // --- END NEW CODE ---
-
-    // Draw fuel meter
-    this.drawFuelMeter(x, y - 30, s);
 
     // Heat shimmer effect when firing
     if (this.isFiring && Math.random() < 0.3) {
@@ -507,52 +459,8 @@ export class FlamethrowerTower extends BaseTower {
     }
   }
 
-  drawFuelMeter(x, y, spec) {
-    const fuelPercent = this.fuel / spec.fuelCapacity;
-    const meterWidth = 30;
-    const meterHeight = 4;
-
-    // Meter background
-    ctx.fillStyle = "#333";
-    ctx.fillRect(x - meterWidth / 2, y, meterWidth, meterHeight);
-
-    // Fuel level
-    const fuelColor =
-      fuelPercent > 0.5
-        ? "#4CAF50"
-        : fuelPercent > 0.25
-        ? "#FFC107"
-        : "#F44336";
-    ctx.fillStyle = fuelColor;
-    ctx.fillRect(x - meterWidth / 2, y, meterWidth * fuelPercent, meterHeight);
-
-    // Meter border
-    ctx.strokeStyle = "#666";
-    ctx.lineWidth = 1;
-    ctx.strokeRect(x - meterWidth / 2, y, meterWidth, meterHeight);
-  }
-
-  drawMiniFlame(x, y, time) {
-    const flameHeight = 3 + Math.sin(time * 10) * 1;
-
-    ctx.fillStyle = "#FF6B35";
-    ctx.beginPath();
-    ctx.ellipse(x, y, 1.5, flameHeight, 0, 0, Math.PI * 2);
-    ctx.fill();
-
-    ctx.fillStyle = "#FFFF00";
-    ctx.beginPath();
-    ctx.ellipse(
-      x,
-      y + flameHeight * 0.3,
-      0.8,
-      flameHeight * 0.6,
-      0,
-      0,
-      Math.PI * 2
-    );
-    ctx.fill();
-  }
+  // drawFuelMeter removed as fuel functionality is removed
+  // drawMiniFlame removed as its style is replaced
 
   drawHeatShimmer(x, y, time) {
     ctx.strokeStyle = "rgba(255, 255, 255, 0.3)";

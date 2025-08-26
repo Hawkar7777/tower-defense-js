@@ -231,9 +231,9 @@ function loop(ts) {
 
   // Draw the loaded map first (game world layer 0)
   drawMap(state.camera, state.zoom);
-  // Draw pre-rendered grid and path over the map (game world layers 1 & 2)
+  // Draw pre-rendered grid over the map (game world layer 1)
   ctx.drawImage(gridCanvas, 0, 0);
-  ctx.drawImage(pathCanvas, 0, 0);
+  // ctx.drawImage(pathCanvas, 0, 0); // COMMENTED OUT: Don't draw the path line
 
   // --- MODIFICATION START: NEW AURA RENDERING LOGIC ---
   // 1. Clear the aura buffer for this frame.
@@ -360,7 +360,7 @@ export async function startGame(levelNumber) {
 
   // --- OPTIMIZATION: Pre-render static elements for this level ---
   precomputeGrid();
-  precomputePath();
+  precomputePath(); // Still precompute path so pointAt works, but won't draw it
 
   last = performance.now();
   if (animationFrameId) cancelAnimationFrame(animationFrameId);
@@ -382,7 +382,7 @@ function gameOver() {
   ctx.clearRect(0, 0, canvas.clientWidth, canvas.clientHeight); // Clear the whole canvas
   drawMap(state.camera, state.zoom); // Draw the map (game world background)
   ctx.drawImage(gridCanvas, 0, 0); // Draw grid
-  ctx.drawImage(pathCanvas, 0, 0); // Draw path
+  // ctx.drawImage(pathCanvas, 0, 0); // COMMENTED OUT: Don't draw path
 
   // Now draw the UI elements on top
   drawTopbar(canvas.clientWidth);
@@ -424,7 +424,7 @@ function levelComplete() {
   ctx.clearRect(0, 0, canvas.clientWidth, canvas.clientHeight); // Clear the whole canvas
   drawMap(state.camera, state.zoom); // Draw the map (game world background)
   ctx.drawImage(gridCanvas, 0, 0); // Draw grid
-  ctx.drawImage(pathCanvas, 0, 0); // Draw path
+  // ctx.drawImage(pathCanvas, 0, 0); // COMMENTED OUT: Don't draw path
 
   // Now draw the UI elements on top
   drawTopbar(canvas.clientWidth);

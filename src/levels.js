@@ -7,7 +7,7 @@ export const levels = [
   {
     level: 1,
     map: { width: 50, height: 25 },
-    startMoney: 4000,
+    startMoney: 100000000,
     startLives: 50, // Increased lives to be more forgiving
     path: (TILE, T_HALF, MAP_W, MAP_H) => [
       { x: 0, y: TILE * 5 + T_HALF },
@@ -16,12 +16,14 @@ export const levels = [
       { x: MAP_W, y: MAP_H * 0.75 },
     ],
     waves: [
-      { count: 10, types: { basic: 0.5, brute: 0.5 } },
-      { boss: "Reaper" }, // Wave 10
-
+      { boss: "Phantom" },
+      {
+        count: 10,
+        types: { bosses: ["Juggernaut", "Basilisk"], brute: 0.5 },
+      }, // Wave 10
+      { bosses: ["Juggernaut", "Basilisk"] },
+      // REMOVE THE COMMA HERE ^
       { count: 10, types: { basic: 1.0 } }, // Wave 1: Only basic enemies
-      { count: 12, types: { basic: 1.0 } }, // Wave 2: A few more basics
-      { count: 15, types: { basic: 1.0 } }, // Wave 3
       { count: 18, types: { basic: 0.8, swift: 0.2 } }, // Wave 4: Introduce Swift
       { count: 20, types: { basic: 0.7, swift: 0.3 } }, // Wave 5
       { count: 15, types: { basic: 0.5, brute: 0.5 } }, // Wave 6: Introduce Brute

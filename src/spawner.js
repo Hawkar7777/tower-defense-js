@@ -1,3 +1,5 @@
+// ===== FILE: spawner.js =====
+
 import { enemies, state } from "./state.js";
 import { pulse } from "./utils.js";
 import { ENEMY_TYPES } from "./enemy/enemyTypes.js";
@@ -85,7 +87,7 @@ function createEntity(type, tier, waveNumber, isBoss) {
   const spec = ENEMY_TYPES[type];
   if (!spec) {
     console.error(`Unknown enemy type: ${type}. Spawning a basic enemy.`);
-    return new BaseEnemy("basic", tier); // Fallback to basic enemy
+    return new BaseEnemy(type, tier); // Fallback to basic enemy
   }
 
   if (spec.isMimic) return new Mimic(tier);

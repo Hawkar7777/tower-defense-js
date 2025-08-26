@@ -1,13 +1,16 @@
+// ===== FILE: path.js =====
+
 // path.js
 
 import { TILE, MAP_GRID_W, MAP_GRID_H } from "./core.js";
 import { lerp } from "./utils.js";
+import { getBlockedCellsFromMap, getPathFromMap } from "./map/mapRenderer.js"; // Import new map functions
 
 // We'll compute path after canvas size sync. Export initPath to call from main.
 export let path = [];
 export let segLens = [];
 export let totalLen = 0;
-export const blocked = new Set();
+export let blocked = new Set(); // Changed to 'let' so it can be reassigned
 
 // --- NEW FUNCTION: Generates a smooth curve through a set of points ---
 /**
@@ -16,9 +19,26 @@ export const blocked = new Set();
  * @param {number} numPoints - The number of points to generate for the final curve.
  * @returns {Array<{x: number, y: number}>} - The array of points forming the smooth curve.
  */
-function generateSpline(points, numPoints = 1000) {
+function generateSpline(points, numPoints = 100) {
+  // Reduced numPoints for performance, adjust if needed
   const curvedPath = [];
   const tension = 0.5; // Catmull-Rom tension. 0.5 is standard.
+
+  // Need at least 4 points for a full Catmull-Rom segment,
+  // handle edge cases for fewer points or just use linear interpolation if too few.
+  if (points.length < 2) return points;
+  if (points.length < 4) {
+    // For 2 or 3 points, just connect them linearly for simplicity
+    for (let i = 0; i < points.length - 1; i++) {
+      const p1 = points[i];
+      const p2 = points[i + 1];
+      for (let j = 0; j <= numPoints / (points.length - 1); j++) {
+        const t = j / (numPoints / (points.length - 1));
+        curvedPath.push({ x: lerp(p1.x, p2.x, t), y: lerp(p1.y, p2.y, t) });
+      }
+    }
+    return curvedPath;
+  }
 
   for (let i = 0; i < points.length - 1; i++) {
     const p0 = i === 0 ? points[i] : points[i - 1];
@@ -26,7 +46,11 @@ function generateSpline(points, numPoints = 1000) {
     const p2 = points[i + 1];
     const p3 = i === points.length - 2 ? points[i + 1] : points[i + 2];
 
-    const numSegments = Math.floor(numPoints / (points.length - 1));
+    // Ensure numSegments is at least 1
+    const numSegments = Math.max(
+      1,
+      Math.floor(numPoints / (points.length - 1))
+    );
 
     for (let j = 0; j < numSegments; j++) {
       const t = j / numSegments;
@@ -49,28 +73,20 @@ function generateSpline(points, numPoints = 1000) {
 }
 
 // --- MODIFIED FUNCTION ---
-export function initPath(levelPathGenerator) {
-  if (!levelPathGenerator) {
+// Now takes no arguments and gets path/blocked tiles from the mapRenderer
+export function initPath() {
+  const roughPath = getPathFromMap(); // Get path points directly from the map
+  blocked = getBlockedCellsFromMap(); // Get blocked cells directly from the map
+
+  if (!roughPath || roughPath.length < 2) {
     path = [];
     segLens = [];
     totalLen = 0;
-    blocked.clear();
     return;
   }
 
-  const MAP_W = MAP_GRID_W * TILE;
-  const MAP_H = MAP_GRID_H * TILE;
-  const T_HALF = TILE / 2;
-
-  // Generate the original straight-line path
-  const roughPath = levelPathGenerator(TILE, T_HALF, MAP_W, MAP_H);
-
   // Generate the smooth curve from the rough path
-  if (roughPath.length > 1) {
-    path = generateSpline(roughPath);
-  } else {
-    path = roughPath;
-  }
+  path = generateSpline(roughPath);
 
   // This part correctly calculates lengths and blocked tiles for the new path
   segLens.length = 0;
@@ -81,14 +97,6 @@ export function initPath(levelPathGenerator) {
     const L = Math.hypot(b.x - a.x, b.y - a.y);
     segLens.push(L);
     totalLen += L;
-  }
-
-  blocked.clear();
-  for (let i = 0; i < totalLen; i += TILE * 0.6) {
-    const p = pointAt(i / totalLen);
-    const gx = Math.floor(p.x / TILE),
-      gy = Math.floor(p.y / TILE);
-    blocked.add(`${gx},${gy}`);
   }
 }
 

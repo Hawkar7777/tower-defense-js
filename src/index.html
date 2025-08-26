@@ -351,12 +351,13 @@
       }
     };
 
-    const startLevel = (levelNumber) => {
+    const startLevel = async (levelNumber) => {
+      // Made async
       levelSelection.style.display = "none";
       const gameCanvas = document.getElementById("game");
       if (gameCanvas) {
         gameCanvas.style.display = "block";
-        startGame(levelNumber);
+        await startGame(levelNumber); // Await startGame
       } else {
         console.error("The game canvas element could not be found!");
       }

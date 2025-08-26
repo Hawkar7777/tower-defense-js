@@ -93,6 +93,46 @@
         height: 100%;
       }
 
+      /* --- NEW LOADING SCREEN STYLES --- */
+      #loadingScreen {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.9);
+        color: white;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        font-size: 2.5em;
+        font-weight: bold;
+        z-index: 200; /* Above everything else */
+        flex-direction: column;
+        gap: 20px;
+      }
+      #loadingScreen.hidden {
+        display: none;
+      }
+      /* Optional: Add a simple spinner */
+      .spinner {
+        border: 8px solid #f3f3f3; /* Light grey */
+        border-top: 8px solid #5c7bfa; /* Blue */
+        border-radius: 50%;
+        width: 60px;
+        height: 60px;
+        animation: spin 1s linear infinite;
+      }
+      @keyframes spin {
+        0% {
+          transform: rotate(0deg);
+        }
+        100% {
+          transform: rotate(360deg);
+        }
+      }
+      /* --- END NEW LOADING SCREEN STYLES --- */
+
       /* --- MODIFIED SHOP STYLES --- */
       #shopScreen {
         display: none;
@@ -100,14 +140,11 @@
         width: 100%;
         height: 100%;
         padding: 20px;
-
-        /* --- FIX STARTS HERE --- */
-        position: absolute; /* Take it out of the normal document flow */
+        position: absolute;
         top: 0;
         left: 0;
-        background-color: #0b0f1a; /* Give it a solid background */
-        z-index: 100; /* Ensure it's on top of other elements like the canvas */
-        /* --- FIX ENDS HERE --- */
+        background-color: #0b0f1a;
+        z-index: 100;
       }
       #shopHeader {
         text-align: center;
@@ -191,6 +228,13 @@
     </div>
 
     <canvas id="game"></canvas>
+
+    <!-- NEW LOADING SCREEN -->
+    <div id="loadingScreen" class="hidden">
+      <div class="spinner"></div>
+      <span>Loading...</span>
+    </div>
+    <!-- END NEW LOADING SCREEN -->
   </body>
 
   <script type="module">
@@ -241,6 +285,7 @@
     const backToMenuButton = document.getElementById("backToMenuButton");
     const towerList = document.getElementById("towerList");
     const shopMoneyBalance = document.getElementById("shopMoneyBalance");
+    const loadingScreen = document.getElementById("loadingScreen"); // Get reference to loading screen
 
     function showShopScreen() {
       mainMenu.style.display = "none";
@@ -352,12 +397,24 @@
     };
 
     const startLevel = async (levelNumber) => {
-      // Made async
       levelSelection.style.display = "none";
       const gameCanvas = document.getElementById("game");
+
       if (gameCanvas) {
         gameCanvas.style.display = "block";
-        await startGame(levelNumber); // Await startGame
+        loadingScreen.classList.remove("hidden"); // Show loading screen
+
+        try {
+          await startGame(levelNumber); // Await startGame
+        } catch (error) {
+          console.error("Error starting game:", error);
+          alert("Failed to load level. Please try again.");
+          // Optionally, navigate back to main menu or level selection
+          gameCanvas.style.display = "none";
+          showLevelSelection();
+        } finally {
+          loadingScreen.classList.add("hidden"); // Hide loading screen
+        }
       } else {
         console.error("The game canvas element could not be found!");
       }

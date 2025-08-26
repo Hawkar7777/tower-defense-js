@@ -44,20 +44,18 @@ export const levels = [
   },
   {
     level: 2,
-    mapFile: "./map/map11.tmj", // Reusing map11.tmj for level 2 for now, or create a new map2.tmj
-    startMoney: 1200, // Slightly more money
-    startLives: 40, // More lives
+    mapFile: "./map/map12.tmj", // Reusing map11.tmj for level 2 for now, or create a new map2.tmj
+    startMoney: 12023230, // Slightly more money
+    startLives: 40, // More livess
     waves: [
       { boss: "Phantom" }, // Wave 10
-      { count: 15, types: { basic: 1.0 } }, // Wave 1: Start simple
-      { count: 18, types: { basic: 0.7, swift: 0.3 } }, // Wave 2
-      { count: 20, types: { swift: 1.0 } }, // Wave 3: A wave of pure swift
-      { count: 22, types: { basic: 0.5, brute: 0.5 } }, // Wave 4
-      { count: 25, types: { brute: 0.6, swift: 0.4 } }, // Wave 5
-      { count: 28, types: { brute: 0.8, swift: 0.2 } }, // Wave 6
-      { count: 20, types: { elite: 1.0 } }, // Wave 7: Introduce Elite
-      { count: 25, types: { brute: 0.5, elite: 0.5 } }, // Wave 8
-      { count: 30, types: { swift: 0.5, elite: 0.5 } }, // Wave 9
     ],
+  },
+  {
+    level: 3,
+    mapFile: "./map/map3.tmj", // Reusing map11.tmj for level 2 for now, or create a new map2.tmj
+    startMoney: 12023230, // Slightly more money
+    startLives: 40, // More livess
+    waves: [{ boss: "Goliath" }],
   },
 ];

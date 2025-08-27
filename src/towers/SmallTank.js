@@ -5,6 +5,7 @@ import { ctx } from "../core.js";
 import { enemies, projectiles, particles } from "../state.js";
 import { dist } from "../utils.js";
 import { TOWER_TYPES } from "../config.js";
+import { soundManager } from "../assets/sounds/SoundManager.js";
 
 // Tank Shell projectile
 class TankShell {
@@ -204,6 +205,7 @@ export class SmallTank extends BaseTower {
       const diff =
         ((want - this._s.turretAngle + Math.PI) % (2 * Math.PI)) - Math.PI;
       this._s.turretAngle += diff * Math.min(1, dt * 5);
+      soundManager.playSound("smallTankShoot", 0.3);
     }
 
     // Fire if ready

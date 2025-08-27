@@ -5,6 +5,7 @@ import { ctx, TILE } from "../core.js";
 import { particles } from "../state.js";
 import { dist } from "../utils.js";
 import { spawnBeam } from "../effects.js";
+import { soundManager } from "../assets/sounds/SoundManager.js";
 
 export class LightningTower extends BaseTower {
   static SPEC = {
@@ -113,6 +114,7 @@ export class LightningTower extends BaseTower {
       }
       current = nextEnemy;
     }
+    soundManager.playSound("lightningShoot", 0.2);
   }
 
   draw() {

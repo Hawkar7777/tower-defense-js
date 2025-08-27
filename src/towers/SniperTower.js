@@ -6,7 +6,7 @@ import { enemies, projectiles, particles } from "../state.js";
 import { dist } from "../utils.js";
 import { spawnMuzzle, spawnHit } from "../effects.js";
 import { SniperBullet } from "../sniperBullet.js"; // We'll create this special projectile
-
+import { soundManager } from "../assets/sounds/SoundManager.js";
 export class SniperTower extends BaseTower {
   static SPEC = {
     name: "Sniper Tower",
@@ -108,6 +108,7 @@ export class SniperTower extends BaseTower {
 
     // Sniper laser sight effect
     this.drawLaserSight(target);
+    soundManager.playSound("sniperShoot", 0.2);
   }
 
   spawnSniperSmoke(x, y) {

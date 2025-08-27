@@ -5,6 +5,7 @@ import { ctx } from "../core.js";
 import { enemies, projectiles, particles } from "../state.js";
 import { dist } from "../utils.js";
 import { TOWER_TYPES } from "../config.js";
+import { soundManager } from "../assets/sounds/SoundManager.js";
 
 // Bullet projectile (with tracer)
 class Bullet {
@@ -145,6 +146,7 @@ export class CarM249Tower extends BaseTower {
       const diff =
         ((want - this._s.turretAngle + Math.PI) % (2 * Math.PI)) - Math.PI;
       this._s.turretAngle += diff * Math.min(1, dt * 10);
+      soundManager.playSound("carM249Shoot", 0.3);
     } else {
       // idle drift
       this._s.turretAngle += Math.sin(performance.now() / 1000) * 0.001;

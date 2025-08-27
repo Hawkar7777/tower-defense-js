@@ -5,6 +5,7 @@ import { ctx } from "../core.js";
 import { enemies, particles } from "../state.js";
 import { dist } from "../utils.js";
 import { spawnExplosion } from "../effects.js";
+import { soundManager } from "../assets/sounds/SoundManager.js"; // Import the sound manager
 
 export class FlamethrowerTower extends BaseTower {
   static SPEC = {
@@ -165,6 +166,9 @@ export class FlamethrowerTower extends BaseTower {
 
     this.createFireStream(center, spec);
     this.spawnFlameParticles(center, spec);
+
+    // Use the sound manager to play the flamethrower sound
+    soundManager.playSound("flameThrougherShoot", 0.15); // Play sound via manager with specific volume
   }
 
   applyBurnEffect(enemy, spec) {

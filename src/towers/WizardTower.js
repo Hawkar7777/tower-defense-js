@@ -4,6 +4,7 @@ import { BaseTower } from "./BaseTower.js";
 import { ctx } from "../core.js";
 import { enemies, particles, projectiles } from "../state.js";
 import { dist } from "../utils.js";
+import { soundManager } from "../assets/sounds/SoundManager.js";
 
 // Fireball projectile - change 'done' to 'dead'
 class Fireball {
@@ -126,6 +127,7 @@ export class WizardTower extends BaseTower {
         projectiles.push(
           new Fireball(this.getAttackOrigin(), target, s.dmg, s.color)
         );
+        soundManager.playSound("wizardShoot", 0.3);
       }
     }
   }

@@ -6,6 +6,7 @@ import { enemies, projectiles, particles } from "../state.js";
 import { dist } from "../utils.js";
 import { spawnMuzzle, spawnExplosion } from "../effects.js";
 import { ArtilleryShell } from "../artilleryShell.js"; // Special arcing projectile
+import { soundManager } from "../assets/sounds/SoundManager.js";
 
 export class ArtilleryTower extends BaseTower {
   static SPEC = {
@@ -133,6 +134,7 @@ export class ArtilleryTower extends BaseTower {
 
     // Apply recoil effect to the tower's drawing
     this.recoilEffect = 0.4;
+    soundManager.playSound("artillaryShoot", 0.3);
   }
 
   spawnMuzzleBlast(x, y) {

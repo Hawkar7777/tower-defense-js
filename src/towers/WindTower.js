@@ -4,6 +4,7 @@ import { BaseTower } from "./BaseTower.js";
 import { ctx } from "../core.js";
 import { particles } from "../state.js"; // No longer need to import `enemies`
 import { dist } from "../utils.js";
+import { soundManager } from "../assets/sounds/SoundManager.js";
 
 export class WindTower extends BaseTower {
   static SPEC = {
@@ -88,6 +89,7 @@ export class WindTower extends BaseTower {
 
       if (hitAny) {
         this.cool = 1 / s.fireRate;
+        soundManager.playSound("windShoot", 0.3);
       }
     }
   }

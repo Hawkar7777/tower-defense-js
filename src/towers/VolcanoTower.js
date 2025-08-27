@@ -4,6 +4,7 @@ import { BaseTower } from "./BaseTower.js";
 import { ctx } from "../core.js";
 import { enemies, projectiles, particles } from "../state.js";
 import { dist } from "../utils.js";
+import { soundManager } from "../assets/sounds/SoundManager.js";
 
 class LavaRock {
   constructor(start, targetPos, dmg, radius, color) {
@@ -45,6 +46,7 @@ class LavaRock {
       c: Math.random() < 0.3 ? "#ff8800" : "#4d2b1b",
       fade: 0.8,
     });
+    soundManager.playSound("volcanoShoot1", 0.3);
   }
 
   explode() {
@@ -80,6 +82,7 @@ class LavaRock {
         c: Math.random() < 0.5 ? "#ff4400" : "#ffaa00",
         fade: 0.9,
       });
+      soundManager.playSound("volcanoShoot", 0.3);
     }
 
     for (const e of enemies) {

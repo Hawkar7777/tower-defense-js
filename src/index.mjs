@@ -1019,6 +1019,78 @@ async function initializeGame() {
     1,
     3
   );
+  await soundManager.loadSound(
+    "flameThrougherShoot",
+    "./assets/sounds/flameThrougherTower.mp3",
+    5,
+    3
+  );
+  await soundManager.loadSound(
+    "sniperShoot",
+    "./assets/sounds/sniperTower.mp3",
+    5,
+    3
+  );
+  await soundManager.loadSound(
+    "artillaryShoot",
+    "./assets/sounds/artillaryTower.mp3",
+    5,
+    3
+  );
+  await soundManager.loadSound(
+    "archerShoot",
+    "./assets/sounds/archerTower.mp3",
+    5,
+    3
+  );
+  await soundManager.loadSound(
+    "lightningShoot",
+    "./assets/sounds/lightningTower.mp3",
+    2,
+    3
+  );
+  await soundManager.loadSound(
+    "shadowShoot",
+    "./assets/sounds/shadowTower.mp3",
+    1,
+    3
+  );
+  await soundManager.loadSound(
+    "wizardShoot",
+    "./assets/sounds/wizardTower.mp3",
+    3,
+    3
+  );
+  await soundManager.loadSound(
+    "windShoot",
+    "./assets/sounds/windTower.mp3",
+    3,
+    3
+  );
+  await soundManager.loadSound(
+    "volcanoShoot",
+    "./assets/sounds/volcanoTower.mp3",
+    3,
+    3
+  );
+  await soundManager.loadSound(
+    "volcanoShoot1",
+    "./assets/sounds/volcanoTower1.mp3",
+    3,
+    3
+  );
+  await soundManager.loadSound(
+    "carM249Shoot",
+    "./assets/sounds/carM249Tower.mp3",
+    3,
+    3
+  );
+  await soundManager.loadSound(
+    "smallTankShoot",
+    "./assets/sounds/smallTankTower.mp3",
+    3,
+    3
+  );
 
   console.log("All sounds loaded");
 

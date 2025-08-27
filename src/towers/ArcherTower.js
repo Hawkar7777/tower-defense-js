@@ -5,6 +5,7 @@ import { ctx } from "../core.js";
 import { enemies, projectiles, particles } from "../state.js";
 import { dist } from "../utils.js";
 import { ArrowProjectile } from "../arrowProjectile.js";
+import { soundManager } from "../assets/sounds/SoundManager.js";
 
 export class ArcherTower extends BaseTower {
   static SPEC = {
@@ -87,6 +88,7 @@ export class ArcherTower extends BaseTower {
     }
 
     this.recoilEffect = 2.5;
+    soundManager.playSound("archerShoot", 0.3);
   }
 
   draw() {

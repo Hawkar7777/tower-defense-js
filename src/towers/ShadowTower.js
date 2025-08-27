@@ -4,6 +4,7 @@ import { BaseTower } from "./BaseTower.js";
 import { ctx } from "../core.js";
 import { enemies, particles, projectiles } from "../state.js";
 import { dist } from "../utils.js";
+import { soundManager } from "../assets/sounds/SoundManager.js";
 
 // Enhanced ShadowOrb projectile
 class ShadowOrb {
@@ -202,6 +203,7 @@ export class ShadowTower extends BaseTower {
       }
       current = nextEnemy;
     }
+    soundManager.playSound("shadowShoot", 0.3);
   }
 
   draw() {

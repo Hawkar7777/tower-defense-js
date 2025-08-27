@@ -968,51 +968,55 @@ canvas.addEventListener("touchcancel", (e) => {
 });
 
 // --- Game Initialization Logic ---
+// --- Game Initialization Logic ---
 async function initializeGame() {
-  // Load all sounds once at the start
-  soundManager.loadSound(
+  // Load all sounds
+  await soundManager.loadSound(
     "gunnerShoot",
     "./assets/sounds/gunnerTower.mp3",
     0.2,
     5
   );
-  soundManager.loadSound(
+  await soundManager.loadSound(
     "cannonShoot",
     "./assets/sounds/cannonTower.mp3",
     0.6,
     5
   );
-  soundManager.loadSound(
+  await soundManager.loadSound(
     "doubleCannonShoot",
     "./assets/sounds/doubleCannonTower.mp3",
-    0.4,
+    0.6,
+    5
+  );
+  await soundManager.loadSound(
+    "laserShoot",
+    "./assets/sounds/laserTower.mp3",
+    0.2,
+    3
+  );
+  await soundManager.loadSound(
+    "iceShoot",
+    "./assets/sounds/iceTower.mp3",
+    0.2,
     5
   );
 
-  console.log(
-    "Sounds loaded. Waiting for user interaction to enable playback."
-  );
+  console.log("All sounds loaded");
 
-  // Handle browser autoplay policies: resume AudioContext on first user interaction
+  // Set up audio resume on user interaction
   const resumeAudio = () => {
-    if (soundManager.audioContext.state === "suspended") {
-      soundManager.audioContext
-        .resume()
-        .then(() => {
-          console.log("Audio context resumed.");
-        })
-        .catch((e) => {
-          console.error("Failed to resume audio context:", e);
-        });
-    }
+    soundManager.resumeAudio();
     document.removeEventListener("click", resumeAudio);
     document.removeEventListener("touchend", resumeAudio);
+    document.removeEventListener("keydown", resumeAudio);
   };
 
   document.addEventListener("click", resumeAudio, { once: true });
   document.addEventListener("touchend", resumeAudio, { once: true });
+  document.addEventListener("keydown", resumeAudio, { once: true });
 
-  // Start the game with a specific level (e.g., Level 1)
+  // Start the game
   await startGame(1);
 }
 

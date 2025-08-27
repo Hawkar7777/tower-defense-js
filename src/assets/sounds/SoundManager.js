@@ -2,95 +2,97 @@ class SoundManager {
   constructor() {
     this.audioContext = new (window.AudioContext ||
       window.webkitAudioContext)();
-    this.sounds = {}; // Stores { soundName: { path, volume, maxConcurrent, pool: [], playingInstances: [] } }
+    this.sounds = {}; // Stores { soundName: { buffer, volume, maxConcurrent, playingInstances } }
+    this.masterVolume = 1.0;
+    this.audioReady = false;
   }
 
-  loadSound(name, path, volume = 1, maxConcurrent = 5) {
+  // Load a sound and decode it into an AudioBuffer
+  async loadSound(name, path, volume = 1, maxConcurrent = 5) {
     if (this.sounds[name]) {
       console.warn(`Sound '${name}' already loaded.`);
       return;
     }
 
-    const soundData = {
-      path: path,
-      volume: volume,
-      maxConcurrent: maxConcurrent,
-      pool: [],
-      playingInstances: [],
-    };
+    try {
+      const response = await fetch(path);
+      const arrayBuffer = await response.arrayBuffer();
+      const audioBuffer = await this.audioContext.decodeAudioData(arrayBuffer);
 
-    for (let i = 0; i < maxConcurrent; i++) {
-      const audio = new Audio(path);
-      audio.volume = volume;
-      audio.load(); // Preload the sound
-      soundData.pool.push(audio);
+      this.sounds[name] = {
+        buffer: audioBuffer,
+        volume: volume,
+        maxConcurrent: maxConcurrent,
+        playingInstances: 0,
+      };
+
+      console.log(`Sound '${name}' loaded successfully.`);
+    } catch (error) {
+      console.error(`Error loading sound '${name}':`, error);
     }
-    this.sounds[name] = soundData;
   }
 
-  playSound(name, customVolume) {
-    const soundData = this.sounds[name];
-    if (!soundData) {
-      console.warn(
-        `Sound '${name}' not loaded. Call soundManager.loadSound() first.`
-      );
-      return;
+  // Play a sound with optional volume adjustment
+  playSound(name, volume = 1.0) {
+    if (!this.audioReady || this.audioContext.state === "suspended") {
+      console.debug("Audio not ready or context suspended");
+      return Promise.resolve();
     }
 
-    // Filter out finished instances from playingInstances
-    // An audio element is considered "finished" if its 'ended' flag is true.
-    // Also, if currentTime is 0 and it's paused, it's ready for reuse.
-    soundData.playingInstances = soundData.playingInstances.filter(
-      (instance) =>
-        !instance.ended && (instance.currentTime > 0 || !instance.paused)
-    );
-
-    // If we have too many instances currently playing, find the oldest to reuse
-    if (soundData.playingInstances.length >= soundData.maxConcurrent) {
-      const oldestInstance = soundData.playingInstances.shift(); // Remove oldest
-      if (oldestInstance) {
-        oldestInstance.pause();
-        oldestInstance.currentTime = 0;
-      } else {
-        // This case should ideally not happen if playingInstances is managed correctly
-        // but provides a fallback to prevent errors.
-        console.warn(
-          `No oldest instance found to stop for sound '${name}'. Skipping sound.`
-        );
-        return;
-      }
+    const sound = this.sounds[name];
+    if (!sound || !sound.buffer) {
+      console.debug(`Sound '${name}' not found or not loaded`);
+      return Promise.resolve();
     }
 
-    // Find an available instance in the pool that is not currently playing
-    let audioInstance = soundData.pool.find(
-      (instance) =>
-        instance.paused || instance.ended || instance.currentTime === 0
-    );
-
-    if (!audioInstance) {
-      // Fallback: If no suitable instance was found, create a new temporary one.
-      // This indicates 'maxConcurrent' might be too low or pooling logic needs review.
-      audioInstance = new Audio(soundData.path);
-      console.warn(
-        `Sound pool for '${name}' exhausted, creating new temporary instance. Consider increasing maxConcurrent for this sound.`
-      );
+    // Check if we've reached the maximum concurrent instances
+    if (sound.playingInstances >= sound.maxConcurrent) {
+      console.debug(`Max concurrent instances reached for '${name}'`);
+      return Promise.resolve();
     }
 
-    // Apply custom volume if provided, otherwise use the default loaded volume
-    audioInstance.volume =
-      customVolume !== undefined ? customVolume : soundData.volume;
+    sound.playingInstances++;
 
-    audioInstance.pause(); // Stop if it was playing from a previous use
-    audioInstance.currentTime = 0; // Rewind to start
-    audioInstance.play().catch((e) => {
-      // Catch "NotAllowedError" if user hasn't interacted, or other playback errors
-      console.warn(`Sound '${name}' playback prevented:`, e);
+    const source = this.audioContext.createBufferSource();
+    source.buffer = sound.buffer;
+
+    const gainNode = this.audioContext.createGain();
+    gainNode.gain.value = volume * sound.volume * this.masterVolume;
+
+    source.connect(gainNode);
+    gainNode.connect(this.audioContext.destination);
+
+    source.start(0);
+
+    return new Promise((resolve) => {
+      source.onended = () => {
+        sound.playingInstances--;
+        resolve();
+      };
+    }).catch((error) => {
+      sound.playingInstances--;
+      console.debug(`Sound '${name}' playback error:`, error.message);
     });
+  }
 
-    // Add the instance to currently playing ones if it's not already there
-    if (!soundData.playingInstances.includes(audioInstance)) {
-      soundData.playingInstances.push(audioInstance);
+  // Resume the audio context (must be called from a user interaction)
+  resumeAudio() {
+    if (this.audioContext.state === "suspended") {
+      this.audioContext
+        .resume()
+        .then(() => {
+          console.log("AudioContext resumed successfully");
+          this.audioReady = true;
+        })
+        .catch((error) => {
+          console.error("Failed to resume AudioContext:", error);
+        });
     }
+  }
+
+  // Set master volume (0.0 to 1.0)
+  setMasterVolume(volume) {
+    this.masterVolume = Math.max(0, Math.min(1, volume));
   }
 }
 

@@ -5,6 +5,8 @@ import { projectiles } from "../state.js";
 import { spawnMuzzle } from "../effects.js";
 import { Bullet } from "../bullet.js";
 import { ctx } from "../core.js";
+import { soundManager } from "../assets/sounds/SoundManager.js"; // Import the sound manager
+import { dist } from "../utils.js"; // Import dist for update method, though it's not directly in this file, often needed in BaseTower
 
 export class IceTower extends BaseTower {
   static SPEC = {
@@ -53,6 +55,10 @@ export class IceTower extends BaseTower {
 
     // Add frost particles effect
     this.spawnFrostParticles(center.x, center.y);
+
+    // --- SOUND IMPLEMENTATION START ---
+    soundManager.playSound("iceShoot", 0.2); // Play the ice shoot sound, adjust volume as needed
+    // --- SOUND IMPLEMENTATION END ---
   }
 
   spawnFrostParticles(x, y) {
@@ -146,32 +152,6 @@ export class IceTower extends BaseTower {
 
     ctx.restore();
 
-    // --- OLD CODE (REMOVE OR COMMENT OUT) ---
-    // // Draw level indicators as ice shards
-    // for (let i = 0; i < this.level; i++) {
-    //   const indicatorX = x - 10 + i * 6;
-    //   const indicatorY = y + 22;
-
-    //   // Glow effect
-    //   ctx.fillStyle = "rgba(108, 250, 255, 0.3)";
-    //   ctx.beginPath();
-    //   ctx.arc(indicatorX, indicatorY, 4, 0, Math.PI * 2);
-    //   ctx.fill();
-
-    //   // Ice shard
-    //   ctx.fillStyle = s.color;
-    //   this.drawIceShard(indicatorX, indicatorY, 3);
-
-    //   // Frost effect for higher levels
-    //   if (this.level > 2 && i >= this.level - 2) {
-    //     ctx.fillStyle = "rgba(255, 255, 255, 0.4)";
-    //     ctx.beginPath();
-    //     ctx.arc(indicatorX, indicatorY, 5, 0, Math.PI * 2);
-    //     ctx.fill();
-    //   }
-    // }
-    // --- END OLD CODE ---
-
     // --- NEW CODE: Display Level as Text for IceTower ---
     ctx.fillStyle = "#ffffff"; // White color for the text
     ctx.font = "12px Arial"; // Font size and type
@@ -240,4 +220,27 @@ export class IceTower extends BaseTower {
 
     ctx.restore();
   }
+}
+
+// Add roundRect method to CanvasRenderingContext2D if it doesn't exist
+if (!CanvasRenderingContext2D.prototype.roundRect) {
+  CanvasRenderingContext2D.prototype.roundRect = function (
+    x,
+    y,
+    width,
+    height,
+    radius
+  ) {
+    if (width < 2 * radius) radius = width / 2;
+    if (height < 2 * radius) radius = height / 2;
+
+    this.beginPath();
+    this.moveTo(x + radius, y);
+    this.arcTo(x + width, y, x + width, y + height, radius);
+    this.arcTo(x + width, y + height, x, y + height, radius);
+    this.arcTo(x, y + height, x, y, radius);
+    this.arcTo(x, y, x + width, y, radius);
+    this.closePath();
+    return this;
+  };
 }

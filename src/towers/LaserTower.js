@@ -3,20 +3,65 @@
 import { BaseTower } from "./BaseTower.js";
 import { spawnBeam } from "../effects.js";
 import { ctx } from "../core.js";
+import { soundManager } from "../assets/sounds/SoundManager.js"; // Import the sound manager
+import { dist } from "../utils.js"; // Import dist for update method
 
 export class LaserTower extends BaseTower {
   static SPEC = {
     name: "Laser",
     cost: 250,
     range: 150,
-    fireRate: 12,
-    dmg: 5,
-    beam: true,
+    fireRate: 1,
+    dmg: 5, // This is the base damage value
+    beam: false,
     color: "#ff69e0",
   };
 
   fireBeam(start, end, color) {
     spawnBeam(start, end, color);
+    soundManager.playSound("laserShoot", 0.4); // Play sound via manager with specific volume
+  }
+
+  update(dt, enemiesList) {
+    const s = this.spec();
+    this.cool -= dt;
+
+    let best = null,
+      bestScore = -1;
+
+    for (const e of enemiesList) {
+      if (e.dead) continue;
+      const p = e.pos;
+      const d = dist(this.center, p);
+      if (d <= s.range && e.t > bestScore) {
+        best = e;
+        bestScore = e.t;
+      }
+    }
+
+    if (!best) return;
+    const c = this.center,
+      bp = best.pos;
+    this.rot = Math.atan2(bp.y - c.y, bp.x - c.x);
+
+    if (this.cool <= 0) {
+      this.cool = 1 / (s.fireRate * this.slowMultiplier);
+      this.fireBeam(c, best.pos, s.color); // Pass best.pos as end point for the beam
+
+      // --- DAMAGE IMPLEMENTATION START ---
+      // Directly deduct health from the target
+      best.hp -= s.dmg;
+
+      // Check if the enemy is defeated
+      if (best.hp <= 0) {
+        best.dead = true;
+        // Potentially add score, money, or other effects here
+        // For example:
+        // state.money += best.bounty;
+        // state.score += best.score;
+      }
+      // --- DAMAGE IMPLEMENTATION END ---
+    }
   }
 
   draw() {
@@ -46,7 +91,6 @@ export class LaserTower extends BaseTower {
     ctx.arc(x, y, 18, 0, Math.PI * 2);
     ctx.stroke();
 
-    // Draw tower body
     ctx.save();
     ctx.translate(x, y);
     ctx.rotate(this.rot);
@@ -120,43 +164,11 @@ export class LaserTower extends BaseTower {
 
     ctx.restore();
 
-    // --- OLD CODE (REMOVE OR COMMENT OUT) ---
-    // // Draw level indicators with glow effect
-    // for (let i = 0; i < this.level; i++) {
-    //   const indicatorX = x - 10 + i * 6;
-    //   const indicatorY = y + 22;
-
-    //   // Glow effect
-    //   ctx.fillStyle = "rgba(255, 105, 224, 0.3)";
-    //   ctx.beginPath();
-    //   ctx.arc(indicatorX, indicatorY, 5, 0, Math.PI * 2);
-    //   ctx.fill();
-
-    //   // Main indicator
-    //   ctx.fillStyle = s.color;
-    //   ctx.beginPath();
-    //   ctx.arc(indicatorX, indicatorY, 3, 0, Math.PI * 2);
-    //   ctx.fill();
-
-    //   // Pulsing effect for higher levels
-    //   if (this.level > 3 && i >= this.level - 3) {
-    //     const pulse = Math.sin(time * 4) * 2;
-    //     ctx.fillStyle = "rgba(255, 255, 255, 0.6)";
-    //     ctx.beginPath();
-    //     ctx.arc(indicatorX, indicatorY, 3 + pulse, 0, Math.PI * 2);
-    //     ctx.fill();
-    //   }
-    // }
-    // --- END OLD CODE ---
-
-    // --- NEW CODE: Display Level as Text for LaserTower ---
-    ctx.fillStyle = "#ffffff"; // White color for the text
-    ctx.font = "12px Arial"; // Font size and type
-    ctx.textAlign = "center"; // Center the text horizontally
-    ctx.textBaseline = "middle"; // Center the text vertically
-    // Position the text below the tower. Adjust y + 25 as needed for spacing.
+    ctx.fillStyle = "#ffffff";
+    ctx.font = "12px Arial";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
     ctx.fillText(`Lv. ${this.level}`, x, y + 25);
-    // --- END NEW CODE ---
 
     // Add some particle effects around the tower
     if (Math.random() < 0.1) {

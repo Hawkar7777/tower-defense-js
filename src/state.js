@@ -7,6 +7,7 @@ export const state = {
   wave: 0,
   time: 0,
   running: false,
+  audioReady: false,
   camera: { x: 0, y: 0 },
   zoom: 1,
   // ADDED: To hold the config of the current level

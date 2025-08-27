@@ -177,6 +177,9 @@ export class HelicopterTower extends BaseTower {
       const origin = this.getAttackOrigin();
       projectiles.push(new HeliBullet(origin, target, s.dmg, s.bulletSpeed));
 
+      // play gun fire sound here
+      soundManager.playSound("smallHelicopterRifle", 0.2);
+
       particles.push({
         x: origin.x,
         y: origin.y,

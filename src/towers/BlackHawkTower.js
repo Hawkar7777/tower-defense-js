@@ -189,6 +189,9 @@ export class BlackHawkTower extends BaseTower {
         new HeliBullet(originRight, target, s.dmg, s.bulletSpeed)
       );
 
+      // 🔊 play gunfire sound once per shot
+      soundManager.playSound("blackHawkRifle", 0.75);
+
       particles.push({
         x: originLeft.x,
         y: originLeft.y,

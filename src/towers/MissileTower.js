@@ -1,11 +1,10 @@
-// ===== FILE: C:\Users\kurd7\Downloads\Tower\src\towers\MissileTower.js =====
-
 import { BaseTower } from "./BaseTower.js";
 import { ctx } from "../core.js";
 import { enemies, projectiles, particles } from "../state.js";
 import { dist } from "../utils.js";
 import { spawnExplosion, spawnMuzzle } from "../effects.js";
 import { Missile } from "../missile.js"; // We'll create this special projectile
+import { soundManager } from "../assets/sounds/SoundManager.js"; // Import the sound manager
 
 export class MissileTower extends BaseTower {
   static SPEC = {
@@ -156,6 +155,9 @@ export class MissileTower extends BaseTower {
 
     // Tower recoil effect
     this.recoilEffect = 0.3;
+
+    // Use the sound manager to play the missile launch sound
+    soundManager.playSound("missleShoot", 0.3); // Play sound via manager with specific volume
   }
 
   spawnLaunchSmoke(x, y) {
@@ -283,45 +285,13 @@ export class MissileTower extends BaseTower {
 
     ctx.restore();
 
-    // --- OLD CODE (REMOVE OR COMMENT OUT) ---
-    // // Draw level indicators as missile icons
-    // for (let i = 0; i < this.level; i++) {
-    //   const indicatorX = x - 12 + i * 6;
-    //   const indicatorY = y + 25;
-
-    //   // Missile icon
-    //   ctx.fillStyle = s.color;
-    //   ctx.beginPath();
-    //   ctx.moveTo(indicatorX - 2, indicatorY - 4);
-    //   ctx.lineTo(indicatorX + 2, indicatorY - 4);
-    //   ctx.lineTo(indicatorX + 2, indicatorY + 4);
-    //   ctx.lineTo(indicatorX - 2, indicatorY + 4);
-    //   ctx.closePath();
-    //   ctx.fill();
-
-    //   // Missile tip
-    //   ctx.beginPath();
-    //   ctx.moveTo(indicatorX + 2, indicatorY);
-    //   ctx.lineTo(indicatorX + 4, indicatorY);
-    //   ctx.lineTo(indicatorX + 2, indicatorY - 2);
-    //   ctx.closePath();
-    //   ctx.fill();
-
-    //   // Fire effect for higher levels
-    //   if (this.level > 3 && i >= this.level - 3) {
-    //     this.drawMiniExhaust(indicatorX, indicatorY, time);
-    //   }
-    // }
-    // --- END OLD CODE ---
-
-    // --- NEW CODE: Display Level as Text for MissileTower ---
+    // Display Level as Text for MissileTower
     ctx.fillStyle = "#ffffff"; // White color for the text
     ctx.font = "12px Arial"; // Font size and type
     ctx.textAlign = "center"; // Center the text horizontally
     ctx.textBaseline = "middle"; // Center the text vertically
     // Position the text below the tower. Adjust y + 25 as needed for spacing.
     ctx.fillText(`Lv. ${this.level}`, x, y + 25);
-    // --- END NEW CODE ---
 
     // Random targeting laser effect
     if (Math.random() < 0.05) {

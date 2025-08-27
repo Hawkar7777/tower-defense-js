@@ -1013,6 +1013,12 @@ async function initializeGame() {
     4,
     2
   );
+  await soundManager.loadSound(
+    "missleShoot",
+    "./assets/sounds/missleTower.mp3",
+    1,
+    3
+  );
 
   console.log("All sounds loaded");
 

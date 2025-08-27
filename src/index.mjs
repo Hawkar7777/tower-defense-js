@@ -1121,6 +1121,18 @@ async function initializeGame() {
     3,
     2
   );
+  await soundManager.loadSound(
+    "smallhelicopterMove",
+    "./assets/sounds/smallHelicopterTower.mp3",
+    2,
+    2
+  );
+  await soundManager.loadSound(
+    "blackHawkMove",
+    "./assets/sounds/blackHawkTower.mp3",
+    2,
+    2
+  );
 
   console.log("All sounds loaded");
 

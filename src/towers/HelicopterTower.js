@@ -3,6 +3,7 @@ import { ctx } from "../core.js";
 import { enemies, projectiles, particles } from "../state.js";
 import { dist, clamp } from "../utils.js";
 import { TOWER_TYPES } from "../config.js";
+import { soundManager } from "../assets/sounds/SoundManager.js";
 
 /* ---------------- Helicopter Tracer Bullet ---------------- */
 class HeliBullet {
@@ -44,6 +45,7 @@ class HeliBullet {
     const vy = Math.sin(this._lastAngle) * this.speed;
     this.pos.x += vx * dt;
     this.pos.y += vy * dt;
+    soundManager.playSound("");
   }
 
   draw() {
@@ -138,6 +140,13 @@ export class HelicopterTower extends BaseTower {
     this.cool -= dt;
     this._s.rotorAngle += dt * 45;
     this._s.flightAngle -= dt * 0.7;
+
+    // rotor/movement sound timer
+    this._s.soundTimer = (this._s.soundTimer || 0) - dt;
+    if (this._s.soundTimer <= 0) {
+      soundManager.playSound("smallhelicopterMove", 0.2);
+      this._s.soundTimer = 1.0; // play every 1 second
+    }
 
     this._s.flightPos = {
       x: this.center.x + Math.cos(this._s.flightAngle) * this._s.patrolRadius,

@@ -3,6 +3,7 @@ import { ctx } from "../core.js";
 import { enemies, projectiles, particles } from "../state.js";
 import { dist, clamp } from "../utils.js";
 import { TOWER_TYPES } from "../config.js";
+import { soundManager } from "../assets/sounds/SoundManager.js";
 
 /* ---------------- Helicopter Tracer Bullet ---------------- */
 class HeliBullet {
@@ -144,6 +145,13 @@ export class BlackHawkTower extends BaseTower {
     this.cool -= dt;
     this._s.rotorAngle += dt * 45;
     this._s.flightAngle -= dt * 0.7;
+
+    // sound timer
+    this._s.soundTimer = (this._s.soundTimer || 0) - dt;
+    if (this._s.soundTimer <= 0) {
+      soundManager.playSound("blackHawkMove", 0.1);
+      this._s.soundTimer = 1.2; // replay every ~1.2s (match your clip length)
+    }
 
     this._s.flightPos = {
       x: this.center.x + Math.cos(this._s.flightAngle) * this._s.patrolRadius,

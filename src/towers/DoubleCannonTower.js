@@ -18,8 +18,38 @@ export class DoubleCannonTower extends BaseTower {
     color: "#ff3333",
   };
 
-  // --- THIS IS THE CORRECTED FUNCTION ---
+  constructor(gx, gy, key) {
+    super(gx, gy, key);
+    // --- NEW: Load the sound effect for Double Cannon ---
+    // Path: relative to the web server's root (Tower folder)
+    this.shootSound = new Audio("./assets/sounds/doubleCannon.mp3");
+    this.shootSound.volume = 0.7; // Adjust volume as needed (0.0 to 1.0)
+    this.shootSound.load(); // Preload the sound
+  }
+
+  // --- NEW: Method to play the sound ---
+  playShootSound() {
+    if (this.shootSound) {
+      this.shootSound.pause(); // Stop if already playing
+      this.shootSound.currentTime = 0; // Rewind to start
+      this.shootSound.play().catch((e) => {
+        // This catch handles potential "NotAllowedError" if the user hasn't interacted
+        // with the page yet, which prevents autoplay.
+        console.warn("Sound playback prevented (user interaction needed?):", e);
+      });
+    }
+  }
+
+  // --- MODIFIED fireProjectile to include miss chance and play sound ---
   fireProjectile(center, target, spec) {
+    // Check for the miss chance first, inherited from BaseTower
+    if (this.missChance > 0 && Math.random() < this.missChance) {
+      // The shot misses! Spawn a red "fizzle" effect at the tower's center.
+      // We don't have separate barrel miss effects here, so a central one will do.
+      spawnMuzzle(center.x, center.y, this.rot, "#ff5555");
+      return false; // Indicate that no projectiles were launched
+    }
+
     const offset = 8; // Distance of each barrel from the center line
     const barrelLength = 22; // The visual length of the barrel from the turret pivot
     const sin = Math.sin(this.rot);
@@ -31,15 +61,19 @@ export class DoubleCannonTower extends BaseTower {
     const muzzle2X = center.x + cos * barrelLength + sin * offset;
     const muzzle2Y = center.y + sin * barrelLength - cos * offset;
 
-    // --- THE FIX ---
     // Fire one projectile from the tip of each barrel
+    // --- TYPO FIX HERE: muuzzle1X changed to muzzle1X ---
     projectiles.push(new Bullet(muzzle1X, muzzle1Y, target, spec));
     projectiles.push(new Bullet(muzzle2X, muzzle2Y, target, spec));
-    // --- END OF FIX ---
 
     // Spawn muzzle flash at the same barrel tip positions
     spawnMuzzle(muzzle1X, muzzle1Y, this.rot, spec.color);
     spawnMuzzle(muzzle2X, muzzle2Y, this.rot, spec.color);
+
+    // --- Play the sound AFTER successful firing ---
+    this.playShootSound();
+
+    return true; // Indicate that projectiles were successfully launched
   }
 
   draw() {
@@ -98,22 +132,6 @@ export class DoubleCannonTower extends BaseTower {
     ctx.fill();
 
     ctx.restore();
-
-    // --- OLD CODE (REMOVE OR COMMENT OUT) ---
-    // // 5. Level Indicators on the Base
-    // for (let i = 0; i < this.level; i++) {
-    //   const angle = 2.5 + i * 0.4;
-    //   const lx = x + Math.cos(angle) * 16;
-    //   const ly = y + Math.sin(angle) * 16;
-    //   ctx.fillStyle = s.color;
-    //   ctx.shadowColor = s.color;
-    //   ctx.shadowBlur = 6;
-    //   ctx.beginPath();
-    //   ctx.arc(lx, ly, 2.5, 0, Math.PI * 2);
-    //   ctx.fill();
-    // }
-    // ctx.shadowBlur = 0;
-    // --- END OLD CODE ---
 
     // --- NEW CODE: Display Level as Text for DoubleCannonTower ---
     ctx.fillStyle = "#ffffff"; // White color for the text

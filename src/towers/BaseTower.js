@@ -1,3 +1,5 @@
+// ===== FILE: C:\Users\kurd7\Downloads\Tower\src\towers\BaseTower.js =====
+
 import { ctx } from "../core.js";
 import { dist } from "../utils.js";
 import { spawnMuzzle } from "../effects.js";
@@ -116,6 +118,8 @@ export class BaseTower {
 
     if (this.cool <= 0) {
       this.cool = 1 / (s.fireRate * this.slowMultiplier);
+      // The return value of fireProjectile is not used here,
+      // but it's important for derived classes that override it.
       this.fireProjectile(c, best, s);
     }
   }
@@ -125,27 +129,26 @@ export class BaseTower {
    * @param {{x: number, y: number}} center - The starting position of the projectile.
    * @param {BaseEnemy} target - The enemy to fire at.
    * @param {object} spec - The tower's current stats.
+   * @returns {boolean} True if a projectile was successfully launched, false if it missed.
    */
   fireProjectile(center, target, spec) {
-    // --- NEW: Check for the miss chance from the Disruptor's aura ---
+    // --- MODIFIED: Check for the miss chance and return false if missed ---
     if (this.missChance > 0 && Math.random() < this.missChance) {
       // The shot misses!
-      // Spawn a red "fizzle" effect to give the player visual feedback.
-      spawnMuzzle(center.x, center.y, this.rot, "#ff5555");
-      // Exit the function early. No projectile is created.
-      return;
+      spawnMuzzle(center.x, center.y, this.rot, "#ff5555"); // Red fizzle effect
+      return false; // Indicate that no projectile was launched
     }
 
     // If the check passes, fire the projectile normally.
     projectiles.push(new Bullet(center.x, center.y, target, spec));
-    spawnMuzzle(center.x, center.y, this.rot, spec.color);
+    spawnMuzzle(center.x, center.y, this.rot, spec.color); // Normal muzzle effect
+    return true; // Indicate that a projectile was successfully launched
   }
 
   fireBeam(start, end, color) {
     // To be implemented in LaserTower
   }
 
-  // Inside BaseTower's draw() method
   draw() {
     const s = this.spec();
     const { x, y } = this.center;
@@ -160,13 +163,6 @@ export class BaseTower {
     ctx.fillStyle = "#fff";
     ctx.fillRect(0, -3, 14, 6);
     ctx.restore();
-
-    // --- OLD CODE (REMOVE OR COMMENT OUT) ---
-    // for (let i = 0; i < this.level; i++) {
-    //   ctx.fillStyle = s.color;
-    //   ctx.fillRect(x - 10 + i * 6, y + 18, 4, 4);
-    // }
-    // --- END OLD CODE ---
 
     // --- NEW CODE: Display Level as Text ---
     ctx.fillStyle = "#ffffff"; // White color for the text

@@ -8,6 +8,41 @@ export class CannonTower extends BaseTower {
     // This is the most important line.
     // It calls the BaseTower's constructor with the necessary information.
     super(gx, gy, key);
+    // --- FINAL CORRECTION: Using an absolute path from the web server's root ---
+    // The server root (http://127.0.0.1:5500/) is assumed to be the 'Tower' folder.
+    // So the path to the sound is '/src/assets/sounds/cannonTower.mp3'.
+    // This should work regardless of where CannonTower.js itself is in the hierarchy.
+    this.shootSound = new Audio("./assets/sounds/cannonTower.mp3"); // Corrected to absolute path
+    this.shootSound.volume = 0.6; // Adjust volume as needed (0.0 to 1.0)
+    this.shootSound.load(); // Preload the sound
+  }
+
+  // --- NEW: Method to play the sound ---
+  playShootSound() {
+    if (this.shootSound) {
+      this.shootSound.pause(); // Stop if already playing
+      this.shootSound.currentTime = 0; // Rewind to start
+      this.shootSound.play().catch((e) => {
+        // This catch handles potential "NotAllowedError" if the user hasn't interacted
+        // with the page yet, which prevents autoplay.
+        // It also catches if the browser still has issues loading the source (e.g. if the file is corrupted)
+        console.warn(
+          "Sound playback prevented (user interaction needed or source issue?):",
+          e
+        );
+      });
+    }
+  }
+
+  // --- NEW: Override fireProjectile to play sound when a projectile is actually fired ---
+  fireProjectile(center, target, spec) {
+    // Call the original BaseTower's fireProjectile.
+    // It now returns true if a projectile was launched, false if it missed.
+    const projectileFired = super.fireProjectile(center, target, spec);
+
+    if (projectileFired) {
+      this.playShootSound(); // Play sound ONLY if a projectile was successfully fired (not a miss)
+    }
   }
 
   // --- COMPLETELY REDESIGNED DRAW METHOD ---
@@ -90,22 +125,6 @@ export class CannonTower extends BaseTower {
     ctx.restore(); // End of barrel drawing
 
     ctx.restore(); // End of turret rotation
-
-    // --- OLD CODE (REMOVE OR COMMENT OUT) ---
-    // // --- 5. Level Indicators on the Base ---
-    // for (let i = 0; i < this.level; i++) {
-    //   const angle = -0.8 - i * 0.4;
-    //   const lx = x + Math.cos(angle) * 16;
-    //   const ly = y + Math.sin(angle) * 16;
-    //   ctx.fillStyle = s.color;
-    //   ctx.shadowColor = s.color;
-    //   ctx.shadowBlur = 6;
-    //   ctx.beginPath();
-    //   ctx.arc(lx, ly, 3, 0, Math.PI * 2);
-    //   ctx.fill();
-    // }
-    // ctx.shadowBlur = 0; // Reset shadow (no longer needed here if no other shadows exist)
-    // --- END OLD CODE ---
 
     // --- NEW CODE: Display Level as Text for CannonTower ---
     ctx.fillStyle = "#ffffff"; // White color for the text

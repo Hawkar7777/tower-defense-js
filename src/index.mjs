@@ -1019,6 +1019,26 @@ async function initializeGame() {
   // Start the game
   await startGame(1);
 }
+// Set up audio resume on user interaction
+const setupAudioResume = () => {
+  // Try to resume immediately
+  soundManager.resumeAudio().then((success) => {
+    if (!success) {
+      // If failed, set up retry on next user interaction
+      const retryAudio = () => {
+        soundManager.resumeAudio();
+        document.removeEventListener("click", retryAudio);
+        document.removeEventListener("touchend", retryAudio);
+      };
 
-// Call the initialization function when the DOM is ready
-document.addEventListener("DOMContentLoaded", initializeGame);
+      document.addEventListener("click", retryAudio);
+      document.addEventListener("touchend", retryAudio);
+    }
+  });
+};
+
+// Call this on DOM content loaded
+document.addEventListener("DOMContentLoaded", () => {
+  setupAudioResume();
+  initializeGame();
+});

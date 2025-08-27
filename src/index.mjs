@@ -1091,6 +1091,12 @@ async function initializeGame() {
     3,
     3
   );
+  await soundManager.loadSound(
+    "mediumTankShoot",
+    "./assets/sounds/mediumTankTower.mp3",
+    3,
+    1
+  );
 
   console.log("All sounds loaded");
 

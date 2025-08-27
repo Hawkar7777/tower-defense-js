@@ -146,7 +146,6 @@ export class CarM249Tower extends BaseTower {
       const diff =
         ((want - this._s.turretAngle + Math.PI) % (2 * Math.PI)) - Math.PI;
       this._s.turretAngle += diff * Math.min(1, dt * 10);
-      soundManager.playSound("carM249Shoot", 0.3);
     } else {
       // idle drift
       this._s.turretAngle += Math.sin(performance.now() / 1000) * 0.001;
@@ -159,6 +158,7 @@ export class CarM249Tower extends BaseTower {
       // trigger recoil + muzzle
       this._s.recoil = Math.min(1.2, this._s.recoil + 0.9);
       this._s.muzzle = 0.16 + Math.random() * 0.05;
+      soundManager.playSound("carM249Shoot", 0.1);
 
       // big muzzle particle
       particles.push({

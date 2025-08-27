@@ -327,7 +327,7 @@ export const TOWER_TYPES = {
     name: "Car M249",
     cost: 600,
     range: 190, // Increased range
-    fireRate: 7, // Increased fire rate
+    fireRate: 4, // Increased fire rate
     dmg: 18, // Increased damage
     color: "#2288ff",
     maxLevel: 8, // More levels

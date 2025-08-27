@@ -11,6 +11,7 @@ import { ctx } from "../core.js";
 import { enemies, projectiles, particles } from "../state.js";
 import { dist } from "../utils.js";
 import { TOWER_TYPES } from "../config.js";
+import { soundManager } from "../assets/sounds/SoundManager.js";
 
 /* ---------------- Medium Shell (fancier) ---------------- */
 class MediumTankShell {
@@ -253,6 +254,7 @@ export class MediumTank extends BaseTower {
       const diff =
         ((want - this._s.turretAngle + Math.PI) % (2 * Math.PI)) - Math.PI;
       this._s.turretAngle += diff * Math.min(1, dt * 2.8);
+      soundManager.playSound("mediumTankShoot", 0.3);
     } else {
       this._s.turretAngle += Math.sin(performance.now() / 1200) * dt * 0.02;
     }

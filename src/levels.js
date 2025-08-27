@@ -8,18 +8,18 @@ export const levels = [
     startMoney: 100000000, // Very generous for testing purposes
     startLives: 50,
     waves: [
+      { count: 10, types: { swarmer: 1.0 } }, // Swarmers can be spawned independently for testing
       // --- Individual Regular Enemy Waves (count: 1 for each type) ---
-      { count: 1, types: { basic: 1.0 } },
-      { count: 1, types: { brute: 1.0 } },
-      { count: 1, types: { swift: 1.0 } },
-      { count: 1, types: { elite: 1.0 } },
-      { count: 1, types: { sapper: 1.0 } },
-      { count: 1, types: { wraith: 1.0 } },
-      { count: 1, types: { mimic: 1.0 } },
-      { count: 1, types: { leech: 1.0 } },
-      { count: 1, types: { shifter: 1.0 } },
-      { count: 1, types: { hive: 1.0 } },
-      { count: 1, types: { swarmer: 1.0 } }, // Swarmers can be spawned independently for testing
+      { count: 10, types: { basic: 1.0 } },
+      { count: 10, types: { brute: 1.0 } },
+      { count: 10, types: { swift: 1.0 } },
+      { count: 10, types: { elite: 1.0 } },
+      { count: 10, types: { sapper: 1.0 } },
+      { count: 10, types: { wraith: 1.0 } },
+      { count: 10, types: { mimic: 1.0 } },
+      { count: 10, types: { leech: 1.0 } },
+      { count: 10, types: { shifter: 1.0 } },
+      { count: 10, types: { hive: 1.0 } },
       { count: 1, types: { specter: 1.0 } },
       { count: 1, types: { collector: 1.0 } },
       { count: 1, types: { disruptor: 1.0 } },

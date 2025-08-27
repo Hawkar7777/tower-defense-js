@@ -4,6 +4,7 @@ import { Bullet } from "../bullet.js";
 import { projectiles, particles } from "../state.js";
 import { dist, clamp } from "../utils.js";
 import { spawnMuzzle } from "../effects.js";
+import { soundManager } from "../assets/sounds/SoundManager.js"; // Import the sound manager
 
 export class GunTower extends BaseTower {
   constructor(gx, gy, key) {
@@ -11,20 +12,10 @@ export class GunTower extends BaseTower {
     this._s = {
       muzzleFlashEffect: 0,
     };
-    this.shootSound = new Audio("./assets/sounds/gunnerTower.mp3");
-    this.shootSound.volume = 0.6;
-    this.shootSound.load();
+    // Removed: this.shootSound = new Audio(...)
   }
 
-  playShootSound() {
-    if (this.shootSound) {
-      this.shootSound.pause();
-      this.shootSound.currentTime = 0;
-      this.shootSound.play().catch((e) => {
-        console.warn("GunTower sound playback prevented:", e);
-      });
-    }
-  }
+  // Removed: playShootSound method
 
   fireProjectile(center, target, spec) {
     const barrelTipOffset = 18;
@@ -42,7 +33,8 @@ export class GunTower extends BaseTower {
 
     this._s.muzzleFlashEffect = 1;
 
-    this.playShootSound();
+    // Use the sound manager to play the sound
+    soundManager.playSound("gunnerShoot", 0.2); // Play sound via manager with specific volume
   }
 
   update(dt, enemiesList) {

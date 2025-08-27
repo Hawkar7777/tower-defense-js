@@ -1,3 +1,5 @@
+// index.mjs
+
 import {
   canvas,
   ctx,
@@ -23,7 +25,6 @@ import { initPath, path } from "./path.js";
 import { updateEffects, drawEffects } from "./effects.js";
 import { spawner, startNextWave } from "./spawner.js";
 import {
-  // drawBackground, // Removed, as it's now handled by the map and base fill
   drawTopbar,
   drawShop,
   drawGhost,
@@ -40,6 +41,9 @@ import {
 } from "./occupation.js";
 import { levels } from "./levels.js";
 import { loadMap, drawMap } from "./map/mapRenderer.js";
+
+// Import the sound manager
+import { soundManager } from "./assets/sounds/SoundManager.js"; // Corrected path based on tower imports
 
 // --- GLOBAL STATE ---
 let currentLevelConfig = null;
@@ -95,6 +99,17 @@ let initialZoom = 1.0;
 // --- GAME LOOP CONTROL ---
 let last = performance.now();
 let animationFrameId = null;
+
+// --- Player Data (to persist tower levels, if desired) ---
+window.playerData = {
+  towerLevels: {
+    gunnerTower: 1,
+    cannonTower: 1,
+    doubleCannonTower: 1,
+    // Add other tower types here with their initial levels
+  },
+  // You can expand this to include money, lives, unlocked levels, etc.
+};
 
 /**
  * OPTIMIZATION: Pre-renders the static grid to an off-screen canvas.
@@ -737,7 +752,9 @@ canvas.addEventListener(
       );
       if (button) {
         const spec = TOWER_TYPES[button.key];
-        if (state.money >= spec.cost) {
+        if (state.money < spec.cost) {
+          pulse("Not enough money!", "#f66");
+        } else {
           touch.potentialSelection = button.key;
           touch.holdTimer = setTimeout(() => {
             touch.isHolding = true;
@@ -745,8 +762,6 @@ canvas.addEventListener(
             ui.selectedTower = null;
             touch.potentialSelection = null;
           }, HOLD_DURATION);
-        } else {
-          pulse("Not enough money!", "#f66");
         }
       }
     } else {
@@ -861,18 +876,26 @@ canvas.addEventListener(
       if (touch.currentY < canvas.clientHeight - 100) {
         const spec = TOWER_TYPES[ui.selectedShopKey];
         if (isPlacementValid(gx, gy, spec)) {
-          // --- MODIFIED TOWER CREATION ---
-          const newTower = new spec.class(gx, gy, ui.selectedShopKey);
-          newTower.level =
-            window.playerData.towerLevels[ui.selectedShopKey] || 1;
-          towers.push(newTower);
+          if (state.money >= spec.cost) {
+            const newTower = new spec.class(gx, gy, ui.selectedShopKey);
+            newTower.level =
+              window.playerData.towerLevels[ui.selectedShopKey] || 1;
+            towers.push(newTower);
 
-          state.money -= spec.cost;
-          pulse(`-${spec.cost}`);
-          updateOccupiedCells();
+            state.money -= spec.cost;
+            pulse(`-${spec.cost}`);
+            updateOccupiedCells();
+            ui.selectedShopKey = null;
+          } else {
+            pulse("Not enough $", "#f66");
+            ui.selectedShopKey = null; // Clear shop selection even if not enough money after attempting placement
+          }
+        } else {
+          ui.selectedShopKey = null; // Clear shop selection if placement was invalid
         }
+      } else {
+        ui.selectedShopKey = null; // Clear shop selection if dropped in shop area
       }
-      ui.selectedShopKey = null;
     } else if (!wasHolding && wasJustATap) {
       if (handleInspectorClick({ x: touch.startX, y: touch.startY })) {
         // Click was handled by inspector, do nothing else
@@ -889,29 +912,35 @@ canvas.addEventListener(
         const gy = Math.floor(worldY / TILE);
         const clickedTower = findTowerAt(gx, gy);
 
-        if (ui.selectedShopKey) {
-          const spec = TOWER_TYPES[ui.selectedShopKey];
-          if (isPlacementValid(gx, gy, spec)) {
-            if (state.money >= spec.cost) {
-              // --- MODIFIED TOWER CREATION ---
-              const newTower = new spec.class(gx, gy, ui.selectedShopKey);
-              newTower.level =
-                window.playerData.towerLevels[ui.selectedShopKey] || 1;
-              towers.push(newTower);
-
-              state.money -= spec.cost;
-              pulse(`-${spec.cost}`);
-              ui.selectedShopKey = null;
-              updateOccupiedCells();
-            } else {
-              pulse("Not enough $", "#f66");
-            }
-          }
-        } else if (clickedTower) {
+        if (clickedTower) {
+          // Priority: If an existing tower was tapped, select it
           ui.selectedTower =
             ui.selectedTower === clickedTower ? null : clickedTower;
+          ui.selectedShopKey = null; // IMPORTANT: Clear any active shop selection
+        } else if (ui.selectedShopKey) {
+          // If no existing tower, but a shop item is selected, try to place it
+          const spec = TOWER_TYPES[ui.selectedShopKey];
+          if (isPlacementValid(gx, gy, spec) && state.money >= spec.cost) {
+            const newTower = new spec.class(gx, gy, ui.selectedShopKey);
+            newTower.level =
+              window.playerData.towerLevels[ui.selectedShopKey] || 1;
+            towers.push(newTower);
+
+            state.money -= spec.cost;
+            pulse(`-${spec.cost}`);
+            updateOccupiedCells();
+            ui.selectedShopKey = null;
+          } else {
+            if (state.money < spec.cost) {
+              pulse("Not enough $", "#f66");
+            }
+            // If placement is invalid or not enough money, still clear shop selection
+            ui.selectedShopKey = null;
+          }
         } else {
+          // No existing tower, no shop item selected. Tap on empty space.
           ui.selectedTower = null;
+          ui.selectedShopKey = null; // Clear any lingering shop selection (redundant if previous checks handled it, but safe)
         }
       }
     }
@@ -937,3 +966,55 @@ canvas.addEventListener("touchcancel", (e) => {
   touch.potentialSelection = null;
   ui.selectedShopKey = null;
 });
+
+// --- Game Initialization Logic ---
+async function initializeGame() {
+  // Load all sounds once at the start
+  soundManager.loadSound(
+    "gunnerShoot",
+    "./assets/sounds/gunnerTower.mp3",
+    0.2,
+    5
+  );
+  soundManager.loadSound(
+    "cannonShoot",
+    "./assets/sounds/cannonTower.mp3",
+    0.6,
+    5
+  );
+  soundManager.loadSound(
+    "doubleCannonShoot",
+    "./assets/sounds/doubleCannonTower.mp3",
+    0.4,
+    5
+  );
+
+  console.log(
+    "Sounds loaded. Waiting for user interaction to enable playback."
+  );
+
+  // Handle browser autoplay policies: resume AudioContext on first user interaction
+  const resumeAudio = () => {
+    if (soundManager.audioContext.state === "suspended") {
+      soundManager.audioContext
+        .resume()
+        .then(() => {
+          console.log("Audio context resumed.");
+        })
+        .catch((e) => {
+          console.error("Failed to resume audio context:", e);
+        });
+    }
+    document.removeEventListener("click", resumeAudio);
+    document.removeEventListener("touchend", resumeAudio);
+  };
+
+  document.addEventListener("click", resumeAudio, { once: true });
+  document.addEventListener("touchend", resumeAudio, { once: true });
+
+  // Start the game with a specific level (e.g., Level 1)
+  await startGame(1);
+}
+
+// Call the initialization function when the DOM is ready
+document.addEventListener("DOMContentLoaded", initializeGame);

@@ -1007,6 +1007,12 @@ async function initializeGame() {
     0.2,
     4
   );
+  await soundManager.loadSound(
+    "poisonShoot",
+    "./assets/sounds/poisonTower.mp3",
+    4,
+    2
+  );
 
   console.log("All sounds loaded");
 

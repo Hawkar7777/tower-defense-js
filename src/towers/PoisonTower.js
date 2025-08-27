@@ -5,6 +5,7 @@ import { ctx } from "../core.js";
 import { enemies, particles } from "../state.js";
 import { dist } from "../utils.js";
 import { spawnPoisonCloud } from "../effects.js";
+import { soundManager } from "../assets/sounds/SoundManager.js"; // Import the sound manager
 
 export class PoisonTower extends BaseTower {
   static SPEC = {
@@ -83,6 +84,9 @@ export class PoisonTower extends BaseTower {
   firePoison(target, spec) {
     // Get precise origin from the nozzle
     const c = this.getAttackOrigin();
+
+    // Play poison shoot sound
+    soundManager.playSound("poisonShoot", 0.3);
 
     // Initial damage
     target.damage(spec.dmg);

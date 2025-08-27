@@ -1001,6 +1001,12 @@ async function initializeGame() {
     0.2,
     5
   );
+  await soundManager.loadSound(
+    "teslaShoot",
+    "./assets/sounds/teslaTower.mp3",
+    0.2,
+    4
+  );
 
   console.log("All sounds loaded");
 

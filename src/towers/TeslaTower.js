@@ -6,6 +6,7 @@ import { enemies } from "../state.js";
 import { spawnLightningArc, spawnElectricExplosion } from "../effects.js";
 import { particles } from "../state.js";
 import { dist } from "../utils.js";
+import { soundManager } from "../assets/sounds/SoundManager.js"; // Import the sound manager
 
 export class TeslaTower extends BaseTower {
   static SPEC = {
@@ -71,6 +72,9 @@ export class TeslaTower extends BaseTower {
   fireLightning(primaryTarget, spec) {
     const c = this.center;
     const hitEnemies = new Set([primaryTarget]);
+
+    // Play tesla shoot sound
+    soundManager.playSound("teslaShoot", 0.3);
 
     // Damage primary target
     primaryTarget.damage(spec.dmg);

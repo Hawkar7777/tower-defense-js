@@ -205,7 +205,7 @@ export class SmallTank extends BaseTower {
       const diff =
         ((want - this._s.turretAngle + Math.PI) % (2 * Math.PI)) - Math.PI;
       this._s.turretAngle += diff * Math.min(1, dt * 5);
-      soundManager.playSound("smallTankShoot", 0.3);
+      soundManager.playSound("smallTankShoot", 0.2);
     }
 
     // Fire if ready

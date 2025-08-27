@@ -3,6 +3,7 @@ import { ctx } from "../core.js";
 import { enemies, projectiles, particles } from "../state.js";
 import { dist } from "../utils.js";
 import { TOWER_TYPES } from "../config.js";
+import { soundManager } from "../assets/sounds/SoundManager.js";
 
 /* ---------------- Behemoth Shell (Heavy Gauss Cannon Style) ---------------- */
 class BehemothShell {
@@ -301,6 +302,7 @@ export class BehemothTank extends BaseTower {
         minDist = d;
       }
     }
+
     return target;
   }
 
@@ -344,6 +346,7 @@ export class BehemothTank extends BaseTower {
         new BehemothShell(right, target, s.dmg, s.splash, s.bulletSpeed)
       );
 
+      soundManager.playSound("behemothTankShoot", 0.3);
       // Trigger visual effects
       this._s.recoil = 3.5;
       this._s.muzzleFlash = 0.6;
@@ -360,6 +363,7 @@ export class BehemothTank extends BaseTower {
       );
       this._s.topCool = 1 / s.topFireRate;
       this._s.topGunFlash = 0.3; // Brighter flash
+      soundManager.playSound("behemothRifleShoot", 0.3);
     }
   }
 

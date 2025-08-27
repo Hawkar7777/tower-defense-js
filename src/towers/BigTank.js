@@ -12,6 +12,7 @@ import { ctx } from "../core.js";
 import { enemies, projectiles, particles } from "../state.js";
 import { dist } from "../utils.js";
 import { TOWER_TYPES } from "../config.js";
+import { soundManager } from "../assets/sounds/SoundManager.js";
 
 /* ---------------- Big Shell (heavy) ---------------- */
 class BigTankShell {
@@ -296,6 +297,8 @@ class TopGunBullet {
         c: "#ffdca0",
         fade: 0.9,
       });
+      soundManager.playSound("bigTankRifleShoot", 0.3);
+
       this.dead = true;
       return;
     }
@@ -429,6 +432,7 @@ export class BigTank extends BaseTower {
       const topDiff =
         ((want - this._s.topGunAngle + Math.PI) % (2 * Math.PI)) - Math.PI;
       this._s.topGunAngle += topDiff * Math.min(1, dt * 6.0); // top gun tracks quicker
+      soundManager.playSound("bigTankShoot", 0.2);
     } else {
       this._s.turretAngle += Math.sin(performance.now() / 1500) * dt * 0.02;
       this._s.topGunAngle += Math.sin(performance.now() / 900) * dt * 0.03;

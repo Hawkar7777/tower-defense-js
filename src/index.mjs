@@ -1088,7 +1088,7 @@ async function initializeGame() {
   await soundManager.loadSound(
     "smallTankShoot",
     "./assets/sounds/smallTankTower.mp3",
-    3,
+    2,
     3
   );
   await soundManager.loadSound(
@@ -1096,6 +1096,30 @@ async function initializeGame() {
     "./assets/sounds/mediumTankTower.mp3",
     3,
     1
+  );
+  await soundManager.loadSound(
+    "bigTankShoot",
+    "./assets/sounds/bigTankTower.mp3",
+    3,
+    2
+  );
+  await soundManager.loadSound(
+    "bigTankRifleShoot",
+    "./assets/sounds/bigTankTowerRifle.mp3",
+    3,
+    2
+  );
+  await soundManager.loadSound(
+    "behemothTankShoot",
+    "./assets/sounds/behemothTankTower.mp3",
+    3,
+    2
+  );
+  await soundManager.loadSound(
+    "behemothRifleShoot",
+    "./assets/sounds/behemothTankRifle.mp3",
+    3,
+    2
   );
 
   console.log("All sounds loaded");

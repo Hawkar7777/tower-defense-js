@@ -341,8 +341,8 @@ export const TOWER_TYPES = {
     name: "Small Tank",
     cost: 350, // Slightly increased cost
     range: 170, // Increased range
-    fireRate: 1.8, // Faster fire rate
-    dmg: 180, // Increased damage
+    fireRate: 1.5, // Faster fire rate
+    dmg: 280, // Increased damage
     splash: 45, // Increased splash
     bulletSpeed: 400,
     color: "#556b2f",
@@ -358,8 +358,8 @@ export const TOWER_TYPES = {
     name: "Medium Tank",
     cost: 550, // Slightly increased cost
     range: 190, // Increased range
-    fireRate: 1.2, // Faster fire rate
-    dmg: 350, // Increased damage
+    fireRate: 0.8, // Faster fire rate
+    dmg: 550, // Increased damage
     splash: 70, // Increased splash
     bulletSpeed: 320,
     color: "#8b4513",

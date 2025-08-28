@@ -84,9 +84,9 @@ export class BaseTower {
       if (this.hexTimer <= 0) {
         this.isHexed = false;
       }
-      return;
     }
 
+    if (this.isHexed) return;
     const s = this.spec();
     this.cool -= dt;
     let best = null,
@@ -147,6 +147,14 @@ export class BaseTower {
 
   fireBeam(start, end, color) {
     // To be implemented in LaserTower
+  }
+
+  // ADD THIS METHOD TO FIX THE WARLOCK HEX ISSUE
+  applyHex(duration) {
+    this.isHexed = true;
+    this.hexTimer = duration;
+    // Force a minimum cooldown to prevent immediate firing after hex expires
+    this.cool = Math.max(this.cool, 0.25);
   }
 
   draw() {

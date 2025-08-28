@@ -142,6 +142,10 @@ export class BlackHawkTower extends BaseTower {
   }
 
   update(dt, enemiesList) {
+    super.update(dt, enemiesList);
+
+    // If hexed, don't do any GunTower-specific logic
+    if (this.isHexed) return;
     this.cool -= dt;
     this._s.rotorAngle += dt * 45;
     this._s.flightAngle -= dt * 0.7;

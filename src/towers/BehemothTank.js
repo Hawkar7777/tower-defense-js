@@ -307,6 +307,10 @@ export class BehemothTank extends BaseTower {
   }
 
   update(dt, enemiesList) {
+    super.update(dt, enemiesList);
+
+    // If hexed, don't do any GunTower-specific logic
+    if (this.isHexed) return;
     // Update internal state timers
     this.cool -= dt;
     this._s.recoil = Math.max(0, this._s.recoil - dt * 2.5);

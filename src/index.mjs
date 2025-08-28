@@ -1217,6 +1217,20 @@ async function initializeGame() {
       maxInstances: 2,
       isBossSound: true,
     },
+    {
+      id: "warlockStun",
+      path: "./assets/sounds/warlockStun.mp3",
+      volume: 2,
+      maxInstances: 2,
+      isBossSound: true,
+    },
+    {
+      id: "warlockMove",
+      path: "./assets/sounds/warlockMove.mp3",
+      volume: 2,
+      maxInstances: 2,
+      isBossSound: true,
+    },
   ];
 
   try {

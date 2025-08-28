@@ -2,9 +2,10 @@
 
 import { ctx } from "../core.js";
 import { clamp } from "../utils.js";
-import { state, towers } from "../state.js"; // 'towers' is already imported, which is great!
+import { state, towers } from "../state.js";
 import { BaseBoss } from "./BaseBoss.js";
 import { BOSS_TYPES } from "./boss-types.js";
+import { soundManager } from "../assets/sounds/SoundManager.js";
 
 export class warlock extends BaseBoss {
   constructor() {
@@ -14,9 +15,11 @@ export class warlock extends BaseBoss {
 
     this.hexTarget = null;
     this.hexRange = 300;
-    this.hexDuration = 5;
+    this.hexDuration = 4;
     this.hexCooldown = 8000;
     this.lastHexTime = -this.hexCooldown;
+
+    this.lastMoveSound = 0;
 
     this.siphonHealAmount = 300 * difficultyMult;
   }
@@ -31,6 +34,7 @@ export class warlock extends BaseBoss {
         if (tower.totalCost > maxCost) {
           maxCost = tower.totalCost;
           bestTarget = tower;
+          soundManager.playSound("warlockStun", 0.3);
         }
       }
     }
@@ -41,30 +45,53 @@ export class warlock extends BaseBoss {
     super.update(dt);
     if (this.dead) return;
 
-    // --- FIX: Add this block to validate the target ---
-    // First, check if the current target is still valid (i.e., hasn't been sold).
-    // The .includes() check is an efficient way to see if the tower is still in the game.
+    soundManager.playSound("warlockMove", 0.1);
+
+    // Clean up invalid target
     if (this.hexTarget && !towers.includes(this.hexTarget)) {
-      this.hexTarget = null; // Forget the sold tower.
+      this.hexTarget = null;
     }
-    // --- END OF FIX ---
 
     const now = performance.now();
+
+    // If existing target moved out of range or died, clear it immediately
+    if (this.hexTarget) {
+      const dCur = Math.hypot(
+        this.pos.x - this.hexTarget.x,
+        this.pos.y - this.hexTarget.y
+      );
+      if (this.hexTarget.dead || dCur > this.hexRange) {
+        if (this.hexTarget.isHexed) {
+          this.hexTarget.isHexed = false;
+          this.hexTarget.hexTimer = 0;
+        }
+        this.hexTarget = null;
+      }
+    }
+
     if (now - this.lastHexTime > this.hexCooldown) {
-      // Only search for a new target if we don't currently have one.
       if (!this.hexTarget) {
         const target = this.findHexTarget();
         if (target) {
+          // FIX: Use the applyHex method if it exists, otherwise fall back to direct property setting
+          if (typeof target.applyHex === "function") {
+            target.applyHex(this.hexDuration);
+          } else {
+            // Fallback for towers that don't have applyHex method
+            target.isHexed = true;
+            target.hexTimer = this.hexDuration;
+            // Force a minimum cooldown to prevent immediate firing after hex expires
+            target.cool = Math.max(target.cool, 0.25);
+          }
+
           this.hexTarget = target;
-          this.hexTarget.isHexed = true;
-          this.hexTarget.hexTimer = this.hexDuration;
           this.lastHexTime = now;
           this.hp = Math.min(this.maxHp, this.hp + this.siphonHealAmount);
         }
       }
     }
 
-    // This handles the case where the hex effect wears off naturally.
+    // Clean up stale references
     if (this.hexTarget && this.hexTarget.isHexed === false) {
       this.hexTarget = null;
     }
@@ -75,8 +102,8 @@ export class warlock extends BaseBoss {
     const { x, y } = this.pos;
     const TAU = Math.PI * 2;
 
-    // The Hex Beam will now correctly stop drawing when the target is null.
-    if (this.hexTarget) {
+    // Draw hex beam to target
+    if (this.hexTarget && this.hexTarget.isHexed) {
       ctx.beginPath();
       ctx.moveTo(x, y);
       ctx.lineTo(this.hexTarget.x, this.hexTarget.y);
@@ -87,7 +114,7 @@ export class warlock extends BaseBoss {
       ctx.globalAlpha = 1.0;
     }
 
-    // The rest of the draw function remains the same.
+    // The rest of the draw function remains the same
     const grd = ctx.createRadialGradient(x, y, this.r * 0.2, x, y, this.r);
     grd.addColorStop(0, "#fff");
     grd.addColorStop(0.5, this.glowColor);

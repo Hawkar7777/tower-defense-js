@@ -6,10 +6,9 @@ export const levels = [
     level: 1,
     mapFile: "./map/map11.tmj", // Use the .tmj file
     startMoney: 100000000, // Very generous for testing purposes
-    startLives: 150,
+    startLives: 1,
     waves: [
-      { boss: "Goliath" },
-      { boss: "Phantom" },
+      { boss: "Warlock" },
 
       // { count: 10, types: { swarmer: 1.0 } }, // Swarmers can be spawned independently for testing
       // // --- Individual Regular Enemy Waves (count: 1 for each type) ---

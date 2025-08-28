@@ -3,6 +3,7 @@ import { ctx, MAP_GRID_W, TILE } from "../core.js";
 import { enemies, projectiles, particles } from "../state.js";
 import { dist, clamp } from "../utils.js";
 import { TOWER_TYPES } from "../config.js";
+import { soundManager } from "../assets/sounds/SoundManager.js";
 
 /* -------------------- New Strategic Missile Class (Design Made Larger) -------------------- */
 class StrategicMissile {
@@ -62,6 +63,7 @@ class StrategicMissile {
   }
 
   createExplosion(position, radius) {
+    soundManager.playSound("b2Explosion", 0.3);
     // Damage all enemies within the massive blast radius
     enemies.forEach((enemy) => {
       if (!enemy.dead && dist(position, enemy.pos) < radius) {
@@ -167,6 +169,8 @@ export class B52SpiritTower extends BaseTower {
         const startX = MAP_GRID_W * TILE + 200;
         this.bomberPos = { x: startX, y: Math.random() * 100 + 50 };
         this.cool = 1 / s.fireRate;
+
+        soundManager.playSound("b2Alarm", 0.1);
       }
     } else if (this.bomberState === "flyingToTarget") {
       // --- CHANGE: The entire firing logic is updated here ---
@@ -200,6 +204,7 @@ export class B52SpiritTower extends BaseTower {
             s.bulletSpeed * 1.5
           )
         );
+        soundManager.playSound("b2Launch", 0.3);
         this.bomberState = "returning";
       }
 

@@ -3,6 +3,7 @@ import { ctx } from "../core.js";
 import { enemies, projectiles, particles } from "../state.js";
 import { dist, clamp } from "../utils.js";
 import { TOWER_TYPES } from "../config.js";
+import { soundManager } from "../assets/sounds/SoundManager.js";
 
 /* ------------------ Guided Missile (Visually Upgraded) ------------------ */
 class Missile {
@@ -56,6 +57,8 @@ class Missile {
   }
 
   createExplosion(position, radius) {
+    soundManager.playSound("jetExplosion", 0.3);
+
     enemies.forEach((enemy) => {
       if (!enemy.dead && dist(position, enemy.pos) < radius) {
         if (typeof enemy.damage === "function") {
@@ -206,9 +209,11 @@ export class JetTower extends BaseTower {
         x: this._s.flightPos.x - Math.cos(this._s.bodyAngle) * 20,
         y: this._s.flightPos.y - Math.sin(this._s.bodyAngle) * 20,
       };
+
       projectiles.push(
         new Missile(missileOrigin, target, s.dmg, s.bulletSpeed)
       );
+      soundManager.playSound("jetShoot", 0.3);
     }
   }
 

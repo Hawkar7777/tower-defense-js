@@ -6,7 +6,7 @@ export const levels = [
     level: 1,
     mapFile: "./map/map11.tmj", // Use the .tmj file
     startMoney: 100000000, // Very generous for testing purposes
-    startLives: 50,
+    startLives: 150,
     waves: [
       { count: 10, types: { swarmer: 1.0 } }, // Swarmers can be spawned independently for testing
       // --- Individual Regular Enemy Waves (count: 1 for each type) ---
@@ -20,9 +20,9 @@ export const levels = [
       { count: 10, types: { leech: 1.0 } },
       { count: 10, types: { shifter: 1.0 } },
       { count: 10, types: { hive: 1.0 } },
-      { count: 1, types: { specter: 1.0 } },
-      { count: 1, types: { collector: 1.0 } },
-      { count: 1, types: { disruptor: 1.0 } },
+      { count: 10, types: { specter: 1.0 } },
+      { count: 10, types: { collector: 1.0 } },
+      { count: 10, types: { disruptor: 1.0 } },
 
       // --- Individual Boss Waves (1 boss per wave) ---
       { boss: "Goliath" },
@@ -34,6 +34,7 @@ export const levels = [
       { boss: "Scorcher" },
       { boss: "Devastator" },
       { boss: "Reaper" },
+      { bosses: ["Reaper", "Devastator"] },
 
       // You can add more specific test waves here if needed,
       // for example, a wave with two specific bosses:

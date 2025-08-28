@@ -1145,6 +1145,32 @@ async function initializeGame() {
     2,
     2
   );
+  await soundManager.loadSound(
+    "jetShoot",
+    "./assets/sounds/jetTower.mp3",
+    2,
+    2
+  );
+  await soundManager.loadSound(
+    "jetExplosion",
+    "./assets/sounds/jetTowerExplosion.mp3",
+    2,
+    2
+  );
+  await soundManager.loadSound("b2Alarm", "./assets/sounds/b2Alarm.mp3", 2, 1);
+  await soundManager.loadSound(
+    "b2Launch",
+    "./assets/sounds/b2Launch.mp3",
+    2,
+    2
+  );
+
+  await soundManager.loadSound(
+    "b2Explosion",
+    "./assets/sounds/B2Explosion.mp3",
+    2,
+    2
+  );
 
   console.log("All sounds loaded");
 

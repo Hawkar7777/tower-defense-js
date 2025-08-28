@@ -3,6 +3,7 @@ import { clamp } from "../utils.js";
 import { state } from "../state.js";
 import { BaseBoss } from "./BaseBoss.js";
 import { BOSS_TYPES } from "./boss-types.js";
+import { soundManager } from "../assets/sounds/SoundManager.js";
 
 export class phantom extends BaseBoss {
   constructor() {
@@ -19,6 +20,15 @@ export class phantom extends BaseBoss {
 
   update(dt) {
     const now = performance.now();
+
+    if (!this.dead && !this.phasing) {
+      // 🎵 subtle movement sound (low volume so it doesn’t spam)
+      if (Math.random() < 0.002) {
+        // ~ sometimes, not every frame
+        soundManager.playSound("phantomMove", 0.2);
+      }
+    }
+
     if (
       !this.phasing &&
       (now - this.lastPhaseTime) / 1000 > this.phaseCooldown
@@ -27,6 +37,8 @@ export class phantom extends BaseBoss {
       this.phaseStartTime = now;
       this.lastPhaseTime = now;
       this.t += this.phaseDistance;
+
+      soundManager.playSound("phantomTeleport", 0.3);
     }
     if (
       this.phasing &&
@@ -40,6 +52,8 @@ export class phantom extends BaseBoss {
   damage(d) {
     if (this.phasing || this.dead) return;
     super.damage(d);
+
+    soundManager.playSound("phantomHit", 0.3);
   }
 
   draw() {

@@ -9,6 +9,7 @@ export const levels = [
     startLives: 150,
     waves: [
       { boss: "Goliath" },
+      { boss: "Phantom" },
 
       // { count: 10, types: { swarmer: 1.0 } }, // Swarmers can be spawned independently for testing
       // // --- Individual Regular Enemy Waves (count: 1 for each type) ---

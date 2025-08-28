@@ -343,6 +343,7 @@ function loop(ts) {
  * Public function to initialize and start a specific level.
  */
 export async function startGame(levelNumber) {
+  soundManager.setBossSoundsEnabled(true);
   // Made async to await map loading
   currentLevelConfig = levels.find((l) => l.level === levelNumber);
   if (!currentLevelConfig) {
@@ -384,6 +385,8 @@ export async function startGame(levelNumber) {
 }
 
 function stopGame() {
+  soundManager.setBossSoundsEnabled(false);
+
   state.running = false;
   if (animationFrameId) {
     cancelAnimationFrame(animationFrameId);
@@ -392,6 +395,7 @@ function stopGame() {
 }
 
 function gameOver() {
+  soundManager.setBossSoundsEnabled(false);
   stopGame();
   // Draw one final frame to show the game over state
   ctx.clearRect(0, 0, canvas.clientWidth, canvas.clientHeight); // Clear the whole canvas
@@ -425,6 +429,8 @@ function gameOver() {
 }
 
 function levelComplete() {
+  soundManager.setBossSoundsEnabled(false);
+
   stopGame();
   const unlocked = parseInt(
     localStorage.getItem("towerDefenseHighestLevel") || "1"
@@ -1181,12 +1187,35 @@ async function initializeGame() {
       path: "./assets/sounds/goliathMove.mp3",
       volume: 2,
       maxInstances: 2,
+      isBossSound: true,
     },
     {
       id: "minionSpawn",
       path: "./assets/sounds/minionSpawn.mp3",
       volume: 2,
       maxInstances: 2,
+      isBossSound: true,
+    },
+    {
+      id: "phantomMove",
+      path: "./assets/sounds/phantomMove.mp3",
+      volume: 2,
+      maxInstances: 2,
+      isBossSound: true,
+    },
+    {
+      id: "phantomTeleport",
+      path: "./assets/sounds/phantomTeleport.mp3",
+      volume: 2,
+      maxInstances: 2,
+      isBossSound: true,
+    },
+    {
+      id: "phantomHit",
+      path: "./assets/sounds/phantomHit.mp3",
+      volume: 2,
+      maxInstances: 2,
+      isBossSound: true,
     },
   ];
 
@@ -1198,7 +1227,8 @@ async function initializeGame() {
           config.id,
           config.path,
           config.volume,
-          config.maxInstances
+          config.maxInstances,
+          config.isBossSound
         )
       )
     );
@@ -1217,12 +1247,12 @@ async function initializeGame() {
     document.addEventListener("touchend", resumeAudio, { once: true });
     document.addEventListener("keydown", resumeAudio, { once: true });
 
+    soundManager.setBossSoundsEnabled(false);
     // Start the game
-    await startGame(1);
+    // await startGame(1);
   } catch (error) {
     console.error("Error loading sounds:", error);
     // Handle error (maybe continue without some sounds or show error message)
-    await startGame(1);
   }
 }
 // Set up audio resume on user interaction

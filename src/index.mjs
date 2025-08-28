@@ -1266,6 +1266,20 @@ async function initializeGame() {
       maxInstances: 2,
       isBossSound: true,
     },
+    {
+      id: "scorcherMissle",
+      path: "./assets/sounds/scorcherMissle.mp3",
+      volume: 2,
+      maxInstances: 2,
+      isBossSound: true,
+    },
+    {
+      id: "scorcherExplode",
+      path: "./assets/sounds/scorcherExplode.mp3",
+      volume: 2,
+      maxInstances: 2,
+      isBossSound: true,
+    },
   ];
 
   try {

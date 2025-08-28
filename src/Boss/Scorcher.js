@@ -6,6 +6,7 @@ import { BOSS_TYPES } from "./boss-types.js";
 import { spawnExplosion } from "../effects.js";
 import { updateOccupiedCells } from "../occupation.js";
 import { pointAt } from "../path.js";
+import { soundManager } from "../assets/sounds/SoundManager.js";
 
 export class Scorcher extends BaseBoss {
   constructor() {
@@ -69,6 +70,8 @@ export class Scorcher extends BaseBoss {
   }
 
   shootTower(target) {
+    soundManager.playSound("scorcherMissle", 0.3);
+
     // Fire from the launcher's position, not the center of the vehicle
     const launcherCenter = {
       x: this.pos.x + Math.cos(this.launcherRotation - 0.1) * (this.r * 1.1),
@@ -98,6 +101,11 @@ export class Scorcher extends BaseBoss {
 
         if (d < 10) {
           this.dead = true;
+
+          // Play explosion sound on hit
+          soundManager.playSound("scorcherExplode", 0.3);
+
+          // Spawn visual explosion and apply AoE damage
           spawnExplosion(this.x, this.y, this.aoeRadius, "#ff8c00");
 
           const destroyedTowers = [];
@@ -157,12 +165,34 @@ export class Scorcher extends BaseBoss {
     projectiles.push(missile);
   }
 
-  // --- NEW "VERY NICE" HIGH-DETAIL DRAW METHOD ---
+  // --- NEW "VERY NICE" HIGH-DETAIL DRAW METHOD (with HP number under the bar) ---
   draw() {
-    super.draw(); // Draws the health bar
+    // Draw the health bar (via BaseBoss)
+    super.draw();
     if (this.dead) return;
 
+    // --- Numeric HP under the health bar (Warlock-style placement) ---
     const { x, y } = this.pos;
+    const w = 55,
+      h = 6;
+    const barY = y - this.r - 18; // same placement as Warlock
+    const hpText = `${Math.round(this.hp)}/${Math.round(this.maxHp)}`;
+    const textY = barY + h + 10; // place just under the bar
+
+    ctx.font = "12px sans-serif";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+
+    // Dark stroke for readability
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = "rgba(0,0,0,0.6)";
+    ctx.strokeText(hpText, x, textY);
+
+    // White fill on top
+    ctx.fillStyle = "#fff";
+    ctx.fillText(hpText, x, textY);
+
+    // --- The rest of the Scorcher drawing (vehicle, launcher, etc.) ---
     const r = this.r;
 
     const lookAheadPos = pointAt(this.t + 0.01);

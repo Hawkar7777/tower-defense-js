@@ -1231,6 +1231,13 @@ async function initializeGame() {
       maxInstances: 2,
       isBossSound: true,
     },
+    {
+      id: "JuggernautRifle",
+      path: "./assets/sounds/JuggernautRifle.mp3",
+      volume: 2,
+      maxInstances: 2,
+      isBossSound: true,
+    },
   ];
 
   try {

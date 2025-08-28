@@ -1238,6 +1238,20 @@ async function initializeGame() {
       maxInstances: 2,
       isBossSound: true,
     },
+    {
+      id: "baslikAura",
+      path: "./assets/sounds/baslikTower.mp3",
+      volume: 2,
+      maxInstances: 2,
+      isBossSound: true,
+    },
+    {
+      id: "baslikDeath",
+      path: "./assets/sounds/baslikDeath.mp3",
+      volume: 2,
+      maxInstances: 2,
+      isBossSound: true,
+    },
   ];
 
   try {

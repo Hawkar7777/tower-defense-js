@@ -5,12 +5,12 @@ import { BOSS_TYPES } from "./boss-types.js";
 import { state, towers } from "../state.js";
 import { dist } from "../utils.js";
 import { ctx } from "../core.js";
+import { soundManager } from "../assets/sounds/SoundManager.js";
 
 export class Basilisk extends BaseBoss {
   constructor(difficultyMult) {
     const spec = BOSS_TYPES.Basilisk;
     super(spec, difficultyMult);
-
     // --- FIX 1: Add a safeguard for the slowFactor ---
     // If the value from the config is missing, invalid, or >= 1,
     // default to 0.5 (a 50% slow). This makes the code safer.
@@ -26,6 +26,9 @@ export class Basilisk extends BaseBoss {
     if (this.dead) {
       return; // Cleanup is now handled by the new cleanup() method
     }
+    // 🔊 Play move sound only if Basilisk is moving
+    // Play sound once per step or use a looped sound
+    soundManager.playSound("baslikAura", 0.3);
     this.applyAura();
   }
 
@@ -57,17 +60,20 @@ export class Basilisk extends BaseBoss {
     this.affectedTowers.clear();
   }
 
-  // Draw method remains the same...
   draw() {
     super.draw();
-    if (this.dead) return; // Add a safety check here
+    if (this.dead) return;
     const { x, y } = this.pos;
+
+    // --- Aura circle ---
     ctx.globalAlpha = 0.15;
     ctx.fillStyle = this.glowColor;
     ctx.beginPath();
     ctx.arc(x, y, this.auraRange, 0, Math.PI * 2);
     ctx.fill();
     ctx.globalAlpha = 1.0;
+
+    // --- Body ---
     ctx.fillStyle = this.color;
     ctx.beginPath();
     ctx.arc(x, y, this.r, 0, Math.PI * 2);
@@ -75,6 +81,41 @@ export class Basilisk extends BaseBoss {
     ctx.strokeStyle = this.detailColor;
     ctx.lineWidth = 2;
     ctx.stroke();
+
+    // --- Health bar above Basilisk ---
+    const w = 60,
+      h = 6;
+    const barY = y - this.r - 20;
+    ctx.fillStyle = "#202326";
+    ctx.fillRect(x - w / 2 - 1, barY - 1, w + 2, h + 2); // bezel
+    ctx.fillStyle = "#111418";
+    ctx.fillRect(x - w / 2, barY, w, h); // dark background
+    const hpPercent = Math.max(0, this.hp / this.maxHp);
+    const healthGrad = ctx.createLinearGradient(x - w / 2, 0, x + w / 2, 0);
+    if (hpPercent > 0.5) {
+      healthGrad.addColorStop(0, "#46d46a");
+      healthGrad.addColorStop(1, "#7be08d");
+    } else if (hpPercent > 0.25) {
+      healthGrad.addColorStop(0, "#fdc04a");
+      healthGrad.addColorStop(1, "#f8a63a");
+    } else {
+      healthGrad.addColorStop(0, "#f66a6a");
+      healthGrad.addColorStop(1, "#ff4a4a");
+    }
+    ctx.fillStyle = healthGrad;
+    ctx.fillRect(x - w / 2, barY, w * hpPercent, h);
+
+    // --- HP number under the bar ---
+    ctx.font = "10px sans-serif";
+    ctx.fillStyle = "rgba(255,255,255,0.9)";
+    ctx.textAlign = "center";
+    ctx.fillText(
+      Math.ceil(this.hp) + " / " + Math.ceil(this.maxHp),
+      x,
+      barY + h + 12
+    );
+
+    // --- Decorative details (rotating spikes) ---
     ctx.save();
     ctx.translate(x, y);
     ctx.rotate(this.animationOffset);
@@ -88,6 +129,8 @@ export class Basilisk extends BaseBoss {
       ctx.fill();
     }
     ctx.restore();
+
+    // --- Eyes ---
     const eyeDist = this.r * 0.5;
     for (let i = -1; i <= 1; i += 2) {
       const eyeX = x + Math.cos(this.animationOffset * 0.5) * eyeDist * i;

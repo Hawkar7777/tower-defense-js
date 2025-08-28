@@ -7,6 +7,7 @@ import { spawnExplosion, spawnMuzzle } from "../effects.js";
 import { updateOccupiedCells } from "../occupation.js";
 import { pointAt } from "../path.js";
 import { roundRect } from "../helpers.js"; // Assuming you have this helper for rounded rectangles
+import { soundManager } from "../assets/sounds/SoundManager.js";
 
 export class Devastator extends BaseBoss {
   constructor() {
@@ -120,6 +121,7 @@ export class Devastator extends BaseBoss {
   }
 
   shootTower(target) {
+    soundManager.playSound("devastatorShoot", 0.3);
     const muzzlePos = {
       x: this.pos.x + Math.cos(this.turretRotation) * (this.r * 1.2),
       y: this.pos.y + Math.sin(this.turretRotation) * (this.r * 1.2),
@@ -183,12 +185,34 @@ export class Devastator extends BaseBoss {
     projectiles.push(projectile);
   }
 
-  // --- "SO NICEEEEE" HIGH-DETAIL DRAW METHOD ---
+  // --- "SO NICEEEEE" HIGH-DETAIL DRAW METHOD (with HP number under bar) ---
   draw() {
+    // Draw the health bar via BaseBoss
     super.draw();
     if (this.dead) return;
 
+    // --- Numeric HP under the health bar (Warlock-style placement) ---
     const { x, y } = this.pos;
+    const w = 55,
+      h = 6;
+    const barY = y - this.r - 18; // same placement as Warlock
+    const hpText = `${Math.round(this.hp)}/${Math.round(this.maxHp)}`;
+    const textY = barY + h + 10; // place just under the bar
+
+    ctx.font = "12px sans-serif";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+
+    // Dark stroke for readability
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = "rgba(0,0,0,0.6)";
+    ctx.strokeText(hpText, x, textY);
+
+    // White fill on top
+    ctx.fillStyle = "#fff";
+    ctx.fillText(hpText, x, textY);
+
+    // --- Continue with all your existing Devastator visuals ---
     const r = this.r;
 
     const lookAheadPos = pointAt(this.t + 0.01);
@@ -253,7 +277,7 @@ export class Devastator extends BaseBoss {
     ctx.moveTo(r * 0.9, -r * 0.7); // Hood corner
     ctx.lineTo(r * 1.1, -r * 0.6); // Bumper
     ctx.lineTo(r * 1.1, r * 0.6);
-    ctx.lineTo(r * 0.9, r * 0.7);
+    ctx.lineTo(r * 0.9, r * 0.4);
     ctx.lineTo(-r * 0.9, r * 0.7); // Rear
     ctx.lineTo(-r * 1.0, r * 0.6);
     ctx.lineTo(-r * 1.0, -r * 0.6);

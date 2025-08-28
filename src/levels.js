@@ -8,7 +8,7 @@ export const levels = [
     startMoney: 100000000, // Very generous for testing purposes
     startLives: 1,
     waves: [
-      { boss: "Scorcher" },
+      { boss: "Reaper" },
 
       // { count: 10, types: { swarmer: 1.0 } }, // Swarmers can be spawned independently for testing
       // // --- Individual Regular Enemy Waves (count: 1 for each type) ---

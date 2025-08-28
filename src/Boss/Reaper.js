@@ -7,6 +7,7 @@ import { spawnExplosion, spawnMuzzle } from "../effects.js";
 import { updateOccupiedCells } from "../occupation.js";
 import { roundRect } from "../helpers.js";
 import { pointAt } from "../path.js";
+import { soundManager } from "../assets/sounds/SoundManager.js";
 
 /**
  * A redesigned Reaper boss, inspired by modern attack helicopters.
@@ -57,6 +58,8 @@ export class Reaper extends BaseBoss {
     super.update(dt);
     if (this.dead) return;
 
+    soundManager.playSound("blackHawkMove", 0.1);
+
     this.attackCooldown -= dt;
     this.bobOffset += dt * 4; // Update bobbing animation
 
@@ -79,6 +82,7 @@ export class Reaper extends BaseBoss {
   }
 
   shootAt(target) {
+    soundManager.playSound("reaperShoot", 0.3);
     const muzzleOffset = this.r * 1.2;
     const muzzleX = this.pos.x + Math.cos(this.weaponRotation) * muzzleOffset;
     const muzzleY = this.pos.y + Math.sin(this.weaponRotation) * muzzleOffset;
@@ -136,12 +140,35 @@ export class Reaper extends BaseBoss {
   }
 
   // --- DRAW METHOD REFACTORED FOR CLARITY ---
-
   draw() {
+    // Draw base health bar and other base visuals
     super.draw();
     if (this.dead) return;
 
+    // --- Numeric HP ABOVE the health bar (bigger bosses look better with it above) ---
     const { x, y } = this.pos;
+    const w = 55,
+      h = 6;
+    const barY = y - this.r - 18; // base bar placement used by BaseBoss (Warlock-style)
+    // place the text above the bar
+    const textY = barY - h - 10;
+
+    const hpText = `${Math.round(this.hp)}/${Math.round(this.maxHp)}`;
+
+    ctx.font = "14px sans-serif"; // slightly larger for big boss
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+
+    // Dark stroke for readability
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = "rgba(0,0,0,0.6)";
+    ctx.strokeText(hpText, x, textY);
+
+    // White fill on top
+    ctx.fillStyle = "#fff";
+    ctx.fillText(hpText, x, textY);
+
+    // --- continue original drawing ---
     const r = this.r;
     const lookAheadPos = pointAt(this.t + 0.01);
     const bodyRotation = Math.atan2(lookAheadPos.y - y, lookAheadPos.x - x);

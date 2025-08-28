@@ -41,8 +41,6 @@ export class TeslaTower extends BaseTower {
   }
 
   update(dt, enemiesList) {
-    super.update(dt, enemiesList);
-
     // If hexed, don't do any GunTower-specific logic
     if (this.isHexed) return;
     const s = this.spec();

@@ -40,11 +40,9 @@ export class BaseBoss {
       this.dead = true;
       state.money += this.reward;
       spawnDeath(this.pos, this.r);
-
-      // 🔑 NEW: call die() so subclasses can add sounds/effects
-      this.die();
-
-      this.cleanup(); // still clean up aura/effects
+      // --- FIX: Immediately call cleanup when the boss dies ---
+      // This ensures effects like auras are removed instantly.
+      this.cleanup();
     }
   }
 

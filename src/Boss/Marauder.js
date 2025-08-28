@@ -6,6 +6,7 @@ import { BOSS_TYPES } from "./boss-types.js";
 import { spawnExplosion, spawnMuzzle } from "../effects.js";
 import { updateOccupiedCells } from "../occupation.js";
 import { pointAt } from "../path.js"; // Needed for drawing rotation
+import { soundManager } from "../assets/sounds/SoundManager.js";
 
 export class Marauder extends BaseBoss {
   constructor() {
@@ -45,6 +46,8 @@ export class Marauder extends BaseBoss {
     super.update(dt); // Handles movement and leaking
     if (this.dead) return;
 
+    soundManager.playSound("marauderMove", 0.3);
+
     this.attackCooldown -= dt;
 
     // If target is gone or out of range, find a new one
@@ -73,6 +76,7 @@ export class Marauder extends BaseBoss {
   }
 
   shootTower(target) {
+    soundManager.playSound("marauderRifle", 0.3);
     const muzzlePos = {
       x: this.pos.x + Math.cos(this.turretRotation) * (this.r * 1.2),
       y: this.pos.y + Math.sin(this.turretRotation) * (this.r * 1.2),
@@ -131,6 +135,7 @@ export class Marauder extends BaseBoss {
   }
 
   // --- NEW, HIGH-DETAIL DRAW METHOD ---
+  // --- REPLACEMENT DRAW METHOD (Marauder) ---
   draw() {
     super.draw(); // Draws the health bar
     if (this.dead) return;
@@ -138,6 +143,28 @@ export class Marauder extends BaseBoss {
     const { x, y } = this.pos;
     const r = this.r;
 
+    // --- Numeric HP under the health bar (Warlock-style position) ---
+    // Match Warlock's bar placement: barY = y - r - 18
+    const w = 55,
+      h = 6;
+    const barY = y - r - 18;
+    const hpText = `${Math.round(this.hp)}/${Math.round(this.maxHp)}`;
+    const textY = barY + h + 10; // place just under the bar
+
+    ctx.font = "12px sans-serif";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+
+    // Dark stroke for readability
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = "rgba(0,0,0,0.6)";
+    ctx.strokeText(hpText, x, textY);
+
+    // White fill on top
+    ctx.fillStyle = "#fff";
+    ctx.fillText(hpText, x, textY);
+
+    // --- Continue existing Marauder drawing (truck, turret, etc.) ---
     // Make the truck body point in the direction it's moving
     const lookAheadPos = pointAt(this.t + 0.01);
     const bodyRotation = Math.atan2(lookAheadPos.y - y, lookAheadPos.x - x);

@@ -1252,6 +1252,20 @@ async function initializeGame() {
       maxInstances: 2,
       isBossSound: true,
     },
+    {
+      id: "marauderRifle",
+      path: "./assets/sounds/marauderRifle.mp3",
+      volume: 2,
+      maxInstances: 2,
+      isBossSound: true,
+    },
+    {
+      id: "marauderMove",
+      path: "./assets/sounds/marauderMove.mp3",
+      volume: 2,
+      maxInstances: 2,
+      isBossSound: true,
+    },
   ];
 
   try {

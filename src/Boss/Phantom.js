@@ -60,11 +60,13 @@ export class phantom extends BaseBoss {
     if (this.dead) return;
     const { x, y } = this.pos;
     const TAU = Math.PI * 2;
+
     ctx.globalAlpha = this.phasing ? 0.3 : 1.0;
     ctx.fillStyle = this.color;
     ctx.beginPath();
     ctx.arc(x, y, this.r, 0, TAU);
     ctx.fill();
+
     ctx.strokeStyle = this.detailColor;
     ctx.lineWidth = 3;
     for (let i = 0; i < 3; i++) {
@@ -77,6 +79,7 @@ export class phantom extends BaseBoss {
       );
       ctx.stroke();
     }
+
     const grd = ctx.createRadialGradient(x, y, 2, x, y, this.r + 5);
     grd.addColorStop(0, this.glowColor);
     grd.addColorStop(1, "rgba(0,255,255,0.0)");
@@ -84,7 +87,10 @@ export class phantom extends BaseBoss {
     ctx.beginPath();
     ctx.arc(x, y, this.r + 8, 0, TAU);
     ctx.fill();
+
+    // restore full alpha so UI text is readable even while phasing
     ctx.globalAlpha = 1.0;
+
     const w = 50,
       h = 6;
     const barY = y - this.r - 18;
@@ -93,5 +99,24 @@ export class phantom extends BaseBoss {
     const hpPercent = clamp(this.hp / this.maxHp, 0, 1);
     ctx.fillStyle = "#6f6";
     ctx.fillRect(x - w / 2, barY, w * hpPercent, h);
+
+    // --- Numeric HP under the health bar (Warlock-style) ---
+    const hpText = `${Math.round(Math.max(0, this.hp))}/${Math.round(
+      this.maxHp
+    )}`;
+    const hpTextY = barY + h + 10; // slightly below the bar
+
+    ctx.font = "12px sans-serif";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+
+    // dark stroke for readability
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = "rgba(0,0,0,0.6)";
+    ctx.strokeText(hpText, x, hpTextY);
+
+    // main fill
+    ctx.fillStyle = "#fff";
+    ctx.fillText(hpText, x, hpTextY);
   }
 }

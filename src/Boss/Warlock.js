@@ -1,5 +1,3 @@
-// ===== FILE: Boss/Warlock.js =====
-
 import { ctx } from "../core.js";
 import { clamp } from "../utils.js";
 import { state, towers } from "../state.js";
@@ -142,5 +140,24 @@ export class warlock extends BaseBoss {
     ctx.fillStyle =
       hpPercent > 0.5 ? "#6f6" : hpPercent > 0.25 ? "#fd6" : "#f66";
     ctx.fillRect(x - w / 2, barY, w * hpPercent, h);
+
+    // --- Numeric HP under the health bar (Warlock-style) ---
+    const hpText = `${Math.round(Math.max(0, this.hp))}/${Math.round(
+      this.maxHp
+    )}`;
+    const hpTextY = barY + h + 10; // slightly below the bar
+
+    ctx.font = "12px sans-serif";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+
+    // dark stroke for readability
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = "rgba(0,0,0,0.6)";
+    ctx.strokeText(hpText, x, hpTextY);
+
+    // main fill
+    ctx.fillStyle = "#fff";
+    ctx.fillText(hpText, x, hpTextY);
   }
 }

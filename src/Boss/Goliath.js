@@ -5,6 +5,7 @@ import { state, enemies } from "../state.js";
 import { createEnemy } from "../enemy.js";
 import { BaseBoss } from "./BaseBoss.js";
 import { BOSS_TYPES } from "./boss-types.js";
+import { soundManager } from "../assets/sounds/SoundManager.js";
 
 export class goliath extends BaseBoss {
   constructor() {
@@ -27,12 +28,17 @@ export class goliath extends BaseBoss {
     }
     super.update(dt);
 
+    if (!this.dead && this.speed > 0) {
+      soundManager.playSound("goliathMove", 0.3);
+    }
+
     const now = performance.now();
     if (now - this.lastMinionSpawnTime > this.minionSpawnCooldown) {
       this.lastMinionSpawnTime = now;
       const minion = createEnemy("basic");
       minion.t = this.t;
       enemies.push(minion);
+      soundManager.playSound("minionSpawn", 0.3);
     }
   }
 

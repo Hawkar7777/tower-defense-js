@@ -970,224 +970,260 @@ canvas.addEventListener("touchcancel", (e) => {
 // --- Game Initialization Logic ---
 // --- Game Initialization Logic ---
 async function initializeGame() {
-  // Load all sounds
-  await soundManager.loadSound(
-    "gunnerShoot",
-    "./assets/sounds/gunnerTower.mp3",
-    0.2,
-    5
-  );
-  await soundManager.loadSound(
-    "cannonShoot",
-    "./assets/sounds/cannonTower.mp3",
-    0.6,
-    5
-  );
-  await soundManager.loadSound(
-    "doubleCannonShoot",
-    "./assets/sounds/doubleCannonTower.mp3",
-    0.6,
-    5
-  );
-  await soundManager.loadSound(
-    "laserShoot",
-    "./assets/sounds/laserTower.mp3",
-    0.2,
-    3
-  );
-  await soundManager.loadSound(
-    "iceShoot",
-    "./assets/sounds/iceTower.mp3",
-    0.2,
-    5
-  );
-  await soundManager.loadSound(
-    "teslaShoot",
-    "./assets/sounds/teslaTower.mp3",
-    0.2,
-    4
-  );
-  await soundManager.loadSound(
-    "poisonShoot",
-    "./assets/sounds/poisonTower.mp3",
-    4,
-    2
-  );
-  await soundManager.loadSound(
-    "missleShoot",
-    "./assets/sounds/missleTower.mp3",
-    1,
-    3
-  );
-  await soundManager.loadSound(
-    "flameThrougherShoot",
-    "./assets/sounds/flameThrougherTower.mp3",
-    5,
-    3
-  );
-  await soundManager.loadSound(
-    "sniperShoot",
-    "./assets/sounds/sniperTower.mp3",
-    5,
-    3
-  );
-  await soundManager.loadSound(
-    "artillaryShoot",
-    "./assets/sounds/artillaryTower.mp3",
-    5,
-    3
-  );
-  await soundManager.loadSound(
-    "archerShoot",
-    "./assets/sounds/archerTower.mp3",
-    5,
-    3
-  );
-  await soundManager.loadSound(
-    "lightningShoot",
-    "./assets/sounds/lightningTower.mp3",
-    2,
-    3
-  );
-  await soundManager.loadSound(
-    "shadowShoot",
-    "./assets/sounds/shadowTower.mp3",
-    1,
-    3
-  );
-  await soundManager.loadSound(
-    "wizardShoot",
-    "./assets/sounds/wizardTower.mp3",
-    3,
-    3
-  );
-  await soundManager.loadSound(
-    "windShoot",
-    "./assets/sounds/windTower.mp3",
-    3,
-    3
-  );
-  await soundManager.loadSound(
-    "volcanoShoot",
-    "./assets/sounds/volcanoTower.mp3",
-    3,
-    3
-  );
-  await soundManager.loadSound(
-    "volcanoShoot1",
-    "./assets/sounds/volcanoTower1.mp3",
-    3,
-    3
-  );
-  await soundManager.loadSound(
-    "carM249Shoot",
-    "./assets/sounds/carM249Tower.mp3",
-    3,
-    3
-  );
-  await soundManager.loadSound(
-    "smallTankShoot",
-    "./assets/sounds/smallTankTower.mp3",
-    2,
-    3
-  );
-  await soundManager.loadSound(
-    "mediumTankShoot",
-    "./assets/sounds/mediumTankTower.mp3",
-    3,
-    1
-  );
-  await soundManager.loadSound(
-    "bigTankShoot",
-    "./assets/sounds/bigTankTower.mp3",
-    3,
-    2
-  );
-  await soundManager.loadSound(
-    "bigTankRifleShoot",
-    "./assets/sounds/bigTankTowerRifle.mp3",
-    3,
-    2
-  );
-  await soundManager.loadSound(
-    "behemothTankShoot",
-    "./assets/sounds/behemothTankTower.mp3",
-    3,
-    2
-  );
-  await soundManager.loadSound(
-    "behemothRifleShoot",
-    "./assets/sounds/behemothTankRifle.mp3",
-    3,
-    2
-  );
-  await soundManager.loadSound(
-    "smallhelicopterMove",
-    "./assets/sounds/smallHelicopterTower.mp3",
-    2,
-    2
-  );
-  await soundManager.loadSound(
-    "blackHawkMove",
-    "./assets/sounds/blackHawkTower.mp3",
-    2,
-    2
-  );
-  await soundManager.loadSound(
-    "smallHelicopterRifle",
-    "./assets/sounds/smallHelicopterRifle.mp3",
-    2,
-    2
-  );
-  await soundManager.loadSound(
-    "blackHawkRifle",
-    "./assets/sounds/blackHawkRifle.mp3",
-    2,
-    2
-  );
-  await soundManager.loadSound(
-    "jetShoot",
-    "./assets/sounds/jetTower.mp3",
-    2,
-    2
-  );
-  await soundManager.loadSound(
-    "jetExplosion",
-    "./assets/sounds/jetTowerExplosion.mp3",
-    2,
-    2
-  );
-  await soundManager.loadSound("b2Alarm", "./assets/sounds/b2Alarm.mp3", 2, 1);
-  await soundManager.loadSound(
-    "b2Launch",
-    "./assets/sounds/b2Launch.mp3",
-    2,
-    2
-  );
+  // Define all sound configurations
+  const soundConfigs = [
+    {
+      id: "gunnerShoot",
+      path: "./assets/sounds/gunnerTower.mp3",
+      volume: 0.2,
+      maxInstances: 5,
+    },
+    {
+      id: "cannonShoot",
+      path: "./assets/sounds/cannonTower.mp3",
+      volume: 0.6,
+      maxInstances: 5,
+    },
+    {
+      id: "doubleCannonShoot",
+      path: "./assets/sounds/doubleCannonTower.mp3",
+      volume: 0.6,
+      maxInstances: 5,
+    },
+    {
+      id: "laserShoot",
+      path: "./assets/sounds/laserTower.mp3",
+      volume: 0.2,
+      maxInstances: 3,
+    },
+    {
+      id: "iceShoot",
+      path: "./assets/sounds/iceTower.mp3",
+      volume: 0.2,
+      maxInstances: 5,
+    },
+    {
+      id: "teslaShoot",
+      path: "./assets/sounds/teslaTower.mp3",
+      volume: 0.2,
+      maxInstances: 4,
+    },
+    {
+      id: "poisonShoot",
+      path: "./assets/sounds/poisonTower.mp3",
+      volume: 4,
+      maxInstances: 2,
+    },
+    {
+      id: "missleShoot",
+      path: "./assets/sounds/missleTower.mp3",
+      volume: 1,
+      maxInstances: 3,
+    },
+    {
+      id: "flameThrougherShoot",
+      path: "./assets/sounds/flameThrougherTower.mp3",
+      volume: 5,
+      maxInstances: 3,
+    },
+    {
+      id: "sniperShoot",
+      path: "./assets/sounds/sniperTower.mp3",
+      volume: 5,
+      maxInstances: 3,
+    },
+    {
+      id: "artillaryShoot",
+      path: "./assets/sounds/artillaryTower.mp3",
+      volume: 5,
+      maxInstances: 3,
+    },
+    {
+      id: "archerShoot",
+      path: "./assets/sounds/archerTower.mp3",
+      volume: 5,
+      maxInstances: 3,
+    },
+    {
+      id: "lightningShoot",
+      path: "./assets/sounds/lightningTower.mp3",
+      volume: 2,
+      maxInstances: 3,
+    },
+    {
+      id: "shadowShoot",
+      path: "./assets/sounds/shadowTower.mp3",
+      volume: 1,
+      maxInstances: 3,
+    },
+    {
+      id: "wizardShoot",
+      path: "./assets/sounds/wizardTower.mp3",
+      volume: 3,
+      maxInstances: 3,
+    },
+    {
+      id: "windShoot",
+      path: "./assets/sounds/windTower.mp3",
+      volume: 3,
+      maxInstances: 3,
+    },
+    {
+      id: "volcanoShoot",
+      path: "./assets/sounds/volcanoTower.mp3",
+      volume: 3,
+      maxInstances: 3,
+    },
+    {
+      id: "volcanoShoot1",
+      path: "./assets/sounds/volcanoTower1.mp3",
+      volume: 3,
+      maxInstances: 3,
+    },
+    {
+      id: "carM249Shoot",
+      path: "./assets/sounds/carM249Tower.mp3",
+      volume: 3,
+      maxInstances: 3,
+    },
+    {
+      id: "smallTankShoot",
+      path: "./assets/sounds/smallTankTower.mp3",
+      volume: 2,
+      maxInstances: 3,
+    },
+    {
+      id: "mediumTankShoot",
+      path: "./assets/sounds/mediumTankTower.mp3",
+      volume: 3,
+      maxInstances: 1,
+    },
+    {
+      id: "bigTankShoot",
+      path: "./assets/sounds/bigTankTower.mp3",
+      volume: 3,
+      maxInstances: 2,
+    },
+    {
+      id: "bigTankRifleShoot",
+      path: "./assets/sounds/bigTankTowerRifle.mp3",
+      volume: 3,
+      maxInstances: 2,
+    },
+    {
+      id: "behemothTankShoot",
+      path: "./assets/sounds/behemothTankTower.mp3",
+      volume: 3,
+      maxInstances: 2,
+    },
+    {
+      id: "behemothRifleShoot",
+      path: "./assets/sounds/behemothTankRifle.mp3",
+      volume: 3,
+      maxInstances: 2,
+    },
+    {
+      id: "smallhelicopterMove",
+      path: "./assets/sounds/smallHelicopterTower.mp3",
+      volume: 2,
+      maxInstances: 2,
+    },
+    {
+      id: "blackHawkMove",
+      path: "./assets/sounds/blackHawkTower.mp3",
+      volume: 2,
+      maxInstances: 2,
+    },
+    {
+      id: "smallHelicopterRifle",
+      path: "./assets/sounds/smallHelicopterRifle.mp3",
+      volume: 2,
+      maxInstances: 2,
+    },
+    {
+      id: "blackHawkRifle",
+      path: "./assets/sounds/blackHawkRifle.mp3",
+      volume: 2,
+      maxInstances: 2,
+    },
+    {
+      id: "jetShoot",
+      path: "./assets/sounds/jetTower.mp3",
+      volume: 2,
+      maxInstances: 2,
+    },
+    {
+      id: "jetExplosion",
+      path: "./assets/sounds/jetTowerExplosion.mp3",
+      volume: 2,
+      maxInstances: 2,
+    },
+    {
+      id: "b2Alarm",
+      path: "./assets/sounds/b2Alarm.mp3",
+      volume: 2,
+      maxInstances: 1,
+    },
+    {
+      id: "b2Launch",
+      path: "./assets/sounds/b2Launch.mp3",
+      volume: 2,
+      maxInstances: 2,
+    },
+    {
+      id: "b2Explosion",
+      path: "./assets/sounds/B2Explosion.mp3",
+      volume: 2,
+      maxInstances: 2,
+    },
+    {
+      id: "goliathMove",
+      path: "./assets/sounds/goliathMove.mp3",
+      volume: 2,
+      maxInstances: 2,
+    },
+    {
+      id: "minionSpawn",
+      path: "./assets/sounds/minionSpawn.mp3",
+      volume: 2,
+      maxInstances: 2,
+    },
+  ];
 
-  await soundManager.loadSound(
-    "b2Explosion",
-    "./assets/sounds/B2Explosion.mp3",
-    2,
-    2
-  );
+  try {
+    // Load all sounds in parallel
+    await Promise.all(
+      soundConfigs.map((config) =>
+        soundManager.loadSound(
+          config.id,
+          config.path,
+          config.volume,
+          config.maxInstances
+        )
+      )
+    );
 
-  console.log("All sounds loaded");
+    console.log("All sounds loaded successfully");
 
-  // Set up audio resume on user interaction
-  const resumeAudio = () => {
-    soundManager.resumeAudio();
-    document.removeEventListener("click", resumeAudio);
-    document.removeEventListener("touchend", resumeAudio);
-    document.removeEventListener("keydown", resumeAudio);
-  };
+    // Set up audio resume on user interaction
+    const resumeAudio = () => {
+      soundManager.resumeAudio();
+      document.removeEventListener("click", resumeAudio);
+      document.removeEventListener("touchend", resumeAudio);
+      document.removeEventListener("keydown", resumeAudio);
+    };
 
-  document.addEventListener("click", resumeAudio, { once: true });
-  document.addEventListener("touchend", resumeAudio, { once: true });
-  document.addEventListener("keydown", resumeAudio, { once: true });
+    document.addEventListener("click", resumeAudio, { once: true });
+    document.addEventListener("touchend", resumeAudio, { once: true });
+    document.addEventListener("keydown", resumeAudio, { once: true });
 
-  // Start the game
-  await startGame(1);
+    // Start the game
+    await startGame(1);
+  } catch (error) {
+    console.error("Error loading sounds:", error);
+    // Handle error (maybe continue without some sounds or show error message)
+    await startGame(1);
+  }
 }
 // Set up audio resume on user interaction
 const setupAudioResume = () => {

@@ -270,6 +270,26 @@ export const TOWER_TYPES = {
     size: { align: "TBLR", occupy: 2 },
     class: SniperTower,
   },
+
+  artillery: {
+    name: "Artillery",
+    cost: 1000, // Increased cost
+    range: 400, // Increased range
+    fireRate: 0.4, // Slightly faster fire rate
+    dmg: 200, // Increased base damage
+    splash: 170, // Increased splash
+    bulletSpeed: 160, // Faster projectile
+    arcHeight: 100, // Higher arc
+    minRange: 40, // Slightly increased min range
+    color: "#8d6e63",
+    maxLevel: 5, // More levels
+    hp: 750, // Increased HP
+    unlockPrice: 1300, // Increased unlock price
+    upgradePriceBase: 270,
+    persistentMaxLevel: 50,
+    size: { align: "TBLR", occupy: 2 },
+    class: ArtilleryTower,
+  },
   laser: {
     name: "Laser",
     cost: 280, // Slightly increased cost
@@ -284,26 +304,6 @@ export const TOWER_TYPES = {
     upgradePriceBase: 110,
     persistentMaxLevel: 70,
     class: LaserTower,
-  },
-
-  artillery: {
-    name: "Artillery",
-    cost: 550, // Increased cost
-    range: 400, // Increased range
-    fireRate: 0.2, // Slightly faster fire rate
-    dmg: 80, // Increased base damage
-    splash: 130, // Increased splash
-    bulletSpeed: 180, // Faster projectile
-    arcHeight: 100, // Higher arc
-    minRange: 70, // Slightly increased min range
-    color: "#8d6e63",
-    maxLevel: 5, // More levels
-    hp: 750, // Increased HP
-    unlockPrice: 1300, // Increased unlock price
-    upgradePriceBase: 270,
-    persistentMaxLevel: 50,
-    size: { align: "TBLR", occupy: 2 },
-    class: ArtilleryTower,
   },
 
   shadow: {

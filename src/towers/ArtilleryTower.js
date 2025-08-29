@@ -7,21 +7,9 @@ import { dist } from "../utils.js";
 import { spawnMuzzle, spawnExplosion } from "../effects.js";
 import { ArtilleryShell } from "../artilleryShell.js"; // Special arcing projectile
 import { soundManager } from "../assets/sounds/SoundManager.js";
+import { TOWER_TYPES } from "../config.js";
 
 export class ArtilleryTower extends BaseTower {
-  static SPEC = {
-    name: "Artillery",
-    cost: 500,
-    range: 350, // Long range
-    fireRate: 0.15, // Very slow firing rate
-    dmg: 60, // High damage
-    splash: 120, // Large splash radius
-    bulletSpeed: 150, // Slow projectiles (for arcing)
-    arcHeight: 80, // Height of projectile arc
-    minRange: 60, // Minimum range to avoid hitting itself
-    color: "#8d6e63",
-  };
-
   constructor(gx, gy, key) {
     super(gx, gy, key);
     this.recoilEffect = 0; // Initialize recoil effect
@@ -29,8 +17,8 @@ export class ArtilleryTower extends BaseTower {
 
   // Override spec to include artillery properties
   spec() {
-    const base = this.constructor.SPEC;
-    const mult = 1 + (this.level - 1) * 0.5; // Higher multiplier for damage
+    const base = TOWER_TYPES.artillery; // Get dynamic config
+    const mult = 1 + (this.level - 1) * 0.5; // scaling
     return {
       name: base.name,
       range: base.range * (1 + (this.level - 1) * 0.1),
@@ -42,6 +30,10 @@ export class ArtilleryTower extends BaseTower {
       minRange: base.minRange,
       color: base.color,
       cost: base.cost,
+      maxLevel: base.maxLevel,
+      hp: base.hp,
+      unlockPrice: base.unlockPrice,
+      upgradePriceBase: base.upgradePriceBase,
     };
   }
 

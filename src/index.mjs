@@ -65,6 +65,399 @@ const auraCtx = auraCanvas.getContext("2d");
 const TOUCH_PAN_SENSITIVITY = 1.5;
 const HOLD_DURATION = 200;
 
+/* ---------------------------
+  PAUSE / AUTOSAVE / LIFECYCLE
+   Insert after your global vars (e.g. after auraCanvas or near initializeGame)
+----------------------------*/
+
+// -----------------------------
+// Pause / Autosave / Lifecycle
+// -----------------------------
+
+// DOM refs for the menu (these exist in HTML snippet above)
+const inGameMenuBtn = document.getElementById("inGameMenuBtn");
+const pauseOverlay = document.getElementById("pauseOverlay");
+const pauseResumeBtn = document.getElementById("pauseResumeBtn");
+// NOTE: pauseShopBtn removed on purpose (you said you deleted that button in HTML)
+// We do NOT attach a listener to pauseMainBtn here so your HTML's custom modal remains the single source-of-truth.
+
+// autosave key (separate from persistent shop saves)
+const AUTOSAVE_KEY = "towerDefenseAutosave_v1";
+
+/**
+ * Create a compact autosave snapshot.
+ */
+function createAutosaveSnapshot(reason = "manual") {
+  try {
+    const towersSnapshot = towers.map((t) => {
+      const specKey = t.specKey || t.key || t.type || t.spec?.name || null;
+      return {
+        gx: t.gx,
+        gy: t.gy,
+        key: specKey || t.key,
+        level: t.level,
+        hp: t.hp,
+        maxHp: t.maxHp,
+        custom: t.customState || null,
+      };
+    });
+
+    const snap = {
+      level: currentLevelConfig?.level ?? null,
+      reason,
+      timestamp: Date.now(),
+      state: {
+        money: state.money,
+        lives: state.lives,
+        wave: state.wave,
+        time: state.time,
+        camera: { x: state.camera.x, y: state.camera.y },
+        zoom: state.zoom,
+      },
+      towers: towersSnapshot,
+    };
+    return snap;
+  } catch (err) {
+    console.error("createAutosaveSnapshot failed", err);
+    return null;
+  }
+}
+
+/**
+ * Save autosave into localStorage
+ */
+function saveAutosave(reason = "manual") {
+  const snap = createAutosaveSnapshot(reason);
+  if (!snap) return;
+  try {
+    localStorage.setItem(AUTOSAVE_KEY, JSON.stringify(snap));
+  } catch (err) {
+    console.warn("Autosave failed", err);
+  }
+}
+
+/**
+ * Restore autosave — returns true if restored successfully.
+ * IMPORTANT: does NOT start the game loop. Keeps state paused so user must press Resume.
+ */
+function restoreAutosaveIfMatchingLevel() {
+  try {
+    const raw = localStorage.getItem(AUTOSAVE_KEY);
+    if (!raw) return false;
+    const snap = JSON.parse(raw);
+    if (!snap || !snap.level) return false;
+    if (!currentLevelConfig || snap.level !== currentLevelConfig.level) {
+      // autosave is for a different level — do not restore automatically
+      return false;
+    }
+
+    // Restore simple state
+    if (snap.state) {
+      state.money = snap.state.money ?? state.money;
+      state.lives = snap.state.lives ?? state.lives;
+      state.wave = snap.state.wave ?? state.wave;
+      state.time = snap.state.time ?? state.time;
+      state.camera.x = snap.state.camera?.x ?? state.camera.x;
+      state.camera.y = snap.state.camera?.y ?? state.camera.y;
+      state.zoom = snap.state.zoom ?? state.zoom;
+    }
+
+    // Rebuild towers (clear existing and rebuild)
+    towers.length = 0;
+    for (const ts of snap.towers || []) {
+      const key = ts.key;
+      const spec = TOWER_TYPES[key];
+      if (!spec || typeof spec.class !== "function") {
+        console.warn("Cannot recreate tower:", key, ts);
+        continue;
+      }
+      const newTower = new spec.class(ts.gx, ts.gy, key);
+      newTower.level = Math.min(ts.level || 1, spec.maxLevel || ts.level || 1);
+      if (typeof ts.hp === "number") newTower.hp = ts.hp;
+      if (typeof ts.maxHp === "number") newTower.maxHp = ts.maxHp;
+      if (ts.custom) newTower.customState = ts.custom;
+      towers.push(newTower);
+    }
+
+    // recalc occupancy
+    updateOccupiedCells();
+
+    // Keep the restored state paused — user must press Resume manually
+    state.running = false;
+    state.paused = true;
+
+    return true;
+  } catch (err) {
+    console.error("restoreAutosaveIfMatchingLevel failed", err);
+    return false;
+  }
+}
+
+/**
+ * Clear autosave (call when starting a fresh level or returning to main menu)
+ */
+function clearAutosave() {
+  localStorage.removeItem(AUTOSAVE_KEY);
+}
+
+/**
+ * Pause the running game without resetting state.
+ * Autosave for background/pagehide reasons.
+ * Show the pause overlay for menu-open and background/pagehide reasons so behavior matches user opening the menu.
+ */
+function pauseGame(reason = "manual") {
+  // if already paused or not running, still ensure overlay logic for background/menu-open
+  if (!state.running && state.paused) {
+    // not changing loop, but ensure overlay visibility for background/menu-open
+    if (
+      pauseOverlay &&
+      (reason === "menu-open" ||
+        reason === "background" ||
+        reason === "pagehide")
+    ) {
+      pauseOverlay.style.display = "flex";
+      pauseOverlay.setAttribute("aria-hidden", "false");
+    }
+    return;
+  }
+
+  if (!state.running && !state.paused) {
+    // No active game loop to pause; still show menu overlay when appropriate
+    state.paused = true;
+    if (
+      pauseOverlay &&
+      (reason === "menu-open" ||
+        reason === "background" ||
+        reason === "pagehide")
+    ) {
+      pauseOverlay.style.display = "flex";
+      pauseOverlay.setAttribute("aria-hidden", "false");
+    }
+    return;
+  }
+
+  // Normal pause path: stop loop preserving runtime state
+  state.paused = true;
+  state.running = false;
+  if (animationFrameId) {
+    cancelAnimationFrame(animationFrameId);
+    animationFrameId = null;
+  }
+
+  // Pause audio safely
+  if (typeof soundManager?.pauseAll === "function") {
+    soundManager.pauseAll();
+  } else if (typeof soundManager?.suspendAll === "function") {
+    soundManager.suspendAll();
+  } else if (typeof soundManager?.setBossSoundsEnabled === "function") {
+    soundManager.setBossSoundsEnabled(false);
+  }
+
+  // autosave only for background/pagehide reason
+  if (reason === "background" || reason === "pagehide") {
+    saveAutosave(reason);
+  }
+
+  // show overlay for menu-open or background/pagehide so returning user must press Resume
+  if (pauseOverlay) {
+    if (
+      reason === "menu-open" ||
+      reason === "background" ||
+      reason === "pagehide"
+    ) {
+      pauseOverlay.style.display = "flex";
+      pauseOverlay.setAttribute("aria-hidden", "false");
+    } else {
+      // don't show overlay for quick internal pauses unless explicitly asked
+      pauseOverlay.style.display = "none";
+      pauseOverlay.setAttribute("aria-hidden", "true");
+    }
+  }
+}
+
+/**
+ * Resume the paused game.
+ */
+function resumeGame() {
+  if (!state.paused) return;
+
+  // hide overlay
+  if (pauseOverlay) {
+    pauseOverlay.style.display = "none";
+    pauseOverlay.setAttribute("aria-hidden", "true");
+  }
+
+  // Resume audio if we can
+  if (typeof soundManager?.resumeAudio === "function") {
+    soundManager.resumeAudio();
+  }
+
+  // resume loop
+  state.paused = false;
+  state.running = true;
+  last = performance.now();
+  animationFrameId = requestAnimationFrame(loop);
+}
+
+/**
+ * Called when app goes to background or page becomes hidden.
+ * Pause the game, show the menu overlay, and autosave.
+ */
+function handleAppBackground() {
+  console.log("App going to background — pausing, showing menu & autosaving.");
+  pauseGame("background");
+  // ensure overlay visible (pauseGame already shows it for background but make explicit)
+  if (pauseOverlay) {
+    pauseOverlay.style.display = "flex";
+    pauseOverlay.setAttribute("aria-hidden", "false");
+  }
+}
+
+/**
+ * Called when app returns to foreground.
+ * Attempt to restore autosave (if matching level) and keep the game paused with the overlay shown.
+ */
+function handleAppForeground() {
+  console.log("App foregrounded — attempting restore and staying paused.");
+
+  const restored = restoreAutosaveIfMatchingLevel();
+  if (restored) {
+    if (pauseOverlay) {
+      pauseOverlay.style.display = "flex";
+      pauseOverlay.setAttribute("aria-hidden", "false");
+    }
+    window.dispatchEvent(
+      new CustomEvent("game-restored-from-autosave", { detail: {} })
+    );
+    return;
+  }
+
+  // If no autosave to restore, keep the game paused and show overlay if paused
+  if (state.paused && pauseOverlay) {
+    pauseOverlay.style.display = "flex";
+    pauseOverlay.setAttribute("aria-hidden", "false");
+  }
+}
+
+/* ---------------------------
+  Hook lifecycle events:
+  - document.visibilitychange
+  - window 'pagehide' & 'pageshow'
+  - Capacitor App plugin (if available)
+----------------------------*/
+
+// ensure only one set of listeners exist — remove typical duplicates if present
+try {
+  // remove previously attached handlers if you want to avoid duplicates (safe no-op if none)
+  // NOTE: these anonymous handlers won't be removed by name; this is best-effort to avoid some dup cases.
+} catch (e) {
+  // ignore
+}
+
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden) handleAppBackground();
+  else handleAppForeground();
+});
+
+// pagehide/pageshow help for progressive web/hybrid scenarios
+window.addEventListener("pagehide", () => {
+  handleAppBackground();
+});
+window.addEventListener("pageshow", () => {
+  handleAppForeground();
+});
+
+// Capacitor integration (if app uses Capacitor, these listeners will run).
+try {
+  (async () => {
+    try {
+      const cap = await import("@capacitor/app");
+      if (cap && cap.App && typeof cap.App.addListener === "function") {
+        cap.App.addListener("appStateChange", (info) => {
+          if (!info.isActive) handleAppBackground();
+          else handleAppForeground();
+        });
+        // older Capacitor versions also support 'pause' and 'resume'
+        cap.App.addListener("pause", () => handleAppBackground());
+        cap.App.addListener("resume", () => handleAppForeground());
+      }
+    } catch (err) {
+      // plugin not available — ignore
+    }
+  })();
+} catch (err) {
+  // dynamic import not supported in old env — ignore
+}
+
+/* ---------------------------
+  Wire the pause/menu behavior
+  - No native confirm() used here.
+  - HTML will show the custom confirm modal and should dispatch
+    'game-mainmenu-request' when the user confirms.
+----------------------------*/
+
+// In-game menu button: pause and show overlay
+if (inGameMenuBtn) {
+  inGameMenuBtn.addEventListener("click", () => {
+    pauseGame("menu-open");
+    window.dispatchEvent(
+      new CustomEvent("game-pause-request", { detail: { reason: "menu-open" } })
+    );
+  });
+}
+
+// Resume button: resume game
+if (pauseResumeBtn) {
+  pauseResumeBtn.addEventListener("click", () => {
+    resumeGame();
+    window.dispatchEvent(
+      new CustomEvent("game-resume-request", {
+        detail: { reason: "menu-resume" },
+      })
+    );
+  });
+}
+
+// We DO NOT attach a pauseShopBtn handler here (removed from HTML).
+// If some other code dispatches 'game-open-shop-request', keep game paused but don't autosave.
+window.addEventListener("game-open-shop-request", () => {
+  pauseGame("shop-open");
+});
+
+// Listen for external pause/resume requests (keeps module reactive)
+window.addEventListener("game-pause-request", (ev) => {
+  const reason = (ev && ev.detail && ev.detail.reason) || "ui-request";
+  pauseGame(reason);
+});
+window.addEventListener("game-resume-request", () => {
+  resumeGame();
+});
+
+// IMPORTANT: HTML's confirm OK button should dispatch 'game-mainmenu-request'.
+// When we receive it, stop the game WITHOUT saving (per your request).
+window.addEventListener("game-mainmenu-request", () => {
+  try {
+    // Stop the game loop and audio without creating a new autosave
+    stopGame(); // (assumes stopGame() exists elsewhere in your code)
+    state.running = false;
+    state.paused = false;
+
+    if (animationFrameId) {
+      cancelAnimationFrame(animationFrameId);
+      animationFrameId = null;
+    }
+
+    if (typeof soundManager?.setBossSoundsEnabled === "function") {
+      soundManager.setBossSoundsEnabled(false);
+    }
+
+    // Do NOT call saveAutosave() here.
+    // The HTML/outer UI should handle showing the main menu (e.g. showMainMenu()).
+  } catch (err) {
+    console.warn("Error while handling game-mainmenu-request:", err);
+  }
+});
+
 // --- INPUT STATE (Restored from original for full functionality) ---
 let mouse = {
   x: 0,

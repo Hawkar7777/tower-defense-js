@@ -109,6 +109,21 @@ export const TOWER_TYPES = {
     persistentMaxLevel: 70,
     class: DoubleCannonTower,
   },
+  laser: {
+    name: "Laser",
+    cost: 280, // Slightly increased cost
+    range: 160, // Increased range
+    fireRate: 15, // High fire rate
+    dmg: 15, // Increased base damage, relies on sustained fire
+    beam: true,
+    color: "#ff69e0",
+    maxLevel: 7, // More levels
+    hp: 480, // Increased HP
+    unlockPrice: 550, // Increased unlock price
+    upgradePriceBase: 110,
+    persistentMaxLevel: 70,
+    class: LaserTower,
+  },
   tesla: {
     name: "Tesla",
     cost: 240, // Slightly increased cost
@@ -290,48 +305,31 @@ export const TOWER_TYPES = {
     size: { align: "TBLR", occupy: 2 },
     class: ArtilleryTower,
   },
-  laser: {
-    name: "Laser",
-    cost: 280, // Slightly increased cost
-    range: 160, // Increased range
-    fireRate: 15, // High fire rate
-    dmg: 7, // Increased base damage, relies on sustained fire
-    beam: true,
-    color: "#ff69e0",
-    maxLevel: 7, // More levels
-    hp: 480, // Increased HP
-    unlockPrice: 550, // Increased unlock price
-    upgradePriceBase: 110,
-    persistentMaxLevel: 70,
-    class: LaserTower,
-  },
-
   shadow: {
     name: "Shadow",
-    cost: 380, // Increased cost
-    range: 150, // Increased range
-    fireRate: 1.5, // Faster fire rate
-    dmg: 20, // Increased base damage
+    cost: 450, // Increased cost
+    range: 190, // Increased range
+    fireRate: 1.3, // Faster fire rate
+    dmg: 30, // Increased base damage
     curseDmg: 7, // Increased curse damage
     curseDuration: 5, // Longer curse
     chainCount: 4, // More chains
     chainRange: 100, // Increased chain range
     color: "#800080",
     maxLevel: 6, // More levels
-    hp: 520, // Increased HP
+    hp: 540, // Increased HP
     unlockPrice: 950, // Increased unlock price
     upgradePriceBase: 190,
     persistentMaxLevel: 60,
     size: { align: "T", occupy: 2 },
     class: ShadowTower,
   },
-
   carM249: {
     name: "Car M249",
     cost: 600,
     range: 190, // Increased range
     fireRate: 4, // Increased fire rate
-    dmg: 18, // Increased damage
+    dmg: 110, // Increased damage
     color: "#2288ff",
     maxLevel: 8, // More levels
     hp: 600, // Increased HP
@@ -342,7 +340,7 @@ export const TOWER_TYPES = {
   },
   smallTank: {
     name: "Small Tank",
-    cost: 350, // Slightly increased cost
+    cost: 750, // Slightly increased cost
     range: 170, // Increased range
     fireRate: 1.5, // Faster fire rate
     dmg: 280, // Increased damage
@@ -357,9 +355,26 @@ export const TOWER_TYPES = {
     size: { align: "LR", occupy: 2 },
     class: SmallTank,
   },
+  helicopter: {
+    name: "Heli Pad",
+    cost: 1600, // Slightly increased cost
+    range: 240, // Increased range
+    fireRate: 14, // Faster fire rate
+    dmg: 40, // Increased damage
+    bulletSpeed: 800,
+    color: "#ffdd99",
+    size: { align: "TBLR", occupy: 1 },
+    maxLevel: 5, // More levels
+    hp: 700, // Increased HP
+    unlockPrice: 3200, // Increased unlock price
+    upgradePriceBase: 650,
+    persistentMaxLevel: 50,
+    class: HelicopterTower,
+  },
+
   mediumTank: {
     name: "Medium Tank",
-    cost: 550, // Slightly increased cost
+    cost: 2500, // Slightly increased cost
     range: 190, // Increased range
     fireRate: 0.8, // Faster fire rate
     dmg: 550, // Increased damage
@@ -414,22 +429,7 @@ export const TOWER_TYPES = {
     persistentMaxLevel: 30,
     class: BehemothTank,
   },
-  helicopter: {
-    name: "Heli Pad",
-    cost: 1600, // Slightly increased cost
-    range: 240, // Increased range
-    fireRate: 14, // Faster fire rate
-    dmg: 40, // Increased damage
-    bulletSpeed: 800,
-    color: "#ffdd99",
-    size: { align: "TBLR", occupy: 1 },
-    maxLevel: 5, // More levels
-    hp: 700, // Increased HP
-    unlockPrice: 3200, // Increased unlock price
-    upgradePriceBase: 650,
-    persistentMaxLevel: 50,
-    class: HelicopterTower,
-  },
+
   blackHawk: {
     name: "Black Hawk",
     cost: 2800, // Increased cost

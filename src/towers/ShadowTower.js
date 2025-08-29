@@ -5,6 +5,7 @@ import { ctx } from "../core.js";
 import { enemies, particles, projectiles } from "../state.js";
 import { dist } from "../utils.js";
 import { soundManager } from "../assets/sounds/SoundManager.js";
+import { TOWER_TYPES } from "../config.js";
 
 // Enhanced ShadowOrb projectile
 class ShadowOrb {
@@ -108,21 +109,8 @@ class ShadowOrb {
 }
 
 export class ShadowTower extends BaseTower {
-  static SPEC = {
-    name: "Shadow Tower",
-    cost: 320,
-    range: 140,
-    fireRate: 1.2,
-    dmg: 15,
-    curseDmg: 5,
-    curseDuration: 4,
-    chainCount: 3,
-    chainRange: 90,
-    color: "#800080", // Main color (deep purple)
-  };
-
   spec() {
-    const base = this.constructor.SPEC;
+    const base = TOWER_TYPES.shadow; // Use config
     const mult = 1 + (this.level - 1) * 0.25;
     return {
       ...base,

@@ -5,36 +5,35 @@ import { spawnBeam } from "../effects.js";
 import { ctx } from "../core.js";
 import { soundManager } from "../assets/sounds/SoundManager.js"; // Import the sound manager
 import { dist } from "../utils.js"; // Import dist for update method
+import { TOWER_TYPES } from "../config.js";
 
 export class LaserTower extends BaseTower {
-  static SPEC = {
-    name: "Laser",
-    cost: 250,
-    range: 150,
-    fireRate: 1,
-    dmg: 5, // This is the base damage value
-    beam: false,
-    color: "#ff69e0",
-  };
-
   fireBeam(start, end, color) {
     spawnBeam(start, end, color);
     soundManager.playSound("laserShoot", 0.4); // Play sound via manager with specific volume
   }
 
+  spec() {
+    const base = TOWER_TYPES.laser; // Get laser tower config
+    const mult = 1 + (this.level - 1) * 0.2; // Optional scaling
+    return {
+      ...base,
+      dmg: base.dmg * mult,
+      range: base.range * (1 + (this.level - 1) * 0.05),
+    };
+  }
+
   update(dt, enemiesList) {
-    // If hexed, don't do any GunTower-specific logic
     if (this.isHexed) return;
     const s = this.spec();
     this.cool -= dt;
 
-    let best = null,
-      bestScore = -1;
+    let best = null;
+    let bestScore = -1;
 
     for (const e of enemiesList) {
       if (e.dead) continue;
-      const p = e.pos;
-      const d = dist(this.center, p);
+      const d = dist(this.center, e.pos);
       if (d <= s.range && e.t > bestScore) {
         best = e;
         bestScore = e.t;
@@ -42,27 +41,16 @@ export class LaserTower extends BaseTower {
     }
 
     if (!best) return;
-    const c = this.center,
-      bp = best.pos;
+
+    const c = this.center;
+    const bp = best.pos;
     this.rot = Math.atan2(bp.y - c.y, bp.x - c.x);
 
     if (this.cool <= 0) {
       this.cool = 1 / (s.fireRate * this.slowMultiplier);
-      this.fireBeam(c, best.pos, s.color); // Pass best.pos as end point for the beam
-
-      // --- DAMAGE IMPLEMENTATION START ---
-      // Directly deduct health from the target
+      this.fireBeam(c, bp, s.color);
       best.hp -= s.dmg;
-
-      // Check if the enemy is defeated
-      if (best.hp <= 0) {
-        best.dead = true;
-        // Potentially add score, money, or other effects here
-        // For example:
-        // state.money += best.bounty;
-        // state.score += best.score;
-      }
-      // --- DAMAGE IMPLEMENTATION END ---
+      if (best.hp <= 0) best.dead = true;
     }
   }
 

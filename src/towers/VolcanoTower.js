@@ -5,6 +5,7 @@ import { ctx } from "../core.js";
 import { enemies, projectiles, particles } from "../state.js";
 import { dist } from "../utils.js";
 import { soundManager } from "../assets/sounds/SoundManager.js";
+import { TOWER_TYPES } from "../config.js"; // <-- dynamic config
 
 class LavaRock {
   constructor(start, targetPos, dmg, radius, color) {
@@ -110,18 +111,8 @@ class LavaRock {
 }
 
 export class VolcanoTower extends BaseTower {
-  static SPEC = {
-    name: "Volcano Tower",
-    cost: 600,
-    range: 200,
-    fireRate: 0.3,
-    dmg: 80,
-    splash: 60,
-    color: "#ff3300",
-  };
-
   spec() {
-    const base = this.constructor.SPEC;
+    const base = TOWER_TYPES.volcano; // Use dynamic config
     const mult = 1 + (this.level - 1) * 0.25;
     return {
       ...base,
@@ -131,16 +122,13 @@ export class VolcanoTower extends BaseTower {
     };
   }
 
-  // Projectile should originate from the top crater
   getAttackOrigin() {
     const { x, y } = this.center;
-    // This Y value should match the visual peak/crater of the new design
-    const craterCenterY = y - 35; // Adjust based on new draw method
-    return { x: x, y: craterCenterY };
+    const craterCenterY = y - 35;
+    return { x, y: craterCenterY };
   }
 
   update(dt, enemiesList) {
-    // If hexed, don't do any GunTower-specific logic
     if (this.isHexed) return;
     const s = this.spec();
     this.cool -= dt;
@@ -171,37 +159,33 @@ export class VolcanoTower extends BaseTower {
       }
     }
 
-    // Particle eruption from the new crater position
-    const particleOriginY = this.getAttackOrigin().y - 5; // A bit below the very top for visual
+    const particleOriginY = this.getAttackOrigin().y - 5;
     if (Math.random() < 0.2) {
-      // Smoke/ash particles
       particles.push({
         x: this.center.x + (Math.random() - 0.5) * 15,
         y: particleOriginY + Math.random() * 5,
         vx: (Math.random() - 0.5) * 15,
-        vy: -30 - Math.random() * 20, // Rise up
+        vy: -30 - Math.random() * 20,
         life: 1.8,
         r: 5 + Math.random() * 4,
-        c: `rgba(50, 40, 30, 0.6)`, // Dark, smoky color
+        c: `rgba(50, 40, 30, 0.6)`,
         fade: 0.97,
       });
     }
     if (Math.random() < 0.1) {
-      // Small lava flickers
       particles.push({
         x: this.center.x + (Math.random() - 0.5) * 10,
         y: particleOriginY,
         vx: (Math.random() - 0.5) * 50,
-        vy: -70 - Math.random() * 50, // Burst higher
+        vy: -70 - Math.random() * 50,
         life: 0.6,
         r: 2 + Math.random() * 3,
-        c: "#ffaa00", // Bright orange
+        c: "#ffaa00",
         fade: 0.9,
       });
     }
   }
 
-  // --- NEW, RUGGED VOLCANO DESIGN DRAW METHOD ---
   draw() {
     const { x, y } = this.center;
     const time = performance.now();
@@ -209,38 +193,34 @@ export class VolcanoTower extends BaseTower {
 
     ctx.save();
 
-    // 1. Base Plateau - wider, more stable looking
-    ctx.fillStyle = "#333333"; // Dark gray rock
+    // Base Plateau
+    ctx.fillStyle = "#333333";
     ctx.strokeStyle = "#555555";
     ctx.lineWidth = 2;
     ctx.beginPath();
-    ctx.ellipse(x, y + 18, 35, 15, 0, 0, Math.PI * 2); // Wider oval base
+    ctx.ellipse(x, y + 18, 35, 15, 0, 0, Math.PI * 2);
     ctx.fill();
     ctx.stroke();
 
-    // 2. Main Volcanic Mountain - jagged and layered
-    ctx.fillStyle = "#412b23"; // Earthy brown/dark red for rock
+    // Volcanic Mountain
+    ctx.fillStyle = "#412b23";
     ctx.strokeStyle = "#241813";
     ctx.lineWidth = 1.5;
-
     ctx.beginPath();
-    // Left side
-    ctx.moveTo(x - 30, y + 18); // Start from wider base
+    ctx.moveTo(x - 30, y + 18);
     ctx.lineTo(x - 20, y - 5);
     ctx.lineTo(x - 10, y - 20);
-    ctx.lineTo(x - 3, y - 30); // Towards peak
-
-    // Right side
-    ctx.lineTo(x + 3, y - 30); // Peak
+    ctx.lineTo(x - 3, y - 30);
+    ctx.lineTo(x + 3, y - 30);
     ctx.lineTo(x + 10, y - 20);
     ctx.lineTo(x + 20, y - 5);
-    ctx.lineTo(x + 30, y + 18); // End at wider base
+    ctx.lineTo(x + 30, y + 18);
     ctx.closePath();
     ctx.fill();
     ctx.stroke();
 
-    // Secondary rock layers / texture
-    ctx.fillStyle = "#3b251d"; // Slightly darker rock
+    // Secondary rock layers
+    ctx.fillStyle = "#3b251d";
     ctx.beginPath();
     ctx.moveTo(x - 25, y + 10);
     ctx.lineTo(x - 15, y - 10);
@@ -249,51 +229,46 @@ export class VolcanoTower extends BaseTower {
     ctx.closePath();
     ctx.fill();
 
-    // 3. Active Crater at the Peak
-    const craterY = y - 35; // Position of the crater
-    const craterRadiusX = 10;
-    const craterRadiusY = 5;
-
-    // Outer crater rim (dark rock)
+    // Active Crater
+    const craterY = y - 35;
     ctx.fillStyle = "#2c1c16";
     ctx.beginPath();
-    ctx.ellipse(x, craterY, craterRadiusX, craterRadiusY, 0, 0, Math.PI * 2);
+    ctx.ellipse(x, craterY, 10, 5, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = "#ff4400";
+    ctx.beginPath();
+    ctx.ellipse(x, craterY + 2, 7, 3.5, 0, 0, Math.PI * 2);
     ctx.fill();
 
-    // Inner lava pool - bubbling effect
-    ctx.fillStyle = "#ff4400"; // Bright orange lava
+    ctx.globalCompositeOperation = "lighter";
+    const bubble1X = x + Math.sin(time / 200) * 2;
+    const bubble1Y = craterY + 2 + Math.cos(time / 200) * 1;
+    ctx.fillStyle = `rgba(255, 220, 0, ${0.7 + Math.sin(time / 100) * 0.3})`;
     ctx.beginPath();
-    ctx.ellipse(
-      x,
-      craterY + 2,
-      craterRadiusX * 0.7,
-      craterRadiusY * 0.7,
-      0,
+    ctx.arc(
+      bubble1X,
+      bubble1Y,
+      1.5 + Math.sin(time / 150) * 0.8,
       0,
       Math.PI * 2
     );
     ctx.fill();
 
-    // Lava bubbles (animated)
-    ctx.globalCompositeOperation = "lighter";
-    const bubble1X = x + Math.sin(time / 200) * 2;
-    const bubble1Y = craterY + 2 + Math.cos(time / 200) * 1;
-    const bubble1R = 1.5 + Math.sin(time / 150) * 0.8;
-    ctx.fillStyle = `rgba(255, 220, 0, ${0.7 + Math.sin(time / 100) * 0.3})`;
-    ctx.beginPath();
-    ctx.arc(bubble1X, bubble1Y, bubble1R, 0, Math.PI * 2);
-    ctx.fill();
-
     const bubble2X = x - Math.sin(time / 180) * 3;
     const bubble2Y = craterY + 2 - Math.cos(time / 180) * 1.5;
-    const bubble2R = 1.0 + Math.sin(time / 120) * 0.6;
     ctx.fillStyle = `rgba(255, 255, 100, ${0.6 + Math.sin(time / 90) * 0.2})`;
     ctx.beginPath();
-    ctx.arc(bubble2X, bubble2Y, bubble2R, 0, Math.PI * 2);
+    ctx.arc(
+      bubble2X,
+      bubble2Y,
+      1.0 + Math.sin(time / 120) * 0.6,
+      0,
+      Math.PI * 2
+    );
     ctx.fill();
-    ctx.globalCompositeOperation = "source-over"; // Reset blend mode
+    ctx.globalCompositeOperation = "source-over";
 
-    // Lava cracks glowing down the mountain
+    // Lava cracks
     ctx.strokeStyle = `rgba(255, 120, 0, ${0.5 + Math.sin(time / 150) * 0.2})`;
     ctx.lineWidth = 1.5;
     ctx.beginPath();
@@ -303,15 +278,13 @@ export class VolcanoTower extends BaseTower {
     ctx.lineTo(x + 18, y + 10);
     ctx.stroke();
 
-    // --- Display Level as Text for VolcanoTower ---
-    ctx.fillStyle = "#ffffff"; // White color for the text
-    ctx.font = "12px Arial"; // Font size and type
-    ctx.textAlign = "center"; // Center the text horizontally
-    ctx.textBaseline = "middle"; // Center the text vertically
-    // Position the text below the tower base
+    // Level Text
+    ctx.fillStyle = "#ffffff";
+    ctx.font = "12px Arial";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
     ctx.fillText(`Lv. ${this.level}`, x, y + 35);
-    // --- END NEW CODE ---
 
-    ctx.restore(); // Restore global context
+    ctx.restore();
   }
 }

@@ -217,6 +217,22 @@ export const TOWER_TYPES = {
     size: { align: "T", occupy: 2 },
     class: WizardTower,
   },
+  volcano: {
+    name: "Volcano",
+    cost: 650, // Increased cost
+    range: 300, // Increased range
+    fireRate: 0.35, // Slightly faster fire rate
+    dmg: 100, // Significantly increased damage
+    splash: 150, // Increased splash
+    color: "#ff3300",
+    maxLevel: 5, // More levels
+    hp: 850, // Increased HP
+    unlockPrice: 1600, // Increased unlock price
+    upgradePriceBase: 320,
+    persistentMaxLevel: 50,
+    size: { align: "T", occupy: 2 },
+    class: VolcanoTower,
+  },
   laser: {
     name: "Laser",
     cost: 280, // Slightly increased cost
@@ -311,22 +327,6 @@ export const TOWER_TYPES = {
     class: ShadowTower,
   },
 
-  volcano: {
-    name: "Volcano",
-    cost: 650, // Increased cost
-    range: 220, // Increased range
-    fireRate: 0.35, // Slightly faster fire rate
-    dmg: 100, // Significantly increased damage
-    splash: 70, // Increased splash
-    color: "#ff3300",
-    maxLevel: 5, // More levels
-    hp: 850, // Increased HP
-    unlockPrice: 1600, // Increased unlock price
-    upgradePriceBase: 320,
-    persistentMaxLevel: 50,
-    size: { align: "T", occupy: 2 },
-    class: VolcanoTower,
-  },
   carM249: {
     name: "Car M249",
     cost: 600,

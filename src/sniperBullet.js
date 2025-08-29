@@ -9,6 +9,8 @@ export class SniperBullet {
   constructor(x, y, angle, spec) {
     this.x = x;
     this.y = y;
+    this.prevX = x; // track previous position for swept collision
+    this.prevY = y;
     this.angle = angle;
     this.spec = spec;
     this.speed = spec.bulletSpeed;
@@ -26,6 +28,10 @@ export class SniperBullet {
   update(dt) {
     if (!this.active) return;
 
+    // Save previous position
+    this.prevX = this.x;
+    this.prevY = this.y;
+
     // Move bullet
     this.x += Math.cos(this.angle) * this.speed * dt;
     this.y += Math.sin(this.angle) * this.speed * dt;
@@ -37,13 +43,23 @@ export class SniperBullet {
       return;
     }
 
-    // Check for collisions with enemies
+    // Check for collisions with enemies using swept line
     for (const enemy of enemies) {
       if (enemy.dead || this.hitEnemies.has(enemy)) continue;
 
-      const d = dist({ x: this.x, y: this.y }, enemy.pos);
-      if (d <= enemy.r) {
-        // Hit enemy
+      // Distance from enemy center to bullet path segment
+      const dx = this.x - this.prevX;
+      const dy = this.y - this.prevY;
+      const fx = this.prevX - enemy.pos.x;
+      const fy = this.prevY - enemy.pos.y;
+
+      const a = dx * dx + dy * dy;
+      const b = 2 * (fx * dx + fy * dy);
+      const c = fx * fx + fy * fy - enemy.r * enemy.r;
+      const discriminant = b * b - 4 * a * c;
+
+      if (discriminant >= 0) {
+        // Collision detected
         this.hitEnemies.add(enemy);
 
         // Draw hit effect
@@ -51,10 +67,7 @@ export class SniperBullet {
 
         // Draw bullet trail
         spawnBeam(
-          {
-            x: this.x - Math.cos(this.angle) * 20,
-            y: this.y - Math.sin(this.angle) * 20,
-          },
+          { x: this.prevX, y: this.prevY },
           { x: this.x, y: this.y },
           this.isCritical ? "#ff0000" : this.spec.color
         );

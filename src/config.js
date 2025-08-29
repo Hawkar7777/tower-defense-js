@@ -219,7 +219,7 @@ export const TOWER_TYPES = {
   },
   volcano: {
     name: "Volcano",
-    cost: 650, // Increased cost
+    cost: 450, // Increased cost
     range: 300, // Increased range
     fireRate: 0.35, // Slightly faster fire rate
     dmg: 100, // Significantly increased damage
@@ -227,11 +227,48 @@ export const TOWER_TYPES = {
     color: "#ff3300",
     maxLevel: 5, // More levels
     hp: 850, // Increased HP
-    unlockPrice: 1600, // Increased unlock price
+    unlockPrice: 1100, // Increased unlock price
     upgradePriceBase: 320,
     persistentMaxLevel: 50,
     size: { align: "T", occupy: 2 },
     class: VolcanoTower,
+  },
+  missile: {
+    name: "Missile",
+    cost: 320, // Increased cost
+    range: 185, // Increased range
+    fireRate: 1.0, // Faster fire rate
+    dmg: 130, // Significantly increased damage
+    splash: 100, // Increased splash
+    bulletSpeed: 220, // Faster homing missile
+    homingStrength: 0.12, // Stronger homing
+    retarget: true,
+    color: "#FF5722",
+    maxLevel: 6, // More levels
+    hp: 600, // Increased HP
+    unlockPrice: 850, // Increased unlock price
+    upgradePriceBase: 160,
+    persistentMaxLevel: 60,
+    class: MissileTower,
+  },
+  sniper: {
+    name: "Sniper",
+    cost: 650, // Increased cost
+    range: 450, // Longer range
+    fireRate: 0.4, // Slightly faster fire rate
+    dmg: 250, // Significantly increased damage
+    bulletSpeed: 2000, // Faster bullet speed
+    penetration: 3, // Increased penetration
+    critChance: 0.3, // Increased crit chance
+    critMultiplier: 2.75, // Increased crit multiplier
+    color: "#2b4ff2",
+    maxLevel: 5, // More levels
+    hp: 650, // Increased HP
+    unlockPrice: 2000, // Increased unlock price
+    upgradePriceBase: 220,
+    persistentMaxLevel: 50,
+    size: { align: "TBLR", occupy: 2 },
+    class: SniperTower,
   },
   laser: {
     name: "Laser",
@@ -249,44 +286,6 @@ export const TOWER_TYPES = {
     class: LaserTower,
   },
 
-  missile: {
-    name: "Missile",
-    cost: 320, // Increased cost
-    range: 170, // Increased range
-    fireRate: 1.0, // Faster fire rate
-    dmg: 85, // Significantly increased damage
-    splash: 85, // Increased splash
-    bulletSpeed: 200, // Faster homing missile
-    homingStrength: 0.12, // Stronger homing
-    retarget: true,
-    color: "#FF5722",
-    maxLevel: 6, // More levels
-    hp: 600, // Increased HP
-    unlockPrice: 850, // Increased unlock price
-    upgradePriceBase: 160,
-    persistentMaxLevel: 60,
-    class: MissileTower,
-  },
-
-  sniper: {
-    name: "Sniper",
-    cost: 400, // Increased cost
-    range: 450, // Longer range
-    fireRate: 0.4, // Slightly faster fire rate
-    dmg: 250, // Significantly increased damage
-    bulletSpeed: 1500, // Faster bullet speed
-    penetration: 3, // Increased penetration
-    critChance: 0.3, // Increased crit chance
-    critMultiplier: 2.75, // Increased crit multiplier
-    color: "#2b4ff2",
-    maxLevel: 5, // More levels
-    hp: 650, // Increased HP
-    unlockPrice: 1100, // Increased unlock price
-    upgradePriceBase: 220,
-    persistentMaxLevel: 50,
-    size: { align: "TBLR", occupy: 2 },
-    class: SniperTower,
-  },
   artillery: {
     name: "Artillery",
     cost: 550, // Increased cost

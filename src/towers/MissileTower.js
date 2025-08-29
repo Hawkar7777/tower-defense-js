@@ -5,36 +5,20 @@ import { dist } from "../utils.js";
 import { spawnExplosion, spawnMuzzle } from "../effects.js";
 import { Missile } from "../missile.js"; // We'll create this special projectile
 import { soundManager } from "../assets/sounds/SoundManager.js"; // Import the sound manager
+import { TOWER_TYPES } from "../config.js";
 
 export class MissileTower extends BaseTower {
-  static SPEC = {
-    name: "Missile Tower",
-    cost: 280,
-    range: 160,
-    fireRate: 0.8,
-    dmg: 70,
-    splash: 80,
-    bulletSpeed: 180,
-    homingStrength: 0.1,
-    retarget: true,
-    color: "#FF5722",
-  };
-
   // Override spec to include missile properties
   spec() {
-    const base = this.constructor.SPEC;
-    const mult = 1 + (this.level - 1) * 0.4; // Higher multiplier for damage
+    const base = TOWER_TYPES.missile;
+    const mult = 1 + (this.level - 1) * 0.4;
     return {
-      name: base.name,
-      range: base.range * (1 + (this.level - 1) * 0.1), // Better range scaling
-      fireRate: base.fireRate * (1 + (this.level - 1) * 0.05),
+      ...base,
       dmg: base.dmg * mult,
       splash: base.splash * (1 + (this.level - 1) * 0.08),
-      bulletSpeed: base.bulletSpeed,
+      range: base.range * (1 + (this.level - 1) * 0.1),
+      fireRate: base.fireRate * (1 + (this.level - 1) * 0.05),
       homingStrength: base.homingStrength + (this.level - 1) * 0.02,
-      retarget: base.retarget,
-      color: base.color,
-      cost: base.cost,
     };
   }
 

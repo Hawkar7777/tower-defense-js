@@ -84,6 +84,9 @@ const pauseResumeBtn = document.getElementById("pauseResumeBtn");
 // autosave key (separate from persistent shop saves)
 const AUTOSAVE_KEY = "towerDefenseAutosave_v1";
 
+// Track if we explicitly disabled boss sounds during pause so we can restore them on resume.
+let bossSoundsDisabledByPause = false;
+
 /**
  * Create a compact autosave snapshot.
  */
@@ -244,13 +247,27 @@ function pauseGame(reason = "manual") {
     animationFrameId = null;
   }
 
-  // Pause audio safely
+  // Pause audio safely. If we have a global pause method prefer it; otherwise try to disable boss sounds as a fallback
   if (typeof soundManager?.pauseAll === "function") {
-    soundManager.pauseAll();
+    try {
+      soundManager.pauseAll();
+    } catch (err) {
+      console.warn("soundManager.pauseAll failed:", err);
+    }
   } else if (typeof soundManager?.suspendAll === "function") {
-    soundManager.suspendAll();
+    try {
+      soundManager.suspendAll();
+    } catch (err) {
+      console.warn("soundManager.suspendAll failed:", err);
+    }
   } else if (typeof soundManager?.setBossSoundsEnabled === "function") {
-    soundManager.setBossSoundsEnabled(false);
+    // If we fall back to toggling boss sounds, remember we did so so we can re-enable later.
+    try {
+      soundManager.setBossSoundsEnabled(false);
+      bossSoundsDisabledByPause = true;
+    } catch (err) {
+      console.warn("soundManager.setBossSoundsEnabled(false) failed:", err);
+    }
   }
 
   // autosave only for background/pagehide reason
@@ -289,7 +306,24 @@ function resumeGame() {
 
   // Resume audio if we can
   if (typeof soundManager?.resumeAudio === "function") {
-    soundManager.resumeAudio();
+    try {
+      soundManager.resumeAudio();
+    } catch (err) {
+      console.warn("soundManager.resumeAudio failed:", err);
+    }
+  }
+
+  // If we disabled boss sounds earlier as a fallback, re-enable them now.
+  if (
+    bossSoundsDisabledByPause &&
+    typeof soundManager?.setBossSoundsEnabled === "function"
+  ) {
+    try {
+      soundManager.setBossSoundsEnabled(true);
+    } catch (err) {
+      console.warn("soundManager.setBossSoundsEnabled(true) failed:", err);
+    }
+    bossSoundsDisabledByPause = false;
   }
 
   // resume loop
@@ -345,14 +379,6 @@ function handleAppForeground() {
   - window 'pagehide' & 'pageshow'
   - Capacitor App plugin (if available)
 ----------------------------*/
-
-// ensure only one set of listeners exist — remove typical duplicates if present
-try {
-  // remove previously attached handlers if you want to avoid duplicates (safe no-op if none)
-  // NOTE: these anonymous handlers won't be removed by name; this is best-effort to avoid some dup cases.
-} catch (e) {
-  // ignore
-}
 
 document.addEventListener("visibilitychange", () => {
   if (document.hidden) handleAppBackground();
@@ -447,9 +473,15 @@ window.addEventListener("game-mainmenu-request", () => {
       animationFrameId = null;
     }
 
+    // Disable boss sounds explicitly and ensure our local flag won't re-enable them
     if (typeof soundManager?.setBossSoundsEnabled === "function") {
-      soundManager.setBossSoundsEnabled(false);
+      try {
+        soundManager.setBossSoundsEnabled(false);
+      } catch (err) {
+        console.warn("soundManager.setBossSoundsEnabled(false) failed:", err);
+      }
     }
+    bossSoundsDisabledByPause = false; // clear flag so resume won't re-enable unexpectedly
 
     // Do NOT call saveAutosave() here.
     // The HTML/outer UI should handle showing the main menu (e.g. showMainMenu()).

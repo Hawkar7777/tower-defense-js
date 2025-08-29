@@ -6,23 +6,9 @@ import { enemies, particles } from "../state.js";
 import { dist } from "../utils.js";
 import { spawnExplosion } from "../effects.js";
 import { soundManager } from "../assets/sounds/SoundManager.js"; // Import the sound manager
+import { TOWER_TYPES } from "../config.js";
 
 export class FlamethrowerTower extends BaseTower {
-  static SPEC = {
-    name: "Flamethrower",
-    cost: 140,
-    range: 80,
-    fireRate: 15, // High fire rate for continuous stream
-    dmg: 8,
-    burnDamage: 6,
-    burnDuration: 3,
-    coneAngle: Math.PI / 3, // 60 degree cone
-    spreadChance: 0.4,
-    spreadRange: 40,
-    // fuelCapacity: 500, // Removed fuel capacity
-    color: "#FF6B35",
-  };
-
   constructor(gx, gy, key) {
     super(gx, gy, key);
     // this.fuel = this.constructor.SPEC.fuelCapacity; // Removed fuel property
@@ -35,21 +21,27 @@ export class FlamethrowerTower extends BaseTower {
   }
 
   spec() {
-    const base = this.constructor.SPEC;
-    const mult = 1 + (this.level - 1) * 0.4; // Higher multiplier for damage
+    const base = TOWER_TYPES.flamethrower; // dynamically get tower type
+    const mult = 1 + (this.level - 1) * 0.4; // scale damage and burn with level
+
     return {
       name: base.name,
       range: base.range * (1 + (this.level - 1) * 0.1),
-      fireRate: base.fireRate * 1,
+      fireRate: base.fireRate,
       dmg: base.dmg * mult,
       burnDamage: base.burnDamage * mult,
       burnDuration: base.burnDuration * (1 + (this.level - 1) * 0.1),
-      coneAngle: base.coneAngle + (this.level - 1) * 0.05, // Wider cone at higher levels
+      coneAngle: base.coneAngle + (this.level - 1) * 0.05,
       spreadChance: base.spreadChance + (this.level - 1) * 0.05,
       spreadRange: base.spreadRange * (1 + (this.level - 1) * 0.05),
-      // fuelCapacity: base.fuelCapacity * (1 + (this.level - 1) * 0.2), // Removed fuel scaling
       color: base.color,
       cost: base.cost,
+      hp: base.hp,
+      unlockPrice: base.unlockPrice,
+      upgradePriceBase: base.upgradePriceBase,
+      maxLevel: base.maxLevel,
+      persistentMaxLevel: base.persistentMaxLevel,
+      class: this.constructor,
     };
   }
 
@@ -58,7 +50,6 @@ export class FlamethrowerTower extends BaseTower {
   }
 
   update(dt, enemiesList) {
-
     // If hexed, don't do any GunTower-specific logic
     if (this.isHexed) return;
     const s = this.spec();

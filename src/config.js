@@ -113,7 +113,7 @@ export const TOWER_TYPES = {
     name: "Tesla",
     cost: 240, // Slightly increased cost
     range: 150, // Increased range
-    fireRate: 2, // Faster fire rate
+    fireRate: 1.4, // Faster fire rate
     dmg: 30, // Increased damage
     chainCount: 4, // More chains
     chainRange: 90, // Increased chain range
@@ -126,6 +126,96 @@ export const TOWER_TYPES = {
     upgradePriceBase: 130,
     persistentMaxLevel: 70,
     class: TeslaTower,
+  },
+  poison: {
+    name: "Poison",
+    cost: 210, // Slightly increased cost
+    range: 120, // Increased range
+    fireRate: 1.5, // Faster fire rate
+    dmg: 18, // Increased initial damage
+    dotDamage: 10, // Increased DoT damage
+    dotDuration: 5, // Longer DoT duration
+    spreadRange: 65, // Increased spread range
+    cloudDuration: 3.5, // Longer cloud duration
+    color: "#4CAF50",
+    maxLevel: 8, // More levels
+    hp: 450, // Increased HP
+    unlockPrice: 480,
+    upgradePriceBase: 75,
+    persistentMaxLevel: 80,
+    class: PoisonTower,
+  },
+  flamethrower: {
+    name: "Flamethrower",
+    cost: 160, // Slightly increased cost
+    range: 90, // Increased range
+    fireRate: 18, // Faster fire rate for continuous flame
+    dmg: 13, // Increased initial damage
+    burnDamage: 8, // Increased burn damage
+    burnDuration: 3.5, // Longer burn
+    coneAngle: Math.PI / 2.8, // Wider cone angle
+    spreadChance: 0.45, // Increased spread chance
+    spreadRange: 45, // Increased spread range
+    color: "#FF6B35",
+    maxLevel: 10, // More levels
+    hp: 420, // Increased HP
+    unlockPrice: 420,
+    upgradePriceBase: 68,
+    persistentMaxLevel: 100,
+    class: FlamethrowerTower,
+  },
+  lightning: {
+    name: "Lightning",
+    cost: 350, // Increased cost
+    range: 160, // Increased range
+    fireRate: 1.8, // Faster fire rate
+    dmg: 35, // Increased damage
+    chainCount: 5, // More chains
+    chainRange: 110, // Increased chain range
+    stunChance: 0.25, // Increased stun chance
+    stunDuration: 1.5, // Longer stun
+    color: "#00ffff",
+    maxLevel: 7, // More levels
+    hp: 550, // Increased HP
+    unlockPrice: 750, // Increased unlock price
+    upgradePriceBase: 150,
+    persistentMaxLevel: 70,
+    size: { align: "T", occupy: 2 },
+    class: LightningTower,
+  },
+  wind: {
+    name: "Wind",
+    cost: 220, // Increased cost
+    range: 150, // Increased range
+    fireRate: 1.3, // Faster fire rate
+    knockback: 50, // Stronger knockback
+    slowAmount: 0.55, // Stronger slow
+    slowDuration: 2, // Longer slow
+    color: "#00bfff",
+    maxLevel: 8, // More levels
+    hp: 450, // Increased HP
+    unlockPrice: 550, // Increased unlock price
+    upgradePriceBase: 110,
+    persistentMaxLevel: 80,
+    size: { align: "T", occupy: 2 },
+    class: WindTower,
+  },
+  wizard: {
+    name: "Wizard",
+    cost: 390, // Increased cost
+    range: 160, // Increased range
+    fireRate: 1.5, // Faster fire rate
+    dmg: 85, // Increased damage
+    chainCount: 4, // More chains
+    chainRange: 80, // Increased chain range
+    color: "#7f00ff",
+    maxLevel: 7, // More levels
+    hp: 520, // Increased HP
+    unlockPrice: 900, // Increased unlock price
+    upgradePriceBase: 180,
+    persistentMaxLevel: 70,
+    size: { align: "T", occupy: 2 },
+    class: WizardTower,
   },
   laser: {
     name: "Laser",
@@ -143,24 +233,6 @@ export const TOWER_TYPES = {
     class: LaserTower,
   },
 
-  poison: {
-    name: "Poison",
-    cost: 210, // Slightly increased cost
-    range: 120, // Increased range
-    fireRate: 1.8, // Faster fire rate
-    dmg: 18, // Increased initial damage
-    dotDamage: 10, // Increased DoT damage
-    dotDuration: 5, // Longer DoT duration
-    spreadRange: 65, // Increased spread range
-    cloudDuration: 3.5, // Longer cloud duration
-    color: "#4CAF50",
-    maxLevel: 8, // More levels
-    hp: 450, // Increased HP
-    unlockPrice: 480,
-    upgradePriceBase: 75,
-    persistentMaxLevel: 80,
-    class: PoisonTower,
-  },
   missile: {
     name: "Missile",
     cost: 320, // Increased cost
@@ -179,25 +251,7 @@ export const TOWER_TYPES = {
     persistentMaxLevel: 60,
     class: MissileTower,
   },
-  flamethrower: {
-    name: "Flamethrower",
-    cost: 160, // Slightly increased cost
-    range: 90, // Increased range
-    fireRate: 18, // Faster fire rate for continuous flame
-    dmg: 10, // Increased initial damage
-    burnDamage: 8, // Increased burn damage
-    burnDuration: 3.5, // Longer burn
-    coneAngle: Math.PI / 2.8, // Wider cone angle
-    spreadChance: 0.45, // Increased spread chance
-    spreadRange: 45, // Increased spread range
-    color: "#FF6B35",
-    maxLevel: 10, // More levels
-    hp: 420, // Increased HP
-    unlockPrice: 420,
-    upgradePriceBase: 68,
-    persistentMaxLevel: 100,
-    class: FlamethrowerTower,
-  },
+
   sniper: {
     name: "Sniper",
     cost: 400, // Increased cost
@@ -237,25 +291,6 @@ export const TOWER_TYPES = {
     class: ArtilleryTower,
   },
 
-  lightning: {
-    name: "Lightning",
-    cost: 350, // Increased cost
-    range: 160, // Increased range
-    fireRate: 1.8, // Faster fire rate
-    dmg: 35, // Increased damage
-    chainCount: 5, // More chains
-    chainRange: 110, // Increased chain range
-    stunChance: 0.25, // Increased stun chance
-    stunDuration: 1.5, // Longer stun
-    color: "#00ffff",
-    maxLevel: 7, // More levels
-    hp: 550, // Increased HP
-    unlockPrice: 750, // Increased unlock price
-    upgradePriceBase: 150,
-    persistentMaxLevel: 70,
-    size: { align: "T", occupy: 2 },
-    class: LightningTower,
-  },
   shadow: {
     name: "Shadow",
     cost: 380, // Increased cost
@@ -275,40 +310,7 @@ export const TOWER_TYPES = {
     size: { align: "T", occupy: 2 },
     class: ShadowTower,
   },
-  wizard: {
-    name: "Wizard",
-    cost: 390, // Increased cost
-    range: 160, // Increased range
-    fireRate: 1.5, // Faster fire rate
-    dmg: 35, // Increased damage
-    chainCount: 3, // More chains
-    chainRange: 90, // Increased chain range
-    color: "#7f00ff",
-    maxLevel: 7, // More levels
-    hp: 520, // Increased HP
-    unlockPrice: 900, // Increased unlock price
-    upgradePriceBase: 180,
-    persistentMaxLevel: 70,
-    size: { align: "T", occupy: 2 },
-    class: WizardTower,
-  },
-  wind: {
-    name: "Wind",
-    cost: 220, // Increased cost
-    range: 150, // Increased range
-    fireRate: 1.5, // Faster fire rate
-    knockback: 50, // Stronger knockback
-    slowAmount: 0.55, // Stronger slow
-    slowDuration: 2, // Longer slow
-    color: "#00bfff",
-    maxLevel: 8, // More levels
-    hp: 450, // Increased HP
-    unlockPrice: 550, // Increased unlock price
-    upgradePriceBase: 110,
-    persistentMaxLevel: 80,
-    size: { align: "T", occupy: 2 },
-    class: WindTower,
-  },
+
   volcano: {
     name: "Volcano",
     cost: 650, // Increased cost

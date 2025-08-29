@@ -7,36 +7,27 @@ import { spawnLightningArc, spawnElectricExplosion } from "../effects.js";
 import { particles } from "../state.js";
 import { dist } from "../utils.js";
 import { soundManager } from "../assets/sounds/SoundManager.js"; // Import the sound manager
+import { TOWER_TYPES } from "../config.js";
 
 export class TeslaTower extends BaseTower {
-  static SPEC = {
-    name: "Tesla Tower",
-    cost: 300,
-    range: 140,
-    fireRate: 1.3,
-    dmg: 25,
-    chainCount: 3,
-    chainRange: 80,
-    stunChance: 0.3,
-    stunDuration: 1.5,
-    color: "#9d4edd",
-  };
-
   // Override spec to include tesla properties
   spec() {
-    const base = this.constructor.SPEC;
-    const mult = 1 + (this.level - 1) * 0.35;
+    const base = TOWER_TYPES.tesla;
+    const mult = 1 + (this.level - 1) * 0.3; // adjust scaling as needed
     return {
       name: base.name,
-      range: base.range * (1 + (this.level - 1) * 0.08),
+      cost: base.cost,
+      range: base.range * (1 + (this.level - 1) * 0.05),
       fireRate: base.fireRate * (1 + (this.level - 1) * 0.05),
       dmg: base.dmg * mult,
-      chainCount: base.chainCount + Math.floor(this.level / 2), // +1 chain every 2 levels
+      chainCount: base.chainCount + Math.floor((this.level - 1) / 2),
       chainRange: base.chainRange * (1 + (this.level - 1) * 0.05),
       stunChance: base.stunChance + (this.level - 1) * 0.05,
       stunDuration: base.stunDuration * (1 + (this.level - 1) * 0.1),
       color: base.color,
-      cost: base.cost,
+      hp: base.hp,
+      unlockPrice: base.unlockPrice,
+      upgradePriceBase: base.upgradePriceBase,
     };
   }
 

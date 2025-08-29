@@ -6,23 +6,11 @@ import { enemies, particles } from "../state.js";
 import { dist } from "../utils.js";
 import { spawnPoisonCloud } from "../effects.js";
 import { soundManager } from "../assets/sounds/SoundManager.js"; // Import the sound manager
+import { TOWER_TYPES } from "../config.js";
 
 export class PoisonTower extends BaseTower {
-  static SPEC = {
-    name: "Poison Tower",
-    cost: 190,
-    range: 110,
-    fireRate: 1.5,
-    dmg: 15,
-    dotDamage: 8,
-    dotDuration: 4,
-    spreadRange: 60,
-    cloudDuration: 3,
-    color: "#4CAF50", // Main color (green)
-  };
-
   spec() {
-    const base = this.constructor.SPEC;
+    const base = TOWER_TYPES.poison;
     const mult = 1 + (this.level - 1) * 0.35;
     return {
       name: base.name,

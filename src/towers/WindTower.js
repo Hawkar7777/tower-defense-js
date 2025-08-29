@@ -2,24 +2,18 @@
 
 import { BaseTower } from "./BaseTower.js";
 import { ctx } from "../core.js";
-import { particles } from "../state.js"; // No longer need to import `enemies`
+import { particles } from "../state.js";
 import { dist } from "../utils.js";
 import { soundManager } from "../assets/sounds/SoundManager.js";
+import { TOWER_TYPES } from "../config.js"; // <-- dynamic config
 
 export class WindTower extends BaseTower {
-  static SPEC = {
-    name: "Wind Tower",
-    cost: 200,
-    range: 140,
-    fireRate: 1.2,
-    knockback: 40,
-    slowAmount: 0.5,
-    slowDuration: 1.5,
-    color: "#00bfff",
-  };
+  constructor(gx, gy, key) {
+    super(gx, gy, key);
+  }
 
   spec() {
-    const base = this.constructor.SPEC;
+    const base = TOWER_TYPES.wind; // use config
     const mult = 1 + (this.level - 1) * 0.25;
     return {
       ...base,
@@ -29,18 +23,16 @@ export class WindTower extends BaseTower {
     };
   }
 
-  // --- MODIFIED --- Moved up to match the new, taller design
   getAttackOrigin() {
     return { x: this.center.x, y: this.center.y - 40 };
   }
 
   update(dt, enemiesList) {
-    // If hexed, don't do any GunTower-specific logic
     if (this.isHexed) return;
     const s = this.spec();
     this.cool -= dt;
 
-    // Check if any enemy has their slow expired
+    // Reset expired slows
     for (const e of enemiesList) {
       if (e.slowedUntil && e.slowedUntil < performance.now()) {
         e.speed = e.originalSpeed;
@@ -52,7 +44,7 @@ export class WindTower extends BaseTower {
       let hitAny = false;
       const attackOrigin = this.getAttackOrigin();
 
-      // Create a visual "gust" effect when firing
+      // Gust particle effect
       for (let i = 0; i < 15; i++) {
         const angle = Math.random() * Math.PI * 2;
         const speed = Math.random() * 80 + 20;
@@ -68,21 +60,20 @@ export class WindTower extends BaseTower {
         });
       }
 
+      // Apply knockback and slow to enemies
       for (const e of enemiesList) {
         if (e.dead) continue;
         const d = dist(this.center, e.pos);
         if (d <= s.range) {
           hitAny = true;
 
-          // Apply knockback
           const dx = e.pos.x - this.center.x;
           const dy = e.pos.y - this.center.y;
           const len = Math.sqrt(dx * dx + dy * dy) || 1;
-          // Apply a gentle push instead of a teleport
+
           e.vx += (dx / len) * s.knockback * 2;
           e.vy += (dy / len) * s.knockback * 2;
 
-          // Apply temporary slow
           if (e.originalSpeed === undefined) e.originalSpeed = e.speed;
           e.slowedUntil = performance.now() + s.slowDuration * 1000;
           e.speed = e.originalSpeed * (1 - s.slowAmount);
@@ -96,7 +87,6 @@ export class WindTower extends BaseTower {
     }
   }
 
-  // --- COMPLETELY REDESIGNED DRAW METHOD ---
   draw() {
     const { x, y } = this.center;
     const time = performance.now();
@@ -123,7 +113,7 @@ export class WindTower extends BaseTower {
     ctx.fillStyle = pylonGradient;
     ctx.beginPath();
     ctx.moveTo(x - 6, y + 10);
-    ctx.lineTo(x - 4, y - 35); // Made much taller
+    ctx.lineTo(x - 4, y - 35);
     ctx.lineTo(x + 4, y - 35);
     ctx.lineTo(x + 6, y + 10);
     ctx.closePath();
@@ -131,7 +121,7 @@ export class WindTower extends BaseTower {
     ctx.stroke();
 
     // 3. Glowing Core at the top
-    const coreY = y - 40; // New, higher position
+    const coreY = y - 40;
     const corePulse = 3 + Math.sin(time / 300) * 1.5;
     const coreGlow = ctx.createRadialGradient(
       x,
@@ -165,10 +155,8 @@ export class WindTower extends BaseTower {
 
       const startX = x + Math.cos(angle) * startRadius;
       const startY = coreY + Math.sin(angle) * startRadius;
-
       const endX = x + Math.cos(angle + 2) * endRadius;
       const endY = coreY + Math.sin(angle + 2) * endRadius;
-
       const controlX = x + Math.cos(angle + 1) * controlRadius;
       const controlY = coreY + Math.sin(angle + 1) * controlRadius;
 
@@ -182,25 +170,11 @@ export class WindTower extends BaseTower {
       ctx.stroke();
     }
 
-    // --- OLD CODE (REMOVE OR COMMENT OUT) ---
-    // // 5. Level indicators as glowing lines on the pylon
-    // for (let i = 0; i < this.level; i++) {
-    //   const levelY = y + 5 - i * 6;
-    //   ctx.fillStyle = "#ffffff";
-    //   ctx.shadowColor = s.color;
-    //   ctx.shadowBlur = 4;
-    //   ctx.fillRect(x - 5, levelY, 10, 2);
-    // }
-    // ctx.shadowBlur = 0;
-    // --- END OLD CODE ---
-
-    // --- NEW CODE: Display Level as Text for WindTower ---
-    ctx.fillStyle = "#ffffff"; // White color for the text
-    ctx.font = "12px Arial"; // Font size and type
-    ctx.textAlign = "center"; // Center the text horizontally
-    ctx.textBaseline = "middle"; // Center the text vertically
-    // Position the text below the tower. Adjust y + 25 as needed for spacing.
+    // Display Level as Text
+    ctx.fillStyle = "#ffffff";
+    ctx.font = "12px Arial";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
     ctx.fillText(`Lv. ${this.level}`, x, y + 25);
-    // --- END NEW CODE ---
   }
 }

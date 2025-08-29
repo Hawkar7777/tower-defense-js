@@ -5,19 +5,9 @@ import { Bullet } from "../bullet.js";
 import { ctx } from "../core.js";
 import { soundManager } from "../assets/sounds/SoundManager.js";
 import { dist } from "../utils.js";
+import { TOWER_TYPES } from "../config.js";
 
 export class DoubleCannonTower extends BaseTower {
-  static SPEC = {
-    name: "Double Canon",
-    cost: 160,
-    range: 120,
-    fireRate: 0.9,
-    dmg: 75,
-    splash: 55,
-    bulletSpeed: 240,
-    color: "#ff3333",
-  };
-
   constructor(gx, gy, key) {
     super(gx, gy, key);
     this._s = {
@@ -28,6 +18,23 @@ export class DoubleCannonTower extends BaseTower {
     // Removed: this.shootSound = new Audio(...) and related properties
   }
 
+  spec() {
+    const base = TOWER_TYPES.doubleCanon;
+    const mult = 1 + (this.level - 1) * 0.3; // adjust scaling as you like
+    return {
+      name: base.name,
+      cost: base.cost,
+      range: base.range * (1 + (this.level - 1) * 0.05),
+      fireRate: base.fireRate * (1 + (this.level - 1) * 0.05),
+      dmg: base.dmg * mult,
+      splash: base.splash * mult,
+      bulletSpeed: base.bulletSpeed,
+      color: base.color,
+      hp: base.hp,
+      unlockPrice: base.unlockPrice,
+      upgradePriceBase: base.upgradePriceBase,
+    };
+  }
   // Removed: playShootSound method
 
   fireProjectile(center, target, spec) {

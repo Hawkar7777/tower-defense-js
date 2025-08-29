@@ -1,30 +1,19 @@
-// ===== FILE: src/towers/LightningTower.js =====
-
 import { BaseTower } from "./BaseTower.js";
-import { ctx, TILE } from "../core.js";
+import { ctx } from "../core.js";
 import { particles } from "../state.js";
 import { dist } from "../utils.js";
 import { spawnBeam } from "../effects.js";
 import { soundManager } from "../assets/sounds/SoundManager.js";
+import { TOWER_TYPES } from "../config.js"; // <-- use config
 
 export class LightningTower extends BaseTower {
-  static SPEC = {
-    name: "Lightning Tower",
-    cost: 300,
-    range: 150,
-    fireRate: 1.5,
-    dmg: 30,
-    chainCount: 4,
-    chainRange: 100,
-    stunChance: 0.2,
-    stunDuration: 1.2,
-    color: "#00ffff", // Main color (bright cyan)
-    size: { align: "T", occupy: 3 },
-  };
+  constructor(gx, gy, key) {
+    super(gx, gy, key);
+  }
 
   spec() {
-    const base = this.constructor.SPEC;
-    const mult = 1 + (this.level - 1) * 0.3;
+    const base = TOWER_TYPES.lightning; // dynamic spec
+    const mult = 1 + (this.level - 1) * 0.3; // scale damage with level
     return {
       name: base.name,
       range: base.range * (1 + (this.level - 1) * 0.1),
@@ -36,22 +25,24 @@ export class LightningTower extends BaseTower {
       stunDuration: base.stunDuration,
       color: base.color,
       cost: base.cost,
+      hp: base.hp,
+      unlockPrice: base.unlockPrice,
+      upgradePriceBase: base.upgradePriceBase,
+      maxLevel: base.maxLevel,
+      persistentMaxLevel: base.persistentMaxLevel,
       size: base.size,
+      class: this.constructor,
     };
   }
 
-  // The lightning should originate from the top conductor of the new design
   getLightningOrigin() {
     const { x, y } = this.center;
     const time = performance.now() / 500;
-    // Top of the pulsating energy sphere
-    const topSphereY = y - 45 + Math.sin(time * 0.7) * 2; // Matches draw method's top sphere
-    return { x: x, y: topSphereY - 8 }; // Slightly above the sphere
+    const topSphereY = y - 45 + Math.sin(time * 0.7) * 2;
+    return { x: x, y: topSphereY - 8 };
   }
 
   update(dt, enemiesList) {
-
-    // If hexed, don't do any GunTower-specific logic
     if (this.isHexed) return;
     const s = this.spec();
     this.cool -= dt;
@@ -102,6 +93,7 @@ export class LightningTower extends BaseTower {
           fade: 0.85,
         });
       }
+
       hitEnemies.add(current);
       prevPos = current.pos;
 
@@ -117,27 +109,26 @@ export class LightningTower extends BaseTower {
       }
       current = nextEnemy;
     }
+
     soundManager.playSound("lightningShoot", 0.2);
   }
 
   draw() {
     const s = this.spec();
-    const time = performance.now() / 500; // For animations
-
+    const time = performance.now() / 500;
     const x = this.center.x;
-    const y = this.center.y; // Use center for base positioning
+    const y = this.center.y;
 
-    // Calculate hover for the whole tower
     const hoverOffset = Math.sin(time * 0.4) * 1.5;
     ctx.save();
     ctx.translate(0, hoverOffset);
 
-    // 1. Arcane Base Platform
-    ctx.fillStyle = "#1a2a3a"; // Dark blue-grey
+    // Arcane Base Platform
+    ctx.fillStyle = "#1a2a3a";
     ctx.strokeStyle = "#3a4a5a";
     ctx.lineWidth = 2;
     ctx.beginPath();
-    ctx.ellipse(x, y + 15, 25, 12, 0, 0, Math.PI * 2); // Wider, oval base
+    ctx.ellipse(x, y + 15, 25, 12, 0, 0, Math.PI * 2);
     ctx.fill();
     ctx.stroke();
 
@@ -160,13 +151,13 @@ export class LightningTower extends BaseTower {
     }
     ctx.shadowBlur = 0;
 
-    // 2. Central Crystal Spire
+    // Central Crystal Spire
     const spireBaseY = y + 10;
     const spireTopY = y - 40;
-    ctx.fillStyle = "#2c3e50"; // Dark metallic blue
+    ctx.fillStyle = "#2c3e50";
     ctx.beginPath();
     ctx.moveTo(x - 8, spireBaseY);
-    ctx.lineTo(x - 4, spireTopY); // Taper to a point
+    ctx.lineTo(x - 4, spireTopY);
     ctx.lineTo(x + 4, spireTopY);
     ctx.lineTo(x + 8, spireBaseY);
     ctx.closePath();
@@ -175,7 +166,6 @@ export class LightningTower extends BaseTower {
     ctx.lineWidth = 1.5;
     ctx.stroke();
 
-    // Spire energy glow (vertical)
     const spireGrad = ctx.createLinearGradient(x, spireBaseY, x, spireTopY);
     spireGrad.addColorStop(0, "rgba(0, 200, 255, 0.2)");
     spireGrad.addColorStop(0.5, "rgba(0, 255, 255, 0.6)");
@@ -189,19 +179,16 @@ export class LightningTower extends BaseTower {
     ctx.closePath();
     ctx.fill();
 
-    // 3. Orbiting Energy Rings
+    // Orbiting Energy Rings
     const ringCount = 3;
-    const ringOffsetY = -10; // Offset relative to tower center
+    const ringOffsetY = -10;
     const ringBaseRadius = 25;
     const ringHeight = 5;
-
     ctx.globalCompositeOperation = "lighter";
     for (let i = 0; i < ringCount; i++) {
       const ringAngle = time * 0.8 + (i * Math.PI * 2) / ringCount;
-      const ringRadius = ringBaseRadius + Math.sin(time * 1.2 + i * 0.5) * 3; // Pulsating radius
-      const ringAlpha = 0.6 + Math.sin(time * 1.5 + i * 0.7) * 0.3; // Pulsating alpha
-
-      // Draw as a rotating ellipse
+      const ringRadius = ringBaseRadius + Math.sin(time * 1.2 + i * 0.5) * 3;
+      const ringAlpha = 0.6 + Math.sin(time * 1.5 + i * 0.7) * 0.3;
       ctx.strokeStyle = `rgba(0, 255, 255, ${ringAlpha})`;
       ctx.lineWidth = 2.5;
       ctx.beginPath();
@@ -216,13 +203,11 @@ export class LightningTower extends BaseTower {
       );
       ctx.stroke();
     }
-    ctx.globalCompositeOperation = "source-over"; // Reset blend mode
+    ctx.globalCompositeOperation = "source-over";
 
-    // 4. Top Energy Conductor (pulsating sphere)
-    const topSphereY = y - 45; // Top of the spire
-    const spherePulseSize = 6 + Math.sin(time * 0.7) * 2; // Pulsating effect
-
-    // Outer glow for the sphere
+    // Top Energy Conductor Sphere
+    const topSphereY = y - 45;
+    const spherePulseSize = 6 + Math.sin(time * 0.7) * 2;
     ctx.globalCompositeOperation = "lighter";
     const outerSphereGrad = ctx.createRadialGradient(
       x,
@@ -242,7 +227,6 @@ export class LightningTower extends BaseTower {
     ctx.arc(x, topSphereY, spherePulseSize * 2, 0, Math.PI * 2);
     ctx.fill();
 
-    // Main sphere body
     const sphereGrad = ctx.createRadialGradient(
       x,
       topSphereY,
@@ -251,24 +235,22 @@ export class LightningTower extends BaseTower {
       topSphereY,
       spherePulseSize
     );
-    sphereGrad.addColorStop(0, "#E0FFFF"); // Light cyan
-    sphereGrad.addColorStop(0.5, "#80FFFF"); // Medium cyan
-    sphereGrad.addColorStop(1, "#00CCCC"); // Darker cyan
+    sphereGrad.addColorStop(0, "#E0FFFF");
+    sphereGrad.addColorStop(0.5, "#80FFFF");
+    sphereGrad.addColorStop(1, "#00CCCC");
     ctx.fillStyle = sphereGrad;
     ctx.beginPath();
     ctx.arc(x, topSphereY, spherePulseSize, 0, Math.PI * 2);
     ctx.fill();
-    ctx.globalCompositeOperation = "source-over"; // Reset blend mode
+    ctx.globalCompositeOperation = "source-over";
 
-    // --- Display Level as Text for LightningTower ---
-    ctx.fillStyle = "#ffffff"; // White color for the text
-    ctx.font = "12px Arial"; // Font size and type
-    ctx.textAlign = "center"; // Center the text horizontally
-    ctx.textBaseline = "middle"; // Center the text vertically
-    // Position the text below the base platform
-    ctx.fillText(`Lv. ${this.level}`, x, y + 35 - hoverOffset); // Account for hover
-    // --- END NEW CODE ---
+    // Level display
+    ctx.fillStyle = "#ffffff";
+    ctx.font = "12px Arial";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(`Lv. ${this.level}`, x, y + 35 - hoverOffset);
 
-    ctx.restore(); // End hover translation
+    ctx.restore();
   }
 }

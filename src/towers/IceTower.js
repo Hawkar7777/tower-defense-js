@@ -7,25 +7,15 @@ import { Bullet } from "../bullet.js";
 import { ctx } from "../core.js";
 import { soundManager } from "../assets/sounds/SoundManager.js"; // Import the sound manager
 import { dist } from "../utils.js"; // Import dist for update method, though it's not directly in this file, often needed in BaseTower
+import { TOWER_TYPES } from "../config.js";
 
 export class IceTower extends BaseTower {
-  static SPEC = {
-    name: "Ice Tower",
-    cost: 180,
-    range: 130,
-    fireRate: 2.5,
-    dmg: 8,
-    slowAmount: 0.6,
-    slowDuration: 3,
-    freezeChance: 0.2,
-    bulletSpeed: 300,
-    color: "#6cfaff",
-  };
-
   // Override spec to include ice properties
+  // ✅ Use config.js values at runtime
   spec() {
-    const base = this.constructor.SPEC;
+    const base = TOWER_TYPES.ice; // <-- comes from config.js
     const mult = 1 + (this.level - 1) * 0.35;
+
     return {
       name: base.name,
       range: base.range * (1 + (this.level - 1) * 0.08),
@@ -37,6 +27,9 @@ export class IceTower extends BaseTower {
       bulletSpeed: base.bulletSpeed,
       color: base.color,
       cost: base.cost,
+      hp: base.hp,
+      unlockPrice: base.unlockPrice,
+      upgradePriceBase: base.upgradePriceBase,
     };
   }
 

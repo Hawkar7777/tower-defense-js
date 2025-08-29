@@ -242,36 +242,85 @@
     import { levels } from "./levels.js";
     import { TOWER_TYPES } from "./config.js";
 
+    // Using the new persistentCurrentLevel structure
     const playerData = {};
 
     function loadPlayerData() {
-      const savedData = localStorage.getItem("towerDefensePlayerData");
+      const raw = localStorage.getItem("towerDefensePlayerData");
+      const saved = raw ? JSON.parse(raw) : null;
+
+      // Default data
       const defaultData = {
         shopMoney: 11123500,
         unlockedTowers: ["gun"],
-        towerLevels: { gun: 1 },
+        // New canonical shape: persistentCurrentLevel
+        persistentCurrentLevel: { gun: 1 },
       };
 
-      Object.assign(
-        playerData,
-        defaultData,
-        savedData ? JSON.parse(savedData) : {}
-      );
+      // Start with defaults and merge saved if present
+      Object.assign(playerData, defaultData, saved || {});
 
+      // MIGRATION: support old keys (towerLevels or persistentMaxLevel)
+      if (saved) {
+        if (
+          saved.persistentCurrentLevel &&
+          typeof saved.persistentCurrentLevel === "object"
+        ) {
+          playerData.persistentCurrentLevel = Object.assign(
+            {},
+            defaultData.persistentCurrentLevel,
+            saved.persistentCurrentLevel
+          );
+        } else {
+          // fallback: copy towerLevels if present
+          if (saved.towerLevels && typeof saved.towerLevels === "object") {
+            playerData.persistentCurrentLevel = Object.assign(
+              {},
+              defaultData.persistentCurrentLevel,
+              saved.towerLevels
+            );
+          }
+          // fallback: copy persistentMaxLevel if present (treat values as current levels)
+          if (
+            saved.persistentMaxLevel &&
+            typeof saved.persistentMaxLevel === "object"
+          ) {
+            playerData.persistentCurrentLevel = Object.assign(
+              {},
+              playerData.persistentCurrentLevel || {},
+              saved.persistentMaxLevel
+            );
+          }
+        }
+      }
+
+      // Ensure persistentCurrentLevel has an entry for every tower key
       if (TOWER_TYPES) {
         Object.keys(TOWER_TYPES).forEach((key) => {
-          if (!playerData.towerLevels[key]) {
-            playerData.towerLevels[key] = 0; // 0 means locked
+          if (typeof playerData.persistentCurrentLevel[key] === "undefined") {
+            // default: 0 means locked, but if unlocked include at least 1
+            playerData.persistentCurrentLevel[key] =
+              playerData.unlockedTowers &&
+              playerData.unlockedTowers.includes(key)
+                ? 1
+                : 0;
           }
         });
       }
+
+      // Backwards-compat alias (some parts of your codebase might still reference towerLevels)
+      playerData.towerLevels = playerData.persistentCurrentLevel;
+
+      // Expose globally for index.mjs and other modules
+      window.playerData = playerData;
     }
 
     function savePlayerData() {
-      localStorage.setItem(
-        "towerDefensePlayerData",
-        JSON.stringify(playerData)
-      );
+      // Ensure we don't persist old keys by accident
+      const toSave = Object.assign({}, playerData);
+      delete toSave.towerLevels;
+      // persist canonical shape
+      localStorage.setItem("towerDefensePlayerData", JSON.stringify(toSave));
     }
 
     window.playerData = playerData;
@@ -304,15 +353,17 @@
 
       for (const key in TOWER_TYPES) {
         const towerConfig = TOWER_TYPES[key];
-        const isUnlocked = playerData.unlockedTowers.includes(key);
-        const currentLevel = playerData.towerLevels[key] || 0;
-        const maxLevel = towerConfig.persistentMaxLevel;
+        const isUnlocked = (playerData.unlockedTowers || []).includes(key);
+        const currentLevel = playerData.persistentCurrentLevel[key] || 0;
+        // Use maxLevel as authoritative cap; fallback to legacy persistentMaxLevel if present
+        const maxLevel =
+          towerConfig.maxLevel || towerConfig.persistentMaxLevel || 1;
 
         const towerDiv = document.createElement("div");
         towerDiv.className = "shop-item";
 
         let statusText = isUnlocked
-          ? `Level ${currentLevel} / ${maxLevel}`
+          ? `Level ${Math.max(1, currentLevel)} / ${maxLevel}`
           : "Locked";
         if (isUnlocked && currentLevel >= maxLevel) {
           statusText = `Level ${maxLevel} / Max`;
@@ -320,12 +371,14 @@
 
         let actionButtonHTML = "";
         if (!isUnlocked) {
-          const canAfford = playerData.shopMoney >= towerConfig.unlockPrice;
+          const canAfford =
+            playerData.shopMoney >= (towerConfig.unlockPrice || Infinity);
           actionButtonHTML = `<button class="unlock-btn" data-key="${key}" ${
             !canAfford ? "disabled" : ""
-          }>Unlock ($${towerConfig.unlockPrice})</button>`;
+          }>Unlock ($${towerConfig.unlockPrice || 0})</button>`;
         } else if (currentLevel < maxLevel) {
-          const upgradeCost = towerConfig.upgradePriceBase * currentLevel;
+          const upgradeBase = Math.max(1, currentLevel);
+          const upgradeCost = (towerConfig.upgradePriceBase || 0) * upgradeBase;
           const canAfford = playerData.shopMoney >= upgradeCost;
           actionButtonHTML = `<button class="upgrade-btn" data-key="${key}" ${
             !canAfford ? "disabled" : ""
@@ -335,7 +388,7 @@
         }
 
         towerDiv.innerHTML = `
-                <h3>${towerConfig.name}</h3>
+                <h3>${towerConfig.name || key}</h3>
                 <p>Status: ${statusText}</p>
                 ${actionButtonHTML}
             `;
@@ -349,22 +402,35 @@
       const towerConfig = TOWER_TYPES[key];
 
       if (e.target.classList.contains("unlock-btn")) {
-        if (playerData.shopMoney >= towerConfig.unlockPrice) {
-          playerData.shopMoney -= towerConfig.unlockPrice;
-          playerData.unlockedTowers.push(key);
-          playerData.towerLevels[key] = 1;
+        const cost = towerConfig.unlockPrice || 0;
+        if (playerData.shopMoney >= cost) {
+          playerData.shopMoney -= cost;
+          playerData.unlockedTowers = playerData.unlockedTowers || [];
+          if (!playerData.unlockedTowers.includes(key))
+            playerData.unlockedTowers.push(key);
+          playerData.persistentCurrentLevel =
+            playerData.persistentCurrentLevel || {};
+          playerData.persistentCurrentLevel[key] = Math.max(
+            1,
+            playerData.persistentCurrentLevel[key] || 1
+          );
+          playerData.towerLevels = playerData.persistentCurrentLevel; // keep alias in sync
           savePlayerData();
           renderShop();
         }
       } else if (e.target.classList.contains("upgrade-btn")) {
-        const currentLevel = playerData.towerLevels[key];
-        const upgradeCost = towerConfig.upgradePriceBase * currentLevel;
-        if (
-          playerData.shopMoney >= upgradeCost &&
-          currentLevel < towerConfig.persistentMaxLevel
-        ) {
+        const currentLevel = playerData.persistentCurrentLevel[key] || 1;
+        const maxLevel =
+          towerConfig.maxLevel || towerConfig.persistentMaxLevel || Infinity;
+        const upgradeBase = Math.max(1, currentLevel);
+        const upgradeCost = (towerConfig.upgradePriceBase || 0) * upgradeBase;
+        if (playerData.shopMoney >= upgradeCost && currentLevel < maxLevel) {
           playerData.shopMoney -= upgradeCost;
-          playerData.towerLevels[key]++;
+          playerData.persistentCurrentLevel[key] = currentLevel + 1;
+          // clamp to max
+          if (playerData.persistentCurrentLevel[key] > maxLevel)
+            playerData.persistentCurrentLevel[key] = maxLevel;
+          playerData.towerLevels = playerData.persistentCurrentLevel; // keep alias in sync
           savePlayerData();
           renderShop();
         }
@@ -405,6 +471,8 @@
         loadingScreen.classList.remove("hidden"); // Show loading screen
 
         try {
+          // ensure window.playerData is up-to-date for index.mjs
+          window.playerData = playerData;
           await startGame(levelNumber); // Await startGame
         } catch (error) {
           console.error("Error starting game:", error);
@@ -425,6 +493,7 @@
     backToMenuButton.addEventListener("click", hideShopScreen);
     exitButton.addEventListener("click", () => alert("Thanks for playing!"));
 
+    // Load on script start
     loadPlayerData();
   </script>
 </html>

@@ -35,11 +35,11 @@ export const TOWER_TYPES = {
     dmg: 15, // Increased damage
     bulletSpeed: 300, // Slightly faster bullets
     color: "#6cf",
-    maxLevel: 5, // More levels for early game progression
+    maxLevel: 15, // More levels for early game progression
     hp: 400, // Increased HP
     unlockPrice: 0,
     upgradePriceBase: 28, // Slightly increased upgrade cost
-    persistentMaxLevel: 11,
+
     class: GunTower,
   },
   archer: {
@@ -56,7 +56,7 @@ export const TOWER_TYPES = {
     hp: 380, // Increased HP
     unlockPrice: 180,
     upgradePriceBase: 35,
-    persistentMaxLevel: 1,
+
     class: ArcherTower,
   },
   cannon: {
@@ -72,7 +72,7 @@ export const TOWER_TYPES = {
     hp: 550, // Increased HP for durability
     unlockPrice: 200,
     upgradePriceBase: 45,
-    persistentMaxLevel: 1,
+
     class: CannonTower,
   },
   ice: {
@@ -90,7 +90,7 @@ export const TOWER_TYPES = {
     hp: 420, // Increased HP
     unlockPrice: 320,
     upgradePriceBase: 55,
-    persistentMaxLevel: 1,
+
     class: IceTower,
   },
   doubleCanon: {
@@ -106,7 +106,7 @@ export const TOWER_TYPES = {
     maxLevel: 7, // More levels
     unlockPrice: 400, // Increased unlock price
     upgradePriceBase: 60,
-    persistentMaxLevel: 1,
+
     class: DoubleCannonTower,
   },
   laser: {
@@ -121,7 +121,7 @@ export const TOWER_TYPES = {
     hp: 480, // Increased HP
     unlockPrice: 550, // Increased unlock price
     upgradePriceBase: 110,
-    persistentMaxLevel: 1,
+
     class: LaserTower,
   },
   tesla: {
@@ -139,7 +139,7 @@ export const TOWER_TYPES = {
     hp: 500, // Increased HP
     unlockPrice: 650, // Increased unlock price
     upgradePriceBase: 130,
-    persistentMaxLevel: 1,
+
     class: TeslaTower,
   },
   poison: {
@@ -157,7 +157,7 @@ export const TOWER_TYPES = {
     hp: 450, // Increased HP
     unlockPrice: 480,
     upgradePriceBase: 75,
-    persistentMaxLevel: 1,
+
     class: PoisonTower,
   },
   flamethrower: {
@@ -176,7 +176,7 @@ export const TOWER_TYPES = {
     hp: 420, // Increased HP
     unlockPrice: 420,
     upgradePriceBase: 68,
-    persistentMaxLevel: 1,
+
     class: FlamethrowerTower,
   },
   lightning: {
@@ -194,7 +194,7 @@ export const TOWER_TYPES = {
     hp: 550, // Increased HP
     unlockPrice: 750, // Increased unlock price
     upgradePriceBase: 150,
-    persistentMaxLevel: 1,
+
     size: { align: "T", occupy: 2 },
     class: LightningTower,
   },
@@ -211,7 +211,7 @@ export const TOWER_TYPES = {
     hp: 450, // Increased HP
     unlockPrice: 550, // Increased unlock price
     upgradePriceBase: 110,
-    persistentMaxLevel: 1,
+
     size: { align: "T", occupy: 2 },
     class: WindTower,
   },
@@ -228,7 +228,7 @@ export const TOWER_TYPES = {
     hp: 520, // Increased HP
     unlockPrice: 900, // Increased unlock price
     upgradePriceBase: 180,
-    persistentMaxLevel: 1,
+
     size: { align: "T", occupy: 2 },
     class: WizardTower,
   },
@@ -244,7 +244,7 @@ export const TOWER_TYPES = {
     hp: 850, // Increased HP
     unlockPrice: 1100, // Increased unlock price
     upgradePriceBase: 320,
-    persistentMaxLevel: 1,
+
     size: { align: "T", occupy: 2 },
     class: VolcanoTower,
   },
@@ -263,7 +263,7 @@ export const TOWER_TYPES = {
     hp: 600, // Increased HP
     unlockPrice: 850, // Increased unlock price
     upgradePriceBase: 160,
-    persistentMaxLevel: 1,
+
     class: MissileTower,
   },
   sniper: {
@@ -281,7 +281,7 @@ export const TOWER_TYPES = {
     hp: 650, // Increased HP
     unlockPrice: 2000, // Increased unlock price
     upgradePriceBase: 220,
-    persistentMaxLevel: 1,
+
     size: { align: "TBLR", occupy: 2 },
     class: SniperTower,
   },
@@ -301,7 +301,7 @@ export const TOWER_TYPES = {
     hp: 750, // Increased HP
     unlockPrice: 1300, // Increased unlock price
     upgradePriceBase: 270,
-    persistentMaxLevel: 1,
+
     size: { align: "TBLR", occupy: 2 },
     class: ArtilleryTower,
   },
@@ -320,7 +320,7 @@ export const TOWER_TYPES = {
     hp: 540, // Increased HP
     unlockPrice: 950, // Increased unlock price
     upgradePriceBase: 190,
-    persistentMaxLevel: 1,
+
     size: { align: "T", occupy: 2 },
     class: ShadowTower,
   },
@@ -335,7 +335,7 @@ export const TOWER_TYPES = {
     hp: 600, // Increased HP
     unlockPrice: 1050,
     upgradePriceBase: 210,
-    persistentMaxLevel: 1,
+
     class: CarM249Tower,
   },
   smallTank: {
@@ -351,7 +351,7 @@ export const TOWER_TYPES = {
     hp: 750, // Significantly increased HP
     unlockPrice: 850,
     upgradePriceBase: 170,
-    persistentMaxLevel: 1,
+
     size: { align: "LR", occupy: 2 },
     class: SmallTank,
   },
@@ -368,7 +368,7 @@ export const TOWER_TYPES = {
     hp: 700, // Increased HP
     unlockPrice: 3200, // Increased unlock price
     upgradePriceBase: 650,
-    persistentMaxLevel: 1,
+
     class: HelicopterTower,
   },
 
@@ -385,7 +385,7 @@ export const TOWER_TYPES = {
     hp: 3500, // Increased HP, confirming its tankiness
     unlockPrice: 1600,
     upgradePriceBase: 320,
-    persistentMaxLevel: 1,
+
     size: { align: "TBLR", occupy: 2 },
     class: MediumTank,
   },
@@ -402,7 +402,7 @@ export const TOWER_TYPES = {
     hp: 900, // Increased HP
     unlockPrice: 4500, // Increased unlock price
     upgradePriceBase: 850,
-    persistentMaxLevel: 1,
+
     class: BlackHawkTower,
   },
   bigTank: {
@@ -422,7 +422,7 @@ export const TOWER_TYPES = {
     hp: 4500, // Significantly increased HP
     unlockPrice: 2700, // Increased unlock price
     upgradePriceBase: 550,
-    persistentMaxLevel: 1,
+
     class: BigTank,
   },
 
@@ -443,7 +443,7 @@ export const TOWER_TYPES = {
     size: { align: "TBLR", occupy: 3 },
     unlockPrice: 5500, // Increased unlock price
     upgradePriceBase: 1100,
-    persistentMaxLevel: 1,
+
     class: BehemothTank,
   },
 
@@ -460,7 +460,7 @@ export const TOWER_TYPES = {
     size: { align: "TBLR", occupy: 0 },
     unlockPrice: 11000, // Increased unlock price
     upgradePriceBase: 2800,
-    persistentMaxLevel: 1,
+
     class: JetTower,
   },
   b52Spirit: {
@@ -477,7 +477,7 @@ export const TOWER_TYPES = {
     size: { align: "TBLR", occupy: 0 },
     unlockPrice: 22000, // Increased unlock price
     upgradePriceBase: 5500,
-    persistentMaxLevel: 1,
+
     class: B52SpiritTower,
   },
 };

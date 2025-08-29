@@ -100,16 +100,122 @@ let initialZoom = 1.0;
 let last = performance.now();
 let animationFrameId = null;
 
-// --- Player Data (to persist tower levels, if desired) ---
+/* ------------------------------------------------------------------
+   Player data / migration notes
+   - We use `persistentCurrentLevel` as the canonical persistent shop level
+     mapping: { <towerKey>: <levelNumber>, ... }
+   - For backwards compatibility we migrate any old `towerLevels` or
+     `persistentMaxLevel` saved data into `persistentCurrentLevel`.
+   - We also keep an alias `towerLevels` pointing to the same object to
+     avoid breaking other code that might still reference it.
+-------------------------------------------------------------------*/
+
+// Default playerData (will be merged/migrated in initializeGame)
 window.playerData = {
-  towerLevels: {
+  // persistentCurrentLevel: keys here should match TOWER_TYPES keys
+  persistentCurrentLevel: {
+    // Example defaults (you can change these keys to match your TOWER_TYPES keys)
     gunnerTower: 1,
     cannonTower: 1,
     doubleCannonTower: 1,
     // Add other tower types here with their initial levels
   },
-  // You can expand this to include money, lives, unlocked levels, etc.
+  // alias for backwards-compat (kept in sync with persistentCurrentLevel)
+  towerLevels: {},
+
+  // other player data placeholders (money/lives) may be managed elsewhere
 };
+
+/**
+ * Safely migrate saved player data from localStorage or old globals.
+ * - Looks for localStorage key "towerDefensePlayerData" (common pattern).
+ * - If found, copies saved.persistentCurrentLevel into window.playerData.
+ * - If saved.towerLevels or saved.persistentMaxLevel exist, copies them into persistentCurrentLevel.
+ * - Ensures alias window.playerData.towerLevels points to persistentCurrentLevel.
+ */
+function migratePlayerDataIfNeeded() {
+  try {
+    const raw = localStorage.getItem("towerDefensePlayerData");
+    if (raw) {
+      const saved = JSON.parse(raw);
+      // If saved already contains new shape, use it
+      if (
+        saved.persistentCurrentLevel &&
+        typeof saved.persistentCurrentLevel === "object"
+      ) {
+        window.playerData.persistentCurrentLevel = Object.assign(
+          {},
+          window.playerData.persistentCurrentLevel || {},
+          saved.persistentCurrentLevel
+        );
+      } else {
+        // fallback migrations
+        if (saved.towerLevels && typeof saved.towerLevels === "object") {
+          window.playerData.persistentCurrentLevel = Object.assign(
+            {},
+            window.playerData.persistentCurrentLevel || {},
+            saved.towerLevels
+          );
+        }
+        if (
+          saved.persistentMaxLevel &&
+          typeof saved.persistentMaxLevel === "object"
+        ) {
+          // persistentMaxLevel likely stored numbers — treat them as current levels
+          window.playerData.persistentCurrentLevel = Object.assign(
+            {},
+            window.playerData.persistentCurrentLevel || {},
+            saved.persistentMaxLevel
+          );
+        }
+      }
+    } else if (
+      window.playerData &&
+      window.playerData.towerLevels &&
+      !window.playerData.persistentCurrentLevel
+    ) {
+      // If script injected towerLevels globally (old shape), migrate it
+      window.playerData.persistentCurrentLevel = Object.assign(
+        {},
+        window.playerData.towerLevels
+      );
+    }
+  } catch (err) {
+    console.warn("Failed to migrate player data:", err);
+  }
+
+  // Ensure every known tower key exists (default to 1 for unlocked-like feel)
+  try {
+    for (const k of Object.keys(TOWER_TYPES)) {
+      if (typeof window.playerData.persistentCurrentLevel[k] === "undefined") {
+        // default to 1 for convenience (adjust if you want locked = 0)
+        window.playerData.persistentCurrentLevel[k] = 1;
+      }
+    }
+  } catch (err) {
+    // ignore if TOWER_TYPES not ready for some reason
+  }
+
+  // Keep backwards-compatible alias
+  window.playerData.towerLevels = window.playerData.persistentCurrentLevel;
+}
+
+/**
+ * Utility to read the persistent current level for a tower key.
+ * Guarantees a minimum of 1 and clamps to spec.maxLevel if present.
+ */
+function getPersistentLevelClamped(key) {
+  const raw =
+    (window.playerData &&
+      window.playerData.persistentCurrentLevel &&
+      window.playerData.persistentCurrentLevel[key]) ||
+    1;
+  const base = Math.max(1, Number(raw) || 1);
+  const spec = TOWER_TYPES[key];
+  if (!spec) return base;
+  const maxLevel = spec.maxLevel || base;
+  return Math.min(base, maxLevel);
+}
 
 /**
  * OPTIMIZATION: Pre-renders the static grid to an off-screen canvas.
@@ -257,7 +363,9 @@ function loop(ts) {
   // 2. Populate the buffer by drawing each Disruptor's opaque aura onto it.
   for (const e of enemies) {
     if (e.type === "disruptor" && !e.dead) {
-      e.drawAuraToBuffer(auraCtx);
+      if (typeof e.drawAuraToBuffer === "function") {
+        e.drawAuraToBuffer(auraCtx);
+      }
     }
   }
 
@@ -677,8 +785,8 @@ canvas.addEventListener("mouseup", (e) => {
       if (state.money >= spec.cost) {
         // --- MODIFIED TOWER CREATION ---
         const newTower = new spec.class(mouse.gx, mouse.gy, ui.selectedShopKey);
-        // Set initial level from persistent data
-        newTower.level = window.playerData.towerLevels[ui.selectedShopKey] || 1;
+        // Set initial level from persistent data (clamped to maxLevel)
+        newTower.level = getPersistentLevelClamped(ui.selectedShopKey);
         towers.push(newTower);
 
         state.money -= spec.cost;
@@ -884,8 +992,8 @@ canvas.addEventListener(
         if (isPlacementValid(gx, gy, spec)) {
           if (state.money >= spec.cost) {
             const newTower = new spec.class(gx, gy, ui.selectedShopKey);
-            newTower.level =
-              window.playerData.towerLevels[ui.selectedShopKey] || 1;
+            // --- MODIFIED: set initial level from persistentCurrentLevel (clamped) ---
+            newTower.level = getPersistentLevelClamped(ui.selectedShopKey);
             towers.push(newTower);
 
             state.money -= spec.cost;
@@ -928,8 +1036,8 @@ canvas.addEventListener(
           const spec = TOWER_TYPES[ui.selectedShopKey];
           if (isPlacementValid(gx, gy, spec) && state.money >= spec.cost) {
             const newTower = new spec.class(gx, gy, ui.selectedShopKey);
-            newTower.level =
-              window.playerData.towerLevels[ui.selectedShopKey] || 1;
+            // --- MODIFIED: set initial level from persistentCurrentLevel (clamped) ---
+            newTower.level = getPersistentLevelClamped(ui.selectedShopKey);
             towers.push(newTower);
 
             state.money -= spec.cost;
@@ -974,8 +1082,10 @@ canvas.addEventListener("touchcancel", (e) => {
 });
 
 // --- Game Initialization Logic ---
-// --- Game Initialization Logic ---
 async function initializeGame() {
+  // Run migration early so persistentCurrentLevel is ready for placement logic
+  migratePlayerDataIfNeeded();
+
   // Define all sound configurations
   const soundConfigs = [
     {
@@ -1350,7 +1460,9 @@ const setupAudioResume = () => {
   });
 };
 
+//
 // Call this on DOM content loaded
+//
 document.addEventListener("DOMContentLoaded", () => {
   setupAudioResume();
   initializeGame();

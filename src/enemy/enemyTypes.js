@@ -51,7 +51,7 @@ export const ENEMY_TYPES = {
     glowColor: "#e76f51",
     detailColor: "#e9c46a",
     attackRange: 100,
-    attackDamage: 15,
+    attackDamage: 35,
     attackRate: 0.8,
     isAttacker: true,
   },

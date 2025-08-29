@@ -36,26 +36,42 @@ export class ArrowProjectile {
       this.exploded = true;
       this.active = false;
 
-      // Damage the target if still alive
       if (!this.target.dead) {
-        const damage =
-          Math.random() < this.spec.critChance
-            ? this.spec.dmg * this.spec.critMultiplier
-            : this.spec.dmg;
-        this.target.damage(damage);
-      }
+        // --- CRIT CHECK ---
+        const isCrit = Math.random() < this.spec.critChance;
+        const damage = isCrit
+          ? this.spec.dmg * this.spec.critMultiplier
+          : this.spec.dmg;
 
-      // Optional hit particles
-      for (let i = 0; i < 5; i++) {
-        particles.push({
-          x: this.x,
-          y: this.y,
-          vx: (Math.random() - 0.5) * 30,
-          vy: (Math.random() - 0.5) * 30,
-          life: 0.3 + Math.random() * 0.2,
-          r: 2,
-          c: this.spec.color,
-        });
+        this.target.damage(damage);
+
+        // Floating text for crits (could store on target or particles system)
+        if (isCrit) {
+          particles.push({
+            x: this.target.pos.x,
+            y: this.target.pos.y - 15,
+            vx: 0,
+            vy: -30,
+            life: 0.6,
+            r: 0,
+            text: "CRIT!",
+            textColor: "#ffeb3b",
+            textSize: 14,
+          });
+        }
+
+        // Particles for hit
+        for (let i = 0; i < (isCrit ? 10 : 5); i++) {
+          particles.push({
+            x: this.x,
+            y: this.y,
+            vx: (Math.random() - 0.5) * (isCrit ? 50 : 30),
+            vy: (Math.random() - 0.5) * (isCrit ? 50 : 30),
+            life: 0.3 + Math.random() * 0.2,
+            r: isCrit ? 3 : 2,
+            c: isCrit ? "#ffeb3b" : this.spec.color, // yellow for crits
+          });
+        }
       }
     }
   }

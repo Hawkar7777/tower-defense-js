@@ -10,7 +10,6 @@ export const levels = [
     waves: [
       // { count: 10, types: { swarmer: 1.0 } }, // Swarmers can be spawned independently for testing
       // // --- Individual Regular Enemy Waves (count: 1 for each type) ---
-      { boss: "Juggernaut" },
       { count: 10, types: { basic: 1.0 } },
       { count: 10, types: { brute: 1.0 } },
       { count: 10, types: { swift: 1.0 } },

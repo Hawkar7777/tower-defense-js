@@ -31,9 +31,9 @@ export const TOWER_TYPES = {
     name: "Gunner",
     cost: 80,
     range: 125, // Slightly increased range
-    fireRate: 7, // Increased fire rate for better early game
+    fireRate: 5, // Increased fire rate for better early game
     dmg: 15, // Increased damage
-    bulletSpeed: 360, // Slightly faster bullets
+    bulletSpeed: 300, // Slightly faster bullets
     color: "#6cf",
     maxLevel: 15, // More levels for early game progression
     hp: 400, // Increased HP
@@ -42,13 +42,30 @@ export const TOWER_TYPES = {
     persistentMaxLevel: 150,
     class: GunTower,
   },
+  archer: {
+    name: "Archer",
+    cost: 95, // Slightly increased cost
+    range: 135, // Increased range
+    fireRate: 5.5, // Faster fire rate
+    dmg: 28, // Increased damage
+    bulletSpeed: 420,
+    critChance: 0.15, // Increased crit chance
+    critMultiplier: 1.6, // Increased crit multiplier
+    color: "#8bc34a",
+    maxLevel: 15, // More levels for early game
+    hp: 380, // Increased HP
+    unlockPrice: 180,
+    upgradePriceBase: 35,
+    persistentMaxLevel: 150,
+    class: ArcherTower,
+  },
   cannon: {
     name: "Cannon",
     cost: 120,
     range: 145, // Slightly increased range
-    fireRate: 1.5, // Faster fire rate
-    dmg: 65, // Increased damage
-    splash: 65, // Increased splash radius
+    fireRate: 1.6, // Faster fire rate
+    dmg: 75, // Increased damage
+    splash: 70, // Increased splash radius
     bulletSpeed: 280, // Faster bullets
     color: "#f6c66a",
     maxLevel: 12, // More levels
@@ -57,37 +74,6 @@ export const TOWER_TYPES = {
     upgradePriceBase: 45,
     persistentMaxLevel: 120,
     class: CannonTower,
-  },
-  doubleCanon: {
-    name: "Double Canon",
-    cost: 190, // Slightly increased cost
-    range: 135, // Increased range
-    fireRate: 1.2, // Faster fire rate for a "double" cannon
-    dmg: 90, // Significantly increased damage
-    splash: 60, // Increased splash
-    bulletSpeed: 260,
-    color: "#f00",
-    hp: 700, // Increased HP
-    maxLevel: 7, // More levels
-    unlockPrice: 400, // Increased unlock price
-    upgradePriceBase: 60,
-    persistentMaxLevel: 70,
-    class: DoubleCannonTower,
-  },
-  laser: {
-    name: "Laser",
-    cost: 280, // Slightly increased cost
-    range: 160, // Increased range
-    fireRate: 15, // High fire rate
-    dmg: 7, // Increased base damage, relies on sustained fire
-    beam: true,
-    color: "#ff69e0",
-    maxLevel: 7, // More levels
-    hp: 480, // Increased HP
-    unlockPrice: 550, // Increased unlock price
-    upgradePriceBase: 110,
-    persistentMaxLevel: 70,
-    class: LaserTower,
   },
   ice: {
     name: "Ice",
@@ -107,6 +93,22 @@ export const TOWER_TYPES = {
     persistentMaxLevel: 80,
     class: IceTower,
   },
+  doubleCanon: {
+    name: "Double Canon",
+    cost: 190, // Slightly increased cost
+    range: 135, // Increased range
+    fireRate: 1.2, // Faster fire rate for a "double" cannon
+    dmg: 90, // Significantly increased damage
+    splash: 60, // Increased splash
+    bulletSpeed: 260,
+    color: "#f00",
+    hp: 700, // Increased HP
+    maxLevel: 7, // More levels
+    unlockPrice: 400, // Increased unlock price
+    upgradePriceBase: 60,
+    persistentMaxLevel: 70,
+    class: DoubleCannonTower,
+  },
   tesla: {
     name: "Tesla",
     cost: 240, // Slightly increased cost
@@ -125,6 +127,22 @@ export const TOWER_TYPES = {
     persistentMaxLevel: 70,
     class: TeslaTower,
   },
+  laser: {
+    name: "Laser",
+    cost: 280, // Slightly increased cost
+    range: 160, // Increased range
+    fireRate: 15, // High fire rate
+    dmg: 7, // Increased base damage, relies on sustained fire
+    beam: true,
+    color: "#ff69e0",
+    maxLevel: 7, // More levels
+    hp: 480, // Increased HP
+    unlockPrice: 550, // Increased unlock price
+    upgradePriceBase: 110,
+    persistentMaxLevel: 70,
+    class: LaserTower,
+  },
+
   poison: {
     name: "Poison",
     cost: 210, // Slightly increased cost
@@ -218,23 +236,7 @@ export const TOWER_TYPES = {
     size: { align: "TBLR", occupy: 2 },
     class: ArtilleryTower,
   },
-  archer: {
-    name: "Archer",
-    cost: 95, // Slightly increased cost
-    range: 135, // Increased range
-    fireRate: 5.5, // Faster fire rate
-    dmg: 12, // Increased damage
-    bulletSpeed: 420,
-    critChance: 0.15, // Increased crit chance
-    critMultiplier: 1.6, // Increased crit multiplier
-    color: "#8bc34a",
-    maxLevel: 15, // More levels for early game
-    hp: 380, // Increased HP
-    unlockPrice: 180,
-    upgradePriceBase: 35,
-    persistentMaxLevel: 150,
-    class: ArcherTower,
-  },
+
   lightning: {
     name: "Lightning",
     cost: 350, // Increased cost

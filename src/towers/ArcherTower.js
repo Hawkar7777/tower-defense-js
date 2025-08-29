@@ -6,23 +6,11 @@ import { enemies, projectiles, particles } from "../state.js";
 import { dist } from "../utils.js";
 import { ArrowProjectile } from "../arrowProjectile.js";
 import { soundManager } from "../assets/sounds/SoundManager.js";
+import { TOWER_TYPES } from "../config.js";
 
 export class ArcherTower extends BaseTower {
-  static SPEC = {
-    name: "Archer Tower",
-    cost: 90,
-    range: 140,
-    fireRate: 5,
-    dmg: 12,
-    bulletSpeed: 400,
-    critChance: 0.15,
-    critMultiplier: 1.7,
-    color: "#4fc3f7",
-    accentColor: "#ffeb3b",
-  };
-
   spec() {
-    const base = this.constructor.SPEC;
+    const base = TOWER_TYPES.archer;
     const mult = 1 + (this.level - 1) * 0.25;
     return {
       name: base.name,
@@ -33,7 +21,7 @@ export class ArcherTower extends BaseTower {
       critChance: base.critChance,
       critMultiplier: base.critMultiplier,
       color: base.color,
-      accentColor: base.accentColor,
+      accentColor: base.accentColor ?? "#ffeb3b", // fallback if missing
       cost: base.cost,
     };
   }

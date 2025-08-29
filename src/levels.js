@@ -8,9 +8,6 @@ export const levels = [
     startMoney: 100000000, // Very generous for testing purposes
     startLives: 1,
     waves: [
-      // { count: 10, types: { swarmer: 1.0 } }, // Swarmers can be spawned independently for testing
-      // // --- Individual Regular Enemy Waves (count: 1 for each type) ---
-      // { boss: "Goliath" },
       { count: 10, types: { basic: 1.0 } },
       { count: 10, types: { brute: 1.0 } },
       { count: 10, types: { swift: 1.0 } },
@@ -25,7 +22,6 @@ export const levels = [
       { count: 10, types: { collector: 1.0 } },
       { count: 10, types: { disruptor: 1.0 } },
 
-      // --- Individual Boss Waves (1 boss per wave) ---
       { boss: "Goliath" },
       { boss: "Phantom" },
       { boss: "Warlock" },
@@ -36,12 +32,6 @@ export const levels = [
       { boss: "Devastator" },
       { boss: "Reaper" },
       { bosses: ["Reaper", "Devastator"] },
-
-      // You can add more specific test waves here if needed,
-      // for example, a wave with two specific bosses:
-      // { bosses: ["Juggernaut", "Basilisk"] },
-      // Or a boss with other enemies:
-      // { count: 5, types: { boss: "Basilisk", basic: 0.5, swift: 0.5 } },
     ],
   },
   {

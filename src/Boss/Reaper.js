@@ -58,7 +58,7 @@ export class Reaper extends BaseBoss {
     super.update(dt);
     if (this.dead) return;
 
-    soundManager.playSound("reaperMove", 0.1);
+    soundManager.playSound("reaperMove", 0.3);
 
     this.attackCooldown -= dt;
     this.bobOffset += dt * 4; // Update bobbing animation

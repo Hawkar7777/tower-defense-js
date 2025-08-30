@@ -151,7 +151,7 @@ export class BlackHawkTower extends BaseTower {
     // sound timer
     this._s.soundTimer = (this._s.soundTimer || 0) - dt;
     if (this._s.soundTimer <= 0) {
-      soundManager.playSound("blackHawkMove", 0.1);
+      soundManager.playSound("blackhawkMove", 0.3);
       this._s.soundTimer = 1.2; // replay every ~1.2s (match your clip length)
     }
 
@@ -192,7 +192,7 @@ export class BlackHawkTower extends BaseTower {
       );
 
       // 🔊 play gunfire sound once per shot
-      soundManager.playSound("blackHawkRifle", 0.75);
+      soundManager.playSound("blackHawkRifle", 0.5);
 
       particles.push({
         x: originLeft.x,

@@ -1688,6 +1688,12 @@ async function initializeGame() {
       maxInstances: 2,
     },
     {
+      id: "blackhawkMove",
+      path: "./assets/sounds/blackhawkMove.mp3",
+      volume: 2,
+      maxInstances: 2,
+    },
+    {
       id: "jetShoot",
       path: "./assets/sounds/jetTower.mp3",
       volume: 2,

@@ -81,7 +81,7 @@ export const BOSS_TYPES = {
   },
   Scorcher: {
     name: "Scorcher",
-    baseHp: 10000, // Heavier armor
+    baseHp: 20000, // Heavier armor
     baseSpeed: 22, // Very slow and deliberate
     baseReward: 800,
     radius: 30, // It's a large, heavy chassis
@@ -91,7 +91,7 @@ export const BOSS_TYPES = {
     livesPenalty: 25,
     // --- Scorcher's Unique Stats ---
     attackRange: 350, // Long range missiles
-    attackDamage: 120, // High explosive damage
+    attackDamage: 500, // High explosive damage
     attackRate: 0.3, // Fires one missile every ~3 seconds
     aoeRadius: 80, // 80px explosion radius
   },

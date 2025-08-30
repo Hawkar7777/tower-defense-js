@@ -34,7 +34,7 @@ export class GunTower extends BaseTower {
     this._s.muzzleFlashEffect = 1;
 
     // Use the sound manager to play the sound
-    soundManager.playSound("gunnerShoot", 0.2); // Play sound via manager with specific volume
+    soundManager.playSound("gunnerShoot", 0.3); // Play sound via manager with specific volume
   }
 
   update(dt, enemiesList) {

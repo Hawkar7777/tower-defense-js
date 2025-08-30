@@ -145,6 +145,14 @@ export class BaseTower {
     return true; // Indicate that a projectile was successfully launched
   }
 
+  destroy() {
+    this._destroyed = true;
+    // stop any looping or associated sounds
+    if (this.stopSounds) {
+      this.stopSounds();
+    }
+  }
+
   fireBeam(start, end, color) {
     // To be implemented in LaserTower
   }

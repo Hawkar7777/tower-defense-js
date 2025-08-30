@@ -328,8 +328,8 @@ export const TOWER_TYPES = {
     name: "Car M249",
     cost: 600,
     range: 190, // Increased range
-    fireRate: 4, // Increased fire rate
-    dmg: 110, // Increased damage
+    fireRate: 10, // Increased fire rate
+    dmg: 37, // Increased damage
     color: "#2288ff",
     maxLevel: 8, // More levels
     hp: 600, // Increased HP
@@ -457,7 +457,7 @@ export const TOWER_TYPES = {
     color: "#34495e",
     maxLevel: 3,
     hp: 800, // Increased HP
-    size: { align: "TBLR", occupy: 0 },
+    size: { align: "TBLR", occupy: 1 },
     unlockPrice: 11000, // Increased unlock price
     upgradePriceBase: 2800,
 
@@ -468,7 +468,7 @@ export const TOWER_TYPES = {
     cost: 16000, // Increased cost
     range: Infinity,
     fireRate: 0.12, // Slightly faster fire rate (still very slow)
-    dmg: 1500, // Massively increased damage
+    dmg: 3500, // Massively increased damage
     splash: 200, // Added significant splash radius
     bulletSpeed: 250, // Slightly faster bomb drop
     color: "#495057",

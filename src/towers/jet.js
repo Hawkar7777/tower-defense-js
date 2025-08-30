@@ -1,5 +1,5 @@
 import { BaseTower } from "./BaseTower.js";
-import { ctx } from "../core.js";
+import { ctx, TILE } from "../core.js"; // <-- added TILE
 import { enemies, projectiles, particles } from "../state.js";
 import { dist, clamp } from "../utils.js";
 import { TOWER_TYPES } from "../config.js";
@@ -143,6 +143,12 @@ export class JetTower extends BaseTower {
 
   constructor(gx, gy, key) {
     super(gx, gy, key);
+    // store grid so we can draw the placed-base aligned to grid
+    this.gx = gx;
+    this.gy = gy;
+    this.placedX = gx * TILE + TILE / 2;
+    this.placedY = gy * TILE + TILE / 2;
+
     this._s = {
       bodyAngle: Math.random() * Math.PI * 2,
       flightPos: { x: Math.random() * 800, y: -50 },
@@ -218,9 +224,11 @@ export class JetTower extends BaseTower {
   }
 
   draw() {
-    // Draw shadow first so it's underneath
+    // draw placed base/hangar where this tower occupies the map cell
+    this.drawPlacedBase(this.placedX, this.placedY, TILE * 0.9);
+
+    // Draw shadow and jet
     drawJetShadow(this._s.flightPos.x, this._s.flightPos.y, this._s.bodyAngle);
-    // Draw the beautiful jet
     drawJet(
       this._s.flightPos.x,
       this._s.flightPos.y,
@@ -229,18 +237,141 @@ export class JetTower extends BaseTower {
       this._s.afterburnerIntensity
     );
 
-    // --- NEW CODE: Display Level as Text for JetTower ---
-    ctx.fillStyle = "#ffffff"; // White color for the text
-    ctx.font = "12px Arial"; // Font size and type
-    ctx.textAlign = "center"; // Center the text horizontally
-    ctx.textBaseline = "middle"; // Center the text vertically
-    // Position the text below the jet's flight position
+    // Display Level as Text for JetTower
+    ctx.fillStyle = "#ffffff";
+    ctx.font = "12px Arial";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
     ctx.fillText(
       `Lv. ${this.level}`,
       this._s.flightPos.x,
       this._s.flightPos.y + 40
     );
-    // --- END NEW CODE ---
+  }
+
+  // Draw a placed-tower base (helipad / hangar pad) with details
+  drawPlacedBase(cx, cy, size) {
+    ctx.save();
+
+    // pad scale
+    const padR = size * 0.45;
+    const innerR = padR * 0.6;
+
+    // subtle drop shadow under pad
+    ctx.fillStyle = "rgba(0,0,0,0.25)";
+    ctx.beginPath();
+    ctx.ellipse(cx + 4, cy + 10, padR * 1.05, padR * 0.5, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // main circular pad
+    ctx.translate(cx, cy);
+    ctx.rotate(
+      Math.sin((this.placedX + this.placedY + Date.now() / 1000) * 0.01) * 0.02
+    ); // tiny idle wobble
+    ctx.beginPath();
+    ctx.arc(0, 0, padR, 0, Math.PI * 2);
+    const padGrad = ctx.createLinearGradient(-padR, -padR, padR, padR);
+    padGrad.addColorStop(0, "#28323a");
+    padGrad.addColorStop(1, "#1b2328");
+    ctx.fillStyle = padGrad;
+    ctx.fill();
+
+    // inner circle highlight
+    ctx.beginPath();
+    ctx.arc(0, 0, innerR, 0, Math.PI * 2);
+    ctx.fillStyle = "rgba(255,255,255,0.03)";
+    ctx.fill();
+
+    // central H marking (helipad style, but stylized)
+    ctx.strokeStyle = "rgba(255,255,255,0.12)";
+    ctx.lineWidth = Math.max(2, padR * 0.08);
+    ctx.beginPath();
+    ctx.moveTo(-innerR * 0.6, 0);
+    ctx.lineTo(innerR * 0.6, 0);
+    ctx.moveTo(-innerR * 0.6, -innerR * 0.45);
+    ctx.lineTo(-innerR * 0.6, innerR * 0.45);
+    ctx.moveTo(innerR * 0.6, -innerR * 0.45);
+    ctx.lineTo(innerR * 0.6, innerR * 0.45);
+    ctx.stroke();
+
+    // hazard stripes around a small service platform rectangle
+    const rectW = padR * 0.9;
+    const rectH = padR * 0.28;
+    const rectY = padR * 0.6;
+    ctx.save();
+    ctx.translate(0, rectY);
+    // platform base
+    ctx.fillStyle = "#2a2f33";
+    roundRect(ctx, -rectW / 2, -rectH / 2, rectW, rectH, 6);
+    // hazard stripes (diagonal)
+    const stripeCount = 8;
+    for (let i = -stripeCount; i < stripeCount; i++) {
+      const w = rectW / 12;
+      const x = i * w * 1.2;
+      ctx.save();
+      ctx.translate(x, 0);
+      ctx.rotate(-0.5);
+      ctx.fillStyle = i % 2 === 0 ? "#f1c40f" : "#1f1f1f";
+      ctx.fillRect(-w / 2, -rectH / 2, w, rectH);
+      ctx.restore();
+    }
+    ctx.restore();
+
+    // small crates / fuel drums near pad edge
+    const crateColors = ["#6b4f3a", "#4c6b3a", "#646464"];
+    for (let i = 0; i < 3; i++) {
+      const angle = ((Math.PI * 2) / 3) * i - 0.6;
+      const rr = padR * (0.9 + i * 0.04);
+      const x = Math.cos(angle) * rr;
+      const y = Math.sin(angle) * rr;
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.rotate(-angle * 0.2);
+      ctx.fillStyle = crateColors[i % crateColors.length];
+      roundRect(ctx, -8, -6, 16, 12, 2);
+      ctx.strokeStyle = "rgba(0,0,0,0.35)";
+      ctx.lineWidth = 1;
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    // small control kiosk
+    ctx.save();
+    ctx.translate(-padR * 0.45, -padR * 0.45);
+    // kiosk shadow
+    ctx.fillStyle = "rgba(0,0,0,0.18)";
+    ctx.fillRect(-10, 8, 24, 8);
+    // kiosk body
+    ctx.fillStyle = "#22313a";
+    roundRect(ctx, -12, -12, 24, 20, 3);
+    // kiosk window
+    ctx.fillStyle = "rgba(140, 200, 255, 0.9)";
+    roundRect(ctx, -6, -8, 12, 8, 2);
+    ctx.restore();
+
+    // pad lights around the rim (pulsing)
+    const t = Date.now() / 250;
+    const pulse = (Math.sin(t) + 1) * 0.5; // 0..1
+    const lightCount = 8;
+    for (let i = 0; i < lightCount; i++) {
+      const a = (i / lightCount) * Math.PI * 2;
+      const lx = Math.cos(a) * (padR + 6);
+      const ly = Math.sin(a) * (padR + 6);
+      ctx.beginPath();
+      const alpha = 0.4 * (0.6 + 0.4 * Math.sin(t + i));
+      ctx.fillStyle = `rgba(93, 173, 226, ${alpha})`;
+      ctx.arc(lx, ly, 3.2, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // perimeter ring (thin metal rim)
+    ctx.beginPath();
+    ctx.arc(0, 0, padR + 3, 0, Math.PI * 2);
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = "rgba(180,180,180,0.08)";
+    ctx.stroke();
+
+    ctx.restore();
   }
 }
 

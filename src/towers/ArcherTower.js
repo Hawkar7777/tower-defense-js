@@ -78,7 +78,7 @@ export class ArcherTower extends BaseTower {
     }
 
     this.recoilEffect = 2.5;
-    soundManager.playSound("archerShoot", 0.3);
+    soundManager.playSound("archerShoot", 0.02);
   }
 
   draw() {

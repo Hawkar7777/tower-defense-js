@@ -1809,6 +1809,13 @@ async function initializeGame() {
       isBossSound: true,
     },
     {
+      id: "baslikHit",
+      path: "./assets/sounds/baslikHit.mp3",
+      volume: 2,
+      maxInstances: 2,
+      isBossSound: true,
+    },
+    {
       id: "baslikDeath",
       path: "./assets/sounds/baslikDeath.mp3",
       volume: 2,

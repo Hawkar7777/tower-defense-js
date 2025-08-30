@@ -62,7 +62,7 @@ export const BOSS_TYPES = {
     livesPenalty: 20,
     // --- Basilisk's Unique Stats ---
     auraRange: 180, // The radius of its slowing aura
-    slowFactor: 1,
+    slowFactor: 0.3,
   },
   Marauder: {
     name: "Marauder",

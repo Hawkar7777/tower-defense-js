@@ -21,6 +21,15 @@ export class Basilisk extends BaseBoss {
     this.affectedTowers = new Set();
   }
 
+  damage(d) {
+    if (this.dead) return;
+
+    super.damage(d); // apply normal HP reduction
+
+    // Play hit sound
+    soundManager.playSound("baslikHit", 0.3);
+  }
+
   update(dt) {
     super.update(dt);
     if (this.dead) {

@@ -1732,6 +1732,13 @@ async function initializeGame() {
       isBossSound: true,
     },
     {
+      id: "goliathHit",
+      path: "./assets/sounds/goliathHit.mp3",
+      volume: 2,
+      maxInstances: 2,
+      isBossSound: true,
+    },
+    {
       id: "phantomMove",
       path: "./assets/sounds/phantomMove.mp3",
       volume: 2,
@@ -1762,6 +1769,13 @@ async function initializeGame() {
     {
       id: "warlockMove",
       path: "./assets/sounds/warlockMove.mp3",
+      volume: 2,
+      maxInstances: 2,
+      isBossSound: true,
+    },
+    {
+      id: "warlockHit",
+      path: "./assets/sounds/warlockHit.mp3",
       volume: 2,
       maxInstances: 2,
       isBossSound: true,

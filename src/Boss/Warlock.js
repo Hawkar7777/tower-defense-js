@@ -22,6 +22,16 @@ export class warlock extends BaseBoss {
     this.siphonHealAmount = 300 * difficultyMult;
   }
 
+  // Add this method:
+  damage(d) {
+    if (this.dead) return;
+
+    super.damage(d); // apply normal HP reduction
+
+    // Play hit sound
+    soundManager.playSound("warlockHit", 0.3);
+  }
+
   findHexTarget() {
     let bestTarget = null;
     let maxCost = 0;

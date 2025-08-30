@@ -46,6 +46,8 @@ export class goliath extends BaseBoss {
     if (this.dead) return;
     if (this.shieldActive) {
       this.shieldHp -= d;
+      soundManager.playSound("goliathHit", 0.3);
+
       if (this.shieldHp <= 0) {
         this.shieldActive = false;
         spawnExplosion(this.pos.x, this.pos.y, this.r + 10, this.shieldColor);
@@ -59,7 +61,6 @@ export class goliath extends BaseBoss {
     if (this.dead) return;
     const { x, y } = this.pos;
     const TAU = Math.PI * 2;
-
     ctx.strokeStyle = this.detailColor;
     ctx.lineWidth = 5;
     for (let i = 0; i < 6; i++) {

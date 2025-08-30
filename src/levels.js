@@ -8,7 +8,7 @@ export const levels = [
     startMoney: 100000000, // Very generous for testing purposes
     startLives: 1,
     waves: [
-      { boss: "Reaper" },
+      { boss: "Warlock" },
 
       { count: 10, types: { wraith: 1.0 } },
       { count: 10, types: { basic: 1.0 } },
@@ -25,7 +25,6 @@ export const levels = [
       { count: 10, types: { disruptor: 1.0 } },
 
       { boss: "Goliath" },
-
       { boss: "Phantom" },
       { boss: "Warlock" },
       { boss: "Juggernaut" },

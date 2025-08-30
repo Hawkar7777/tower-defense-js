@@ -1872,8 +1872,22 @@ async function initializeGame() {
       isBossSound: true,
     },
     {
+      id: "devastatorMove",
+      path: "./assets/sounds/devastatorMove.mp3",
+      volume: 2,
+      maxInstances: 2,
+      isBossSound: true,
+    },
+    {
       id: "reaperShoot",
       path: "./assets/sounds/reaperShoot.mp3",
+      volume: 2,
+      maxInstances: 2,
+      isBossSound: true,
+    },
+    {
+      id: "reaperMove",
+      path: "./assets/sounds/reaperMove.mp3",
       volume: 2,
       maxInstances: 2,
       isBossSound: true,

@@ -53,6 +53,8 @@ export class Devastator extends BaseBoss {
     super.update(dt);
     if (this.dead) return;
 
+    soundManager.playSound("devastatorMove", 0.1);
+
     this.stateTimer -= dt;
 
     // --- State Machine Logic ---

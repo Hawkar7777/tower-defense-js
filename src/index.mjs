@@ -1788,6 +1788,20 @@ async function initializeGame() {
       isBossSound: true,
     },
     {
+      id: "JuggernautMove",
+      path: "./assets/sounds/JuggernautMove.mp3",
+      volume: 2,
+      maxInstances: 2,
+      isBossSound: true,
+    },
+    {
+      id: "JuggernautHit",
+      path: "./assets/sounds/JuggernautHit.mp3",
+      volume: 2,
+      maxInstances: 2,
+      isBossSound: true,
+    },
+    {
       id: "baslikAura",
       path: "./assets/sounds/baslikTower.mp3",
       volume: 2,

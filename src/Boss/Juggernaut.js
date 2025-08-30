@@ -46,9 +46,20 @@ export class Juggernaut extends BaseBoss {
     return closestTower;
   }
 
+  damage(d) {
+    if (this.dead) return;
+
+    super.damage(d); // apply normal HP reduction
+
+    // Play hit sound
+    soundManager.playSound("JuggernautHit", 0.3);
+  }
   update(dt) {
     super.update(dt);
     if (this.dead) return;
+
+    // Only play move sound if actually moving
+    soundManager.playSound("JuggernautMove", 0.2);
 
     // recoil spring physics (simple critically-damped spring)
     const recoilSpringK = 360; // stiffness

@@ -1074,7 +1074,16 @@ function handleInspectorClick(pos) {
     state.money += sellValue;
     const towerIndex = towers.findIndex((t) => t === ui.selectedTower);
     if (towerIndex > -1) {
+      const soldTower = towers[towerIndex]; // Keep reference to the tower being sold
       towers.splice(towerIndex, 1);
+
+      // --- FIX: Clear target for any enemy that was targeting the sold tower ---
+      for (const enemy of enemies) {
+        if (enemy.target === soldTower) {
+          enemy.target = null; // Clear the target
+        }
+      }
+      // --- END FIX ---
     }
     ui.selectedTower = null;
     updateOccupiedCells();

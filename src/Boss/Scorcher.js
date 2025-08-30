@@ -1,3 +1,4 @@
+// Scorcher.js
 import { ctx } from "../core.js";
 import { dist } from "../utils.js";
 import { state, towers, projectiles } from "../state.js";
@@ -47,10 +48,12 @@ export class Scorcher extends BaseBoss {
 
     this.attackCooldown -= dt;
 
+    // If target is gone, dead, out of range, or removed from towers array => find a new one
     if (
       !this.targetTower ||
       this.targetTower.hp <= 0 ||
-      dist(this.pos, this.targetTower.center) > this.attackRange
+      dist(this.pos, this.targetTower.center) > this.attackRange ||
+      towers.indexOf(this.targetTower) === -1 // <-- ensure target is still present
     ) {
       this.targetTower = this.findTargetTower();
     }
@@ -72,6 +75,9 @@ export class Scorcher extends BaseBoss {
   }
 
   shootTower(target) {
+    // Safety: if target was removed between choosing and firing, abort
+    if (!target || towers.indexOf(target) === -1) return;
+
     soundManager.playSound("scorcherMissle", 0.3);
 
     // Fire from the launcher's position, not the center of the vehicle
@@ -83,7 +89,7 @@ export class Scorcher extends BaseBoss {
     const missile = {
       x: launcherCenter.x,
       y: launcherCenter.y,
-      target: target,
+      target: target, // keep reference but validate each update
       speed: 200, // Missiles are slower than bullets
       damage: this.attackDamage,
       aoeRadius: this.aoeRadius,
@@ -92,10 +98,18 @@ export class Scorcher extends BaseBoss {
       isEnemyProjectile: true,
 
       update: function (dt) {
-        if (this.target.hp <= 0 || this.dead) {
+        // If the target was removed from the towers array (sold/cleared) or is undefined -> stop missile
+        if (!this.target || towers.indexOf(this.target) === -1) {
           this.dead = true;
           return;
         }
+
+        // If the target has been destroyed already -> stop missile
+        if (this.target.hp <= 0) {
+          this.dead = true;
+          return;
+        }
+
         const dx = this.target.center.x - this.x;
         const dy = this.target.center.y - this.y;
         this.rotation = Math.atan2(dy, dx);
@@ -104,15 +118,15 @@ export class Scorcher extends BaseBoss {
         if (d < 10) {
           this.dead = true;
 
-          // Play explosion sound on hit
-
           // Spawn visual explosion and apply AoE damage
           spawnExplosion(this.x, this.y, this.aoeRadius, "#ff8c00");
           soundManager.playSound("scorcherExplode", 1);
 
           const destroyedTowers = [];
+          // Use explicit point for distance calculation (avoid accidentally relying on other properties)
+          const hitPoint = { x: this.x, y: this.y };
           for (const tower of towers) {
-            if (dist(this, tower.center) <= this.aoeRadius) {
+            if (dist(hitPoint, tower.center) <= this.aoeRadius) {
               tower.hp -= this.damage;
               if (tower.hp <= 0) {
                 destroyedTowers.push(tower);
@@ -133,10 +147,13 @@ export class Scorcher extends BaseBoss {
           this.y += (dy / d) * this.speed * dt;
         }
       },
+
       draw: function () {
         ctx.save();
         ctx.translate(this.x, this.y);
-        ctx.rotate(this.rotation);
+        // rotation may be undefined briefly; guard with fallback
+        const rot = typeof this.rotation === "number" ? this.rotation : 0;
+        ctx.rotate(rot);
         ctx.fillStyle = "rgba(0,0,0,0.5)"; // Shadow
         ctx.beginPath();
         ctx.ellipse(-2, 2, 10, 3, 0, 0, Math.PI * 2);
@@ -164,6 +181,7 @@ export class Scorcher extends BaseBoss {
         ctx.restore();
       },
     };
+
     projectiles.push(missile);
   }
 

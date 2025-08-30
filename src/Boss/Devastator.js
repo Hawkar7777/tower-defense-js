@@ -1,3 +1,4 @@
+// Devastator.js
 import { ctx } from "../core.js";
 import { dist } from "../utils.js";
 import { state, towers, projectiles } from "../state.js";
@@ -57,9 +58,18 @@ export class Devastator extends BaseBoss {
 
     this.stateTimer -= dt;
 
+    // If target was removed from towers array, force re-acquire
+    if (
+      this.targetTower &&
+      (this.targetTower.hp <= 0 || towers.indexOf(this.targetTower) === -1)
+    ) {
+      this.targetTower = null;
+    }
+
     // --- State Machine Logic ---
     switch (this.attackState) {
       case "idle":
+        // Only acquire towers that are actually in the towers array
         this.targetTower = this.findTargetTower();
         if (this.targetTower) {
           this.attackState = "spinning";
@@ -70,10 +80,18 @@ export class Devastator extends BaseBoss {
       case "spinning":
         // Animate the barrels spinning up
         this.barrelRotation += dt * 25;
-        if (!this.targetTower || this.targetTower.hp <= 0) {
+
+        // if target is missing, go idle (also handles sold/removed)
+        if (
+          !this.targetTower ||
+          this.targetTower.hp <= 0 ||
+          towers.indexOf(this.targetTower) === -1
+        ) {
           this.attackState = "idle";
+          this.targetTower = null;
           return;
         }
+
         this.turretRotation = Math.atan2(
           this.targetTower.center.y - this.pos.y,
           this.targetTower.center.x - this.pos.x
@@ -88,11 +106,19 @@ export class Devastator extends BaseBoss {
       case "firing":
         // Animate barrels spinning faster
         this.barrelRotation += dt * 60;
-        if (!this.targetTower || this.targetTower.hp <= 0) {
+
+        // if target is missing (killed or removed) -> go to cooldown
+        if (
+          !this.targetTower ||
+          this.targetTower.hp <= 0 ||
+          towers.indexOf(this.targetTower) === -1
+        ) {
           this.attackState = "cooldown";
           this.stateTimer = this.cooldown;
+          this.targetTower = null;
           return;
         }
+
         this.turretRotation = Math.atan2(
           this.targetTower.center.y - this.pos.y,
           this.targetTower.center.x - this.pos.x
@@ -123,6 +149,9 @@ export class Devastator extends BaseBoss {
   }
 
   shootTower(target) {
+    // Safety: abort if target was removed between selection and firing
+    if (!target || towers.indexOf(target) === -1) return;
+
     soundManager.playSound("devastatorShoot", 0.3);
     const muzzlePos = {
       x: this.pos.x + Math.cos(this.turretRotation) * (this.r * 1.2),
@@ -140,15 +169,24 @@ export class Devastator extends BaseBoss {
     const projectile = {
       x: muzzlePos.x,
       y: muzzlePos.y,
-      target: target,
+      target: target, // keep reference but validate each update
       speed: 600,
       damage: this.attackDamage,
       dead: false,
       isEnemyProjectile: true,
 
       update: function (dt) {
-        if (this.target.hp <= 0) this.dead = true;
-        if (this.dead) return;
+        // If the target was removed from the towers array (sold/cleared) or undefined -> stop projectile
+        if (!this.target || towers.indexOf(this.target) === -1) {
+          this.dead = true;
+          return;
+        }
+
+        // If target was destroyed -> stop projectile
+        if (this.target.hp <= 0) {
+          this.dead = true;
+          return;
+        }
 
         const dx = this.target.center.x - this.x;
         const dy = this.target.center.y - this.y;
@@ -168,15 +206,22 @@ export class Devastator extends BaseBoss {
           this.y += (dy / d) * this.speed * dt;
         }
       },
+
       draw: function () {
         ctx.strokeStyle = "#ffae42";
         ctx.lineWidth = 3;
         ctx.beginPath();
         ctx.moveTo(this.x, this.y);
-        const angle = Math.atan2(
-          this.target.center.y - this.y,
-          this.target.center.x - this.x
-        );
+
+        // guard in case target no longer exists
+        let angle = 0;
+        if (this.target && towers.indexOf(this.target) !== -1) {
+          angle = Math.atan2(
+            this.target.center.y - this.y,
+            this.target.center.x - this.x
+          );
+        }
+
         ctx.lineTo(
           this.x - Math.cos(angle) * 10,
           this.y - Math.sin(angle) * 10

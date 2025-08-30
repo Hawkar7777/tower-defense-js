@@ -1,3 +1,4 @@
+// Marauder.js
 import { ctx } from "../core.js";
 import { dist } from "../utils.js";
 import { state, towers, projectiles } from "../state.js";
@@ -59,11 +60,12 @@ export class Marauder extends BaseBoss {
 
     this.attackCooldown -= dt;
 
-    // If target is gone or out of range, find a new one
+    // If target is gone, out of range, dead, or was removed from towers array, find a new one
     if (
       !this.targetTower ||
       this.targetTower.hp <= 0 ||
-      dist(this.pos, this.targetTower.center) > this.attackRange
+      dist(this.pos, this.targetTower.center) > this.attackRange ||
+      towers.indexOf(this.targetTower) === -1 // <-- important: target must still be in towers array
     ) {
       this.targetTower = this.findTargetTower();
     }
@@ -85,6 +87,9 @@ export class Marauder extends BaseBoss {
   }
 
   shootTower(target) {
+    // Extra safety: don't shoot if target was removed between choosing and firing
+    if (!target || towers.indexOf(target) === -1) return;
+
     soundManager.playSound("marauderRifle", 0.2);
     const muzzlePos = {
       x: this.pos.x + Math.cos(this.turretRotation) * (this.r * 1.2),
@@ -96,21 +101,30 @@ export class Marauder extends BaseBoss {
     const projectile = {
       x: muzzlePos.x,
       y: muzzlePos.y,
-      target: target,
+      target: target, // keep the original object reference but check membership each update
       speed: 450, // Fast machine gun bullets
       damage: this.attackDamage,
       dead: false,
       isEnemyProjectile: true,
 
       update: function (dt) {
+        // If the target was removed from the towers array (sold/cleared), stop the projectile
+        if (!this.target || towers.indexOf(this.target) === -1) {
+          this.dead = true;
+          return;
+        }
+
+        // If the target has been killed, stop the projectile
         if (this.target.hp <= 0) {
           this.dead = true;
           return;
         }
+
         const dx = this.target.center.x - this.x;
         const dy = this.target.center.y - this.y;
         const d = Math.hypot(dx, dy);
         if (d < 10) {
+          // Hit
           this.target.hp -= this.damage;
           this.dead = true;
 
@@ -132,10 +146,18 @@ export class Marauder extends BaseBoss {
         ctx.lineWidth = 2;
         ctx.beginPath();
         ctx.moveTo(this.x, this.y);
-        const angle = Math.atan2(
-          this.target.center.y - this.y,
-          this.target.center.x - this.x
-        );
+
+        // If the target was removed, just draw a short tracer in flight direction
+        let angle;
+        if (!this.target || towers.indexOf(this.target) === -1) {
+          angle = 0;
+        } else {
+          angle = Math.atan2(
+            this.target.center.y - this.y,
+            this.target.center.x - this.x
+          );
+        }
+
         ctx.lineTo(this.x - Math.cos(angle) * 7, this.y - Math.sin(angle) * 7);
         ctx.stroke();
       },

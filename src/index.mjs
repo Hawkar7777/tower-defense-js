@@ -1837,6 +1837,13 @@ async function initializeGame() {
       isBossSound: true,
     },
     {
+      id: "marauderHit",
+      path: "./assets/sounds/marauderHit.mp3",
+      volume: 2,
+      maxInstances: 2,
+      isBossSound: true,
+    },
+    {
       id: "scorcherMissle",
       path: "./assets/sounds/scorcherMissle.mp3",
       volume: 2,

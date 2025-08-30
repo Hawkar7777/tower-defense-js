@@ -25,6 +25,15 @@ export class Marauder extends BaseBoss {
     this.turretRotation = 0;
   }
 
+  damage(d) {
+    if (this.dead) return;
+
+    super.damage(d); // apply normal HP reduction
+
+    // Play hit sound
+    soundManager.playSound("marauderHit", 0.4);
+  }
+
   // This function is identical to Juggernaut's
   findTargetTower() {
     let closestTower = null;
@@ -76,7 +85,7 @@ export class Marauder extends BaseBoss {
   }
 
   shootTower(target) {
-    soundManager.playSound("marauderRifle", 0.3);
+    soundManager.playSound("marauderRifle", 0.2);
     const muzzlePos = {
       x: this.pos.x + Math.cos(this.turretRotation) * (this.r * 1.2),
       y: this.pos.y + Math.sin(this.turretRotation) * (this.r * 1.2),

@@ -1858,6 +1858,13 @@ async function initializeGame() {
       isBossSound: true,
     },
     {
+      id: "scorcherMove",
+      path: "./assets/sounds/scorcherMove.mp3",
+      volume: 2,
+      maxInstances: 2,
+      isBossSound: true,
+    },
+    {
       id: "devastatorShoot",
       path: "./assets/sounds/devastatorShoot.mp3",
       volume: 2,

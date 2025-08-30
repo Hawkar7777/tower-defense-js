@@ -55,6 +55,8 @@ export class Scorcher extends BaseBoss {
       this.targetTower = this.findTargetTower();
     }
 
+    soundManager.playSound("scorcherMove", 0.3);
+
     if (this.targetTower) {
       const targetPos = this.targetTower.center;
       this.launcherRotation = Math.atan2(
@@ -103,10 +105,10 @@ export class Scorcher extends BaseBoss {
           this.dead = true;
 
           // Play explosion sound on hit
-          soundManager.playSound("scorcherExplode", 0.3);
 
           // Spawn visual explosion and apply AoE damage
           spawnExplosion(this.x, this.y, this.aoeRadius, "#ff8c00");
+          soundManager.playSound("scorcherExplode", 1);
 
           const destroyedTowers = [];
           for (const tower of towers) {
